@@ -1,0 +1,32 @@
+Environment / sensitive data
+.env
+config.php
+
+Dependencies (if any later)
+vendor/
+
+Uploads (user-generated files)
+uploads/
+public/uploads/
+
+Logs
+*.log
+logs/
+
+OS junk
+.DS_Store
+Thumbs.db
+
+Editor / IDE
+.vscode/
+.idea/
+
+Cache / temp
+cache/
+tmp/
+*.cache
+
+Archives
+*.zip
+*.tar
+*.gz
