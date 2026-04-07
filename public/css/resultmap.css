@@ -1,0 +1,220 @@
+#mapModal {
+    display: none;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 30000 !important;
+    width: 100%;
+    height: 100%;
+    padding: 16px;
+    background: rgba(15, 23, 42, 0.72);
+    overflow: hidden;
+    overscroll-behavior: contain;
+    box-sizing: border-box;
+}
+
+#mapModal .modal-content {
+    z-index: 30001;
+    background: #ffffff;
+    margin: 0 auto !important;
+    width: min(960px, 100%) !important;
+    max-width: 960px !important;
+    height: min(84vh, 760px) !important;
+    max-height: calc(100vh - 32px);
+    border-radius: 18px;
+    position: relative;
+    box-shadow: 0 22px 48px rgba(0, 0, 0, 0.28);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+body.map-modal-open {
+    overflow: hidden;
+    touch-action: none;
+}
+
+body.map-modal-open header,
+body.map-modal-open .nav-panel,
+body.map-modal-open .nav-backdrop {
+    z-index: 1 !important;
+}
+
+.map-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 20px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    flex: 0 0 auto;
+}
+
+#mapModalTitle {
+    margin: 0 !important;
+    line-height: 1.35;
+    color: #0f172a;
+    font-size: 1.15rem;
+    min-width: 0;
+}
+
+#mapModal .close {
+    appearance: none;
+    -webkit-appearance: none;
+    border: 1px solid #d7e0ee;
+    background: #ffffff;
+    color: #475569;
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 1.6rem;
+    font-weight: 600;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+#mapModal .close:hover,
+#mapModal .close:focus {
+    color: #0f172a;
+    border-color: #94a3b8;
+    background: #f8fafc;
+    outline: none;
+}
+
+.map-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 16px 20px 20px;
+    display: flex;
+}
+
+#mapModal #map {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100% !important;
+    min-height: 320px;
+    border-radius: 14px;
+    overflow: hidden;
+    z-index: 1;
+    background: #f1f5f9;
+}
+
+#mapModal .leaflet-control-container {
+    z-index: 2;
+}
+
+#mapModal .leaflet-top,
+#mapModal .leaflet-bottom {
+    z-index: 2;
+}
+
+#mapModal .leaflet-control-zoom a {
+    width: 34px;
+    height: 34px;
+    line-height: 34px;
+}
+
+#mapModal .route-info-panel > div,
+#mapModal .no-location-info > div {
+    max-width: min(280px, calc(100vw - 88px));
+    min-width: 0 !important;
+    box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+    #mapModal {
+        padding: 0;
+        background: rgba(15, 23, 42, 0.82);
+    }
+
+    #mapModal .modal-content {
+        width: 100% !important;
+        max-width: none !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        max-height: 100vh !important;
+        max-height: 100dvh !important;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .map-modal-header {
+        padding: calc(14px + env(safe-area-inset-top, 0px)) 14px 12px;
+        gap: 12px;
+    }
+
+    #mapModalTitle {
+        font-size: 1rem;
+        line-height: 1.3;
+    }
+
+    #mapModal .close {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        border-radius: 10px;
+        font-size: 1.45rem;
+    }
+
+    .map-modal-body {
+        padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    }
+
+    #mapModal #map {
+        min-height: 0;
+        border-radius: 12px;
+    }
+
+    #mapModal .leaflet-top.leaflet-left {
+        top: 6px;
+        left: 6px;
+    }
+
+    #mapModal .leaflet-top.leaflet-right {
+        top: 6px;
+        right: 6px;
+    }
+
+    #mapModal .leaflet-bottom.leaflet-left,
+    #mapModal .leaflet-bottom.leaflet-right {
+        bottom: 6px;
+    }
+
+    #mapModal .route-info-panel > div,
+    #mapModal .no-location-info > div {
+        max-width: calc(100vw - 52px);
+        margin: 0 0 6px 0 !important;
+        padding: 12px !important;
+        font-size: 12px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .map-modal-header {
+        padding: calc(12px + env(safe-area-inset-top, 0px)) 12px 10px;
+    }
+
+    #mapModalTitle {
+        font-size: 0.96rem;
+    }
+
+    .map-modal-body {
+        padding: 10px 10px calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+
+    #mapModal .leaflet-control-zoom a {
+        width: 32px;
+        height: 32px;
+        line-height: 32px;
+    }
+
+    #mapModal .route-info-panel > div,
+    #mapModal .no-location-info > div {
+        max-width: calc(100vw - 36px);
+    }
+}

@@ -1,0 +1,386 @@
+.edit-user-page .form-section {
+    width: 100%;
+    max-width: none;
+    margin: 0 auto;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+}
+
+.edit-user-page .page-header h1 {
+    color: #ffffff;
+}
+
+.edit-user-page .page-header h1 i {
+    color: #ffffff;
+}
+
+.edit-user-page .page-header p {
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.edit-user-page .edit-user-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 360px;
+    gap: 30px;
+    width: 100%;
+}
+
+.edit-user-page .edit-user-main,
+.edit-user-page .edit-user-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.edit-user-page .form-card-modern {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    overflow: hidden;
+    border: 1px solid var(--gray-200);
+}
+
+.edit-user-page .card-header {
+    padding: 20px 24px;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.edit-user-page .card-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--gray-800);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.edit-user-page .card-header h3 i {
+    color: var(--primary);
+}
+
+.edit-user-page .card-body {
+    padding: 24px;
+}
+
+.edit-user-page .edit-user-intro {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.5rem;
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.edit-user-page .edit-user-intro h2 {
+    margin: 0 0 0.35rem;
+    font-size: 1.4rem;
+    color: var(--gray-800);
+}
+
+.edit-user-page .edit-user-intro p {
+    margin: 0;
+    color: var(--gray-500);
+    font-size: 0.92rem;
+}
+
+.edit-user-page .user-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
+    gap: 0.85rem;
+}
+
+.edit-user-page .meta-card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+}
+
+.edit-user-page .meta-label {
+    display: block;
+    color: var(--gray-500);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.35rem;
+}
+
+.edit-user-page .meta-card strong {
+    color: var(--gray-800);
+    font-size: 0.96rem;
+}
+
+.edit-user-page .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.edit-user-page .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.edit-user-page .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: var(--gray-700);
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.edit-user-page .form-group input,
+.edit-user-page .form-group select,
+.edit-user-page .form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.edit-user-page .form-group textarea {
+    min-height: 120px;
+    resize: vertical;
+    line-height: 1.55;
+}
+
+.edit-user-page .form-group input:focus,
+.edit-user-page .form-group select:focus,
+.edit-user-page .form-group textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1);
+}
+
+.edit-user-page .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.edit-user-page .readonly-field {
+    background: var(--gray-50) !important;
+    color: var(--gray-500);
+    cursor: not-allowed;
+}
+
+.edit-user-page .field-note {
+    display: block;
+    margin-top: 8px;
+    color: var(--gray-500);
+    font-size: 0.78rem;
+}
+
+.edit-user-page .status-readonly-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.edit-user-page .status-readonly-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.edit-user-page .status-readonly-pill.status-active {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.edit-user-page .status-readonly-pill.status-inactive {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.edit-user-page .status-readonly-pill.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.edit-user-page .status-readonly-pill.status-suspended {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.edit-user-page .summary-field-note {
+    margin-top: 12px;
+}
+
+.edit-user-page .admin-permissions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px;
+}
+
+.edit-user-page .permission-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--gray-200);
+    border-radius: 14px;
+    background: var(--gray-50);
+    color: var(--gray-700);
+    font-weight: 600;
+}
+
+.edit-user-page .permission-option input[type="checkbox"] {
+    accent-color: var(--primary);
+    width: 16px;
+    height: 16px;
+    margin: 0;
+}
+
+.edit-user-page .permission-option span {
+    line-height: 1.4;
+}
+
+.edit-user-page .summary-avatar {
+    width: 68px;
+    height: 68px;
+    margin: 0 auto 16px;
+    border-radius: 18px;
+    background: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.edit-user-page .summary-name {
+    text-align: center;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--gray-800);
+    margin-bottom: 0.35rem;
+}
+
+.edit-user-page .summary-email {
+    text-align: center;
+    color: var(--gray-500);
+    font-size: 0.88rem;
+    margin-bottom: 1rem;
+    word-break: break-word;
+}
+
+.edit-user-page .summary-role {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    width: 100%;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 0.8rem 1rem;
+    color: var(--gray-700);
+    font-weight: 600;
+}
+
+.edit-user-page .role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
+}
+
+.edit-user-page .form-group-compact {
+    margin-bottom: 0;
+}
+
+.edit-user-page .form-actions-modern {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.edit-user-page .btn-modern {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    text-decoration: none;
+}
+
+.edit-user-page .btn-primary-modern {
+    background: var(--primary);
+    color: white;
+}
+
+.edit-user-page .btn-primary-modern:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+}
+
+.edit-user-page .btn-outline-modern {
+    background: white;
+    color: var(--gray-600);
+    border: 1px solid var(--gray-300);
+}
+
+.edit-user-page .btn-outline-modern:hover {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.edit-user-page .back-link-modern {
+    text-decoration: none;
+}
+
+.edit-user-page .alert {
+    padding: 15px 20px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+@media (max-width: 1024px) {
+    .edit-user-page .edit-user-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .edit-user-page .edit-user-intro {
+        flex-direction: column;
+    }
+
+    .edit-user-page .user-meta-grid,
+    .edit-user-page .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .edit-user-page .page-header h1 {
+        align-items: flex-start;
+    }
+}

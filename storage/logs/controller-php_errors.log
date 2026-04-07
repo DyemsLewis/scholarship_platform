@@ -1,0 +1,170 @@
+[16-Mar-2026 05:42:18 Europe/Berlin] === LOGIN ATTEMPT ===
+[16-Mar-2026 05:42:18 Europe/Berlin] Email: rosario.jameslouis@ncst.edu.ph
+[16-Mar-2026 05:42:18 Europe/Berlin] User found: Yes
+[16-Mar-2026 05:42:18 Europe/Berlin] User ID: 8
+[16-Mar-2026 05:42:18 Europe/Berlin] Raw DB latitude: NULL
+[16-Mar-2026 05:42:18 Europe/Berlin] Raw DB longitude: NULL
+[16-Mar-2026 05:42:18 Europe/Berlin] Raw DB location_name: NULL
+[16-Mar-2026 05:42:18 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[16-Mar-2026 05:42:18 Europe/Berlin] Session user_latitude: NULL
+[16-Mar-2026 05:42:18 Europe/Berlin] Session user_longitude: NULL
+[16-Mar-2026 05:42:18 Europe/Berlin] Session user_location_name: NULL
+[16-Mar-2026 05:58:29 Europe/Berlin] === LOGIN ATTEMPT ===
+[16-Mar-2026 05:58:29 Europe/Berlin] Email: rosario.jameslouis@ncst.edu.ph
+[16-Mar-2026 05:58:29 Europe/Berlin] User found: Yes
+[16-Mar-2026 05:58:29 Europe/Berlin] User ID: 8
+[16-Mar-2026 05:58:29 Europe/Berlin] Raw DB latitude: NULL
+[16-Mar-2026 05:58:29 Europe/Berlin] Raw DB longitude: NULL
+[16-Mar-2026 05:58:29 Europe/Berlin] Raw DB location_name: NULL
+[16-Mar-2026 05:58:29 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[16-Mar-2026 05:58:29 Europe/Berlin] Session user_latitude: NULL
+[16-Mar-2026 05:58:29 Europe/Berlin] Session user_longitude: NULL
+[16-Mar-2026 05:58:29 Europe/Berlin] Session user_location_name: NULL
+[16-Mar-2026 06:04:12 Europe/Berlin] === LOGIN ATTEMPT ===
+[16-Mar-2026 06:04:12 Europe/Berlin] Email: rosario.jameslouis@ncst.edu.ph
+[16-Mar-2026 06:04:12 Europe/Berlin] User found: Yes
+[16-Mar-2026 06:04:12 Europe/Berlin] User ID: 8
+[16-Mar-2026 06:04:12 Europe/Berlin] Raw DB latitude: NULL
+[16-Mar-2026 06:04:12 Europe/Berlin] Raw DB longitude: NULL
+[16-Mar-2026 06:04:12 Europe/Berlin] Raw DB location_name: NULL
+[16-Mar-2026 06:04:12 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[16-Mar-2026 06:04:12 Europe/Berlin] Session user_latitude: NULL
+[16-Mar-2026 06:04:12 Europe/Berlin] Session user_longitude: NULL
+[16-Mar-2026 06:04:12 Europe/Berlin] Session user_location_name: NULL
+[16-Mar-2026 06:06:20 Europe/Berlin] === LOGIN ATTEMPT ===
+[16-Mar-2026 06:06:20 Europe/Berlin] Email: rosario.jameslouis@ncst.edu.ph
+[16-Mar-2026 06:06:20 Europe/Berlin] User found: Yes
+[16-Mar-2026 06:06:20 Europe/Berlin] User ID: 8
+[16-Mar-2026 06:06:20 Europe/Berlin] Raw DB latitude: NULL
+[16-Mar-2026 06:06:20 Europe/Berlin] Raw DB longitude: NULL
+[16-Mar-2026 06:06:20 Europe/Berlin] Raw DB location_name: NULL
+[16-Mar-2026 06:06:20 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[16-Mar-2026 06:06:20 Europe/Berlin] Session user_latitude: NULL
+[16-Mar-2026 06:06:20 Europe/Berlin] Session user_longitude: NULL
+[16-Mar-2026 06:06:20 Europe/Berlin] Session user_location_name: NULL
+[16-Mar-2026 06:07:12 Europe/Berlin] === LOGIN ATTEMPT ===
+[16-Mar-2026 06:07:12 Europe/Berlin] Email: rosario.jameslouis@ncst.edu.ph
+[16-Mar-2026 06:07:12 Europe/Berlin] User found: Yes
+[16-Mar-2026 06:07:12 Europe/Berlin] User ID: 8
+[16-Mar-2026 06:07:12 Europe/Berlin] Raw DB latitude: NULL
+[16-Mar-2026 06:07:12 Europe/Berlin] Raw DB longitude: NULL
+[16-Mar-2026 06:07:12 Europe/Berlin] Raw DB location_name: NULL
+[16-Mar-2026 06:07:12 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[16-Mar-2026 06:07:12 Europe/Berlin] Session user_latitude: NULL
+[16-Mar-2026 06:07:12 Europe/Berlin] Session user_longitude: NULL
+[16-Mar-2026 06:07:12 Europe/Berlin] Session user_location_name: NULL
+[16-Mar-2026 06:07:54 Europe/Berlin] === LOGIN ATTEMPT ===
+[16-Mar-2026 06:07:54 Europe/Berlin] Email: rosario.jameslouis@ncst.edu.ph
+[16-Mar-2026 06:07:54 Europe/Berlin] User found: Yes
+[16-Mar-2026 06:07:54 Europe/Berlin] User ID: 8
+[16-Mar-2026 06:07:54 Europe/Berlin] Raw DB latitude: NULL
+[16-Mar-2026 06:07:54 Europe/Berlin] Raw DB longitude: NULL
+[16-Mar-2026 06:07:54 Europe/Berlin] Raw DB location_name: NULL
+[16-Mar-2026 06:07:54 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[16-Mar-2026 06:07:54 Europe/Berlin] Session user_latitude: NULL
+[16-Mar-2026 06:07:54 Europe/Berlin] Session user_longitude: NULL
+[16-Mar-2026 06:07:54 Europe/Berlin] Session user_location_name: NULL
+[16-Mar-2026 06:19:04 Europe/Berlin] User authenticated - ID: 8, Latitude: 14.33657294, Longitude: 120.99152057
+[16-Mar-2026 06:19:04 Europe/Berlin] === LOGIN ATTEMPT ===
+[16-Mar-2026 06:19:04 Europe/Berlin] Email: rosario.jameslouis@ncst.edu.ph
+[16-Mar-2026 06:19:04 Europe/Berlin] User found: Yes
+[16-Mar-2026 06:19:04 Europe/Berlin] User ID: 8
+[16-Mar-2026 06:19:04 Europe/Berlin] Raw DB latitude: 14.33657294
+[16-Mar-2026 06:19:04 Europe/Berlin] Raw DB longitude: 120.99152057
+[16-Mar-2026 06:19:04 Europe/Berlin] Raw DB location_name: NULL
+[16-Mar-2026 06:19:04 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[16-Mar-2026 06:19:04 Europe/Berlin] Session user_latitude: 14.33657294
+[16-Mar-2026 06:19:04 Europe/Berlin] Session user_longitude: 120.99152057
+[16-Mar-2026 06:19:04 Europe/Berlin] Session user_location_name: NULL
+[16-Mar-2026 06:23:08 Europe/Berlin] User authenticated - ID: 1, Latitude: , Longitude: 
+[16-Mar-2026 06:23:08 Europe/Berlin] === LOGIN ATTEMPT ===
+[16-Mar-2026 06:23:08 Europe/Berlin] Email: jaimslouis@gmail.com
+[16-Mar-2026 06:23:08 Europe/Berlin] User found: Yes
+[16-Mar-2026 06:23:08 Europe/Berlin] User ID: 1
+[16-Mar-2026 06:23:08 Europe/Berlin] Raw DB latitude: NULL
+[16-Mar-2026 06:23:08 Europe/Berlin] Raw DB longitude: NULL
+[16-Mar-2026 06:23:08 Europe/Berlin] Raw DB location_name: NULL
+[16-Mar-2026 06:23:08 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[16-Mar-2026 06:23:08 Europe/Berlin] Session user_latitude: NULL
+[16-Mar-2026 06:23:08 Europe/Berlin] Session user_longitude: NULL
+[16-Mar-2026 06:23:08 Europe/Berlin] Session user_location_name: NULL
+[16-Mar-2026 06:24:30 Europe/Berlin] User authenticated - ID: 8, Latitude: 14.33657294, Longitude: 120.99152057
+[16-Mar-2026 06:24:30 Europe/Berlin] === LOGIN ATTEMPT ===
+[16-Mar-2026 06:24:30 Europe/Berlin] Email: rosario.jameslouis@ncst.edu.ph
+[16-Mar-2026 06:24:30 Europe/Berlin] User found: Yes
+[16-Mar-2026 06:24:30 Europe/Berlin] User ID: 8
+[16-Mar-2026 06:24:30 Europe/Berlin] Raw DB latitude: 14.33657294
+[16-Mar-2026 06:24:30 Europe/Berlin] Raw DB longitude: 120.99152057
+[16-Mar-2026 06:24:30 Europe/Berlin] Raw DB location_name: NULL
+[16-Mar-2026 06:24:30 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[16-Mar-2026 06:24:30 Europe/Berlin] Session user_latitude: 14.33657294
+[16-Mar-2026 06:24:30 Europe/Berlin] Session user_longitude: 120.99152057
+[16-Mar-2026 06:24:30 Europe/Berlin] Session user_location_name: NULL
+[16-Mar-2026 06:25:14 Europe/Berlin] User authenticated - ID: 8, Latitude: 14.33657294, Longitude: 120.99152057
+[16-Mar-2026 06:25:14 Europe/Berlin] === LOGIN ATTEMPT ===
+[16-Mar-2026 06:25:14 Europe/Berlin] Email: rosario.jameslouis@ncst.edu.ph
+[16-Mar-2026 06:25:14 Europe/Berlin] User found: Yes
+[16-Mar-2026 06:25:14 Europe/Berlin] User ID: 8
+[16-Mar-2026 06:25:14 Europe/Berlin] Raw DB latitude: 14.33657294
+[16-Mar-2026 06:25:14 Europe/Berlin] Raw DB longitude: 120.99152057
+[16-Mar-2026 06:25:14 Europe/Berlin] Raw DB location_name: NULL
+[16-Mar-2026 06:25:14 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[16-Mar-2026 06:25:14 Europe/Berlin] Session user_latitude: 14.33657294
+[16-Mar-2026 06:25:14 Europe/Berlin] Session user_longitude: 120.99152057
+[16-Mar-2026 06:25:14 Europe/Berlin] Session user_location_name: NULL
+[18-Mar-2026 10:14:46 Europe/Berlin] User authenticated - ID: 8, Latitude: 14.33657294, Longitude: 120.99152057
+[18-Mar-2026 10:14:46 Europe/Berlin] === LOGIN ATTEMPT ===
+[18-Mar-2026 10:14:46 Europe/Berlin] Email: rosario.jameslouis@ncst.edu.ph
+[18-Mar-2026 10:14:46 Europe/Berlin] User found: Yes
+[18-Mar-2026 10:14:46 Europe/Berlin] User ID: 8
+[18-Mar-2026 10:14:46 Europe/Berlin] Raw DB latitude: 14.33657294
+[18-Mar-2026 10:14:46 Europe/Berlin] Raw DB longitude: 120.99152057
+[18-Mar-2026 10:14:46 Europe/Berlin] Raw DB location_name: NULL
+[18-Mar-2026 10:14:46 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[18-Mar-2026 10:14:46 Europe/Berlin] Session user_latitude: 14.33657294
+[18-Mar-2026 10:14:46 Europe/Berlin] Session user_longitude: 120.99152057
+[18-Mar-2026 10:14:46 Europe/Berlin] Session user_location_name: NULL
+[18-Mar-2026 10:18:24 Europe/Berlin] User authenticated - ID: 1, Latitude: , Longitude: 
+[18-Mar-2026 10:18:24 Europe/Berlin] === LOGIN ATTEMPT ===
+[18-Mar-2026 10:18:24 Europe/Berlin] Email: jaimslouis@gmail.com
+[18-Mar-2026 10:18:24 Europe/Berlin] User found: Yes
+[18-Mar-2026 10:18:24 Europe/Berlin] User ID: 1
+[18-Mar-2026 10:18:24 Europe/Berlin] Raw DB latitude: NULL
+[18-Mar-2026 10:18:24 Europe/Berlin] Raw DB longitude: NULL
+[18-Mar-2026 10:18:24 Europe/Berlin] Raw DB location_name: NULL
+[18-Mar-2026 10:18:24 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[18-Mar-2026 10:18:24 Europe/Berlin] Session user_latitude: NULL
+[18-Mar-2026 10:18:24 Europe/Berlin] Session user_longitude: NULL
+[18-Mar-2026 10:18:24 Europe/Berlin] Session user_location_name: NULL
+[18-Mar-2026 10:18:42 Europe/Berlin] User authenticated - ID: 8, Latitude: 14.33657294, Longitude: 120.99152057
+[18-Mar-2026 10:18:42 Europe/Berlin] === LOGIN ATTEMPT ===
+[18-Mar-2026 10:18:42 Europe/Berlin] Email: rosario.jameslouis@ncst.edu.ph
+[18-Mar-2026 10:18:42 Europe/Berlin] User found: Yes
+[18-Mar-2026 10:18:42 Europe/Berlin] User ID: 8
+[18-Mar-2026 10:18:42 Europe/Berlin] Raw DB latitude: 14.33657294
+[18-Mar-2026 10:18:42 Europe/Berlin] Raw DB longitude: 120.99152057
+[18-Mar-2026 10:18:42 Europe/Berlin] Raw DB location_name: NULL
+[18-Mar-2026 10:18:42 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[18-Mar-2026 10:18:42 Europe/Berlin] Session user_latitude: 14.33657294
+[18-Mar-2026 10:18:42 Europe/Berlin] Session user_longitude: 120.99152057
+[18-Mar-2026 10:18:42 Europe/Berlin] Session user_location_name: NULL
+[18-Mar-2026 10:26:09 Europe/Berlin] === LOGIN ATTEMPT ===
+[18-Mar-2026 10:26:09 Europe/Berlin] Email: rosario.jameslouis@ncst.edu.ph
+[18-Mar-2026 10:26:09 Europe/Berlin] User found: No
+[18-Mar-2026 10:26:09 Europe/Berlin] Login failed - Invalid credentials for: rosario.jameslouis@ncst.edu.ph
+[18-Mar-2026 10:26:21 Europe/Berlin] === LOGIN ATTEMPT ===
+[18-Mar-2026 10:26:21 Europe/Berlin] Email: jaimslouis@gmail.com
+[18-Mar-2026 10:26:21 Europe/Berlin] User found: No
+[18-Mar-2026 10:26:21 Europe/Berlin] Login failed - Invalid credentials for: jaimslouis@gmail.com
+[18-Mar-2026 10:26:33 Europe/Berlin] User authenticated - ID: 1, Latitude: , Longitude: 
+[18-Mar-2026 10:26:33 Europe/Berlin] === LOGIN ATTEMPT ===
+[18-Mar-2026 10:26:33 Europe/Berlin] Email: jaimslouis@gmail.com
+[18-Mar-2026 10:26:33 Europe/Berlin] User found: Yes
+[18-Mar-2026 10:26:33 Europe/Berlin] User ID: 1
+[18-Mar-2026 10:26:33 Europe/Berlin] Raw DB latitude: NULL
+[18-Mar-2026 10:26:33 Europe/Berlin] Raw DB longitude: NULL
+[18-Mar-2026 10:26:33 Europe/Berlin] Raw DB location_name: NULL
+[18-Mar-2026 10:26:33 Europe/Berlin] === SESSION DATA AFTER LOGIN ===
+[18-Mar-2026 10:26:33 Europe/Berlin] Session user_latitude: NULL
+[18-Mar-2026 10:26:33 Europe/Berlin] Session user_longitude: NULL
+[18-Mar-2026 10:26:33 Europe/Berlin] Session user_location_name: NULL

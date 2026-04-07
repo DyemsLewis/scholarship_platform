@@ -1,0 +1,13 @@
+Options -Indexes
+
+<FilesMatch "^(\.env|composer\.(json|lock)|package(-lock)?\.json|yarn\.lock|phpunit\.xml|web\.config|\.gitignore)$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "\.(sql|log|ini|bak|dist|sh|bat)$">
+    Require all denied
+</FilesMatch>
+
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

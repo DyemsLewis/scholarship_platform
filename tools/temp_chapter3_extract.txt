@@ -1,0 +1,373 @@
+
+DEVELOPMENT OF A WEB- AND MOBILE-BASED SCHOLARSHIP FINDER AND ELIGIBILITY PLATFORM FOR FILIPINO STUDENTS WITH A 
+DECISION SUPPORT SYSTEM
+
+A Capstone Project
+Presented to the Faculty of
+Computer Studies Department
+National College of Science and Technology
+Dasmariñas, Cavite
+
+In Partial Fulfillment
+of the Requirements for the Degree
+Bachelor of Science in Information Technology
+
+by
+MERCADO, CHARLES HOWARD 
+ROSARIO, JAMES LOUIS
+SALDITOS, MANUEL SHAWN
+ANDRADA, ARISTON
+
+E
+APRIL 2026
+Chapter 1
+THE PROBLEM AND ITS BACKGROUND
+Introduction
+Education is very important for individual development and the growth of the country. A lot of students in the Philippines want to go to college, but they can't because they don't have enough money. Because of this, scholarships from the government, private groups, and other groups have become an important way for students who need money to get it.
+Even with scholarship programs available, finding information about them is still a challenge. Details about scholarships, including requirements and deadlines, are often spread across different online platforms, social media, school announcements, and other sources. As a result, students must spend time searching different places, comparing eligibility criteria, and determining if they qualify. This process can be confusing and time-consuming, which might cause qualified students to miss out on important opportunities.
+The platform's objectives encompass the aggregation of scholarship information, the facilitation of opportunity discovery based on student qualifications, and the application of image processing to extract General Weighted Averages (GWA) for streamlined eligibility assessment. Consequently, the proposed platform aims to expedite, simplify, and enhance the scholarship search experience for students.
+
+
+
+
+
+Project Context
+To assist Filipino students in identifying scholarship opportunities aligned with their academic credentials and location, the researchers created a web- and mobile-based platform. This system streamlines the scholarship search process by automatically extracting a student's General Weighted Average from submitted report cards and subsequently calculating match probabilities via a decision support system.
+The platform serves students who need financial assistance for their education and administrators who manage scholarship programs, targeting the student community of the National College of Science and Technology and beyond.
+The Application Review Module is the next module. When a student submits an application, it lands here for review. Administrators can see the student’s details, which scholarship they picked, and the documents they uploaded. With one click, they can say “approved” or “rejected.” If they reject it, they can leave a note explaining why, so the student knows what to fix.
+The Document Verification Module is the next module. Students need to upload papers like birth certificates and school IDs. This module lets administrators look at those files and mark them as “verified” or “rejected.” If a file is rejected, they can tell the student why. The student sees the status right away, so they know if they need to upload something again.
+The GWA Extraction Module. Instead of asking students to type their GWA by hand, this module lets them take a picture or upload a PDF of their report card. The system cleans up the image and uses a tool called Tesseract to read the text.It looks for keywords and can also figure out the average from grades.f it sees a percentage, it changes it to the 1.00–5.00 scale used in the Philippines. This saves students time and keeps the GWA correct.
+The Decision Support System (DSS) Module. After the student’s GWA is saved, this module gets to work. It checks every active scholarship and sees if the student’s GWA meets the requirement. It also looks at the student’s course and compares it to what the scholarship wants. If the student shared their location, it gives a little extra weight to scholarships that are closer. Then it shows each scholarship with a percentage and a simple label like “Ready to Apply” or “Needs Documents.” This helps students quickly spot the scholarships they are most likely to get.
+The Scholarship Management Module. This module lets providers and administrators create, change, or remove scholarships. They fill out a form with the scholarship name, who is giving it, what it’s about, the GWA requirement, the deadline, and which documents are needed. They can also add a logo, put in a link for an online exam, and even pin multiple exam locations on a map. This keeps the list of scholarships up to date and correct.
+The Application Wizard Module. Applying for a scholarship can be hard, but this wizard makes it simple. It shows the details and checks if they qualify. It then lists the documents needed, marking progress. Finally, it lets the student check everything, agree to the rules, and submit.
+The Location & Mapping Module. Students can show where they live by dropping a pin on a map. They can also let the system guess their location from their address, or use their device’s GPS. Scholarship providers can also place pins for their offices or for remote exam sites. When students look at scholarships, they can see how far each one is and even open a map to get directions. This helps them choose opportunities that are close to home.
+The GWA Issue Reporting Module. Sometimes the system misreads a grade. If that happens, students can report the mistake right from the upload page. They pick a reason, like “The GWA it found is wrong,” and can suggest the correct number. The report is saved so an administrator can check it later. If needed, the admin can manually change the GWA. This makes sure students aren’t hurt by an occasional slip up.
+The Activity Logging Module. This module quietly writes down everything important that happens—like when someone logs in, submits an application, or uploads a document. Admins can look at this record later. They can see extra details, such as why a document was rejected. 
+The Frontend User Interface Module. Students see this when they visit the website. It looks clean and works well on phones and computers. From the main page, students can look for scholarships, upload their grades, check their documents, and start the application wizard. Buttons and messages are clear, so students always know what to click next.
+The Email & Notification Service Module. When a student joins, the system emails them a code to check their email is real. If they forget their password, it emails a different code so they can make a new one. Emails are sent through a secure connection, and the system keeps a record of every email sent. This way, users get important messages without anyone having to send them one by one.
+
+Statement of the Problem
+Filipino students have a hard time finding scholarships that fit them. 
+This study asks:
+1. How can we put all scholarships in one place that students can easily reach?
+2. How can the system automatically show scholarships that match the student’s grades, course, and location?
+3. How can students quickly search, compare, and see what each scholarship needs?
+4. How can staff easily add, change, or remove scholarships and check student documents?
+5. How can the system read a student’s GWA from a report card and let them fix it if it’s wrong?
+Objectives of the Study
+This study aims to build a website and app that helps Filipino students find and apply for scholarships. 
+Specifically, it aims to:
+1. Put all scholarships in one place so students can easily see them. 
+2. Show students scholarships that fit their grades, course, and where they live. 
+3. Tell students what each scholarship requires, and how matched they are.
+4. Give staff a simple panel to manage scholarships, users, and check documents. 
+5. Use OCR to read a student’s GWA from their report card and let them fix it if it’s wrong.
+
+
+Scope and Limitation of the Study
+This study aims to build a web- and mobile- based tool that helps Filipino college students find scholarships and see if they qualify. The system has a homepage where students can browse scholarships. It also has login and registration pages that ask for the student’s location. There’s a student dashboard, a page for uploading grades that uses image processing to read the GWA, and a results page with a decision support system that shows match percentages and eligibility. Students can upload documents and see what’s done. They can also look at a map of scholarships and use a step-by-step application guide. For staff, there are admin panels where they can manage users, scholarships, applications, and check documents.
+
+The decision support system matches students with scholarships by checking simple things: the student’s GWA, their course, how soon the deadline is, and who is giving the scholarship. It also checks which required documents have been uploaded and verified. The image processing part uses standard techniques—grayscale, contrast and brightness adjustments, sharpening—to read the GWA from common report cards and transcripts. It works best when the uploaded file is clear and clean, and it accepts JPG, PNG, and PDF files up to 5MB.
+
+The system’s recommendations are only as good as the data entered by staff—scholarship details have to be added manually; the system does not pull information from other websites. It works on both computers and phones as long as there is an internet connection, but it does not work offline and does not send automatic deadline reminders.
+
+Significance of the Study
+Students. This study will help Filipino students find scholarships without the hassle. All the information will be in one place. The system will check if they qualify, show scholarships near them, and match them with what fits best. Students will save time, avoid confusion, and just apply to the scholarships that are right for them.
+ Parents and Guardians. Parents and guardians can use the platform to look for financial aid for their children. It can help parents figure out their options and make smarter choices about supporting their child’s schooling.
+ Educational Institutions. Schools and universities can share scholarship information more easily. More students will learn about available financial aid, and more of them will apply.
+ Scholarship Providers and Organizations. Government agencies, private groups, and non‑profits will have a better way to share their scholarship programs. They can post complete details, including images and locations, and reach the right students. They can also manage their listings in an organized wa.
+ Administrators. System administrators will have a single place to manage scholarship data. They can check student documents, track applications, and keep everything up to date. This will reduce manual work and prevent mistakes.
+ Policy Makers and Educational Planners. The system can help them see which scholarships are available, how many students are applying, and what trends are emerging. This information can guide their decisions when planning education policies.
+Future Researchers. This study will serve as a reference for future researchers who aim to create similar educational platforms, decision support systems, document management systems, or information management systems for scholarship programs.
+Definition of Terms
+ Scholarship. Aid given to students by the government, private institutions, or organizations to help them pay for school based on factors like academic success, financial need, or where they live.
+Scholarship Finder. This part lets students look for scholarships. They can filter by where they live, what year they’re in, and what they qualify for. No more digging through long lists.
+Eligibility. These are the rules a student needs to meet to get a scholarship. Things like grades, course, or where they live.
+Eligibility Checker. This checks a student’s info against the scholarship rules and shows right away if they qualify.
+Decision Support System. This looks at a student’s info, uses rules, and gives suggestions to help them choose a scholarship.
+General Weighted Average. The student’s average grade across all subjects, computed on a scale of 1.00 to 5.00, and used as a key academic requirement for many scholarships.
+Image Processing Module. A custom‑built component that improves the quality of uploaded grade documents—by converting them to grayscale, adjusting contrast, and sharpening the image—so it can accurately read and extract the student’s General Weighted Average from report cards and transcripts.
+Document Management System. A module where students can upload their documents—like enrollment certificates, birth certificates, and transcripts—see them, and check if they’ve been verified yet.
+Document Verification. An administrative function that allows authorized staff to check student‑submitted documents, mark them as verified, or return them with a reason if something needs to be corrected.
+Application Wizard. A step‑by‑step assistant that walks students through the scholarship application process—reviewing eligibility, uploading documents, and confirming all information before final submission.
+Scholarship Map. An interactive map that shows scholarship provider locations with markers, so students can see where each provider is and find out how far they are from their current location. Centralized System. An online platform that collects, stores, and manages scholarship information in a single database, allowing easier access, updates, and management of data.
+Web-Based Platform. This is a system that runs right in your browser, no need to install anything. As long as you have internet, you can open it on any device and start using it right away.
+Mobile-Based Platform. This version works on smartphones and tablets, so you can use it anywhere. It fits your screen and lets you find scholarships fast, anytime..
+Document Management System. A module that lets students upload, view, and keep track of the verification status of their required scholarship documents, such as enrollment certificates, birth certificates, and transcripts.
+Document Verification. An administrative function that allows authorized staff to check student‑submitted documents, mark them as verified, or return them with a reason if something needs to be corrected.
+Application Wizard. A step‑by‑step assistant that walks students through the scholarship application process—reviewing eligibility, uploading documents, and confirming all information before final submission.
+Scholarship Map. An interactive map that shows scholarship provider locations with markers, so students can see where each provider is and find out how far they are from their current location. Centralized System. An online platform that collects, stores, and manages scholarship information in a single database, allowing easier access, updates, and management of data.
+Web-Based Platform. This is a system that runs right in your browser, no need to install anything. As long as you have internet, you can open it on any device and start using it right away.
+Mobile-Based Platform. This version is built specifically for smartphones and tablets, so you can use it wherever you are. It’s made to fit your screen and make scholarship searching quick even if you’re at home or on the go.
+
+Chapter 2
+REVIEW OF RELATED LITERATURE AND STUDIES
+
+Local Literature
+According to the Commission on Higher Education (2025a), the CHED Merit Scholarship Program (CMSP) is a well‑known government scholarship in the Philippines. It gives money to students who get good grades, especially those who meet a certain GWA. The problem is, many students don’t know what that GWA requirement is. The info is spread out—some schools put it on a bulletin board, some hide it in a PDF, and students often have to ask their guidance counselor just to find out. Our system fixes that by keeping all the requirements in one place. When a student uploads their grades, the system automatically checks if their GWA is high enough. Students don’t have to hunt for the rules or try to figure out if they qualify. It just tells them right away. Imagine trying to apply for five different scholarships and having to look up each one’s GWA cutoff—that’s a lot of work and easy to mess up. Our system does it in seconds.
+According to the Commission on Higher Education (2025b), the Medical Scholarship and Return Service (MSRS) is for students who want to be doctors. It doesn’t just give money for school—after they graduate, they have to serve in places where there aren’t enough doctors. That’s a big commitment, and the scholarship itself is very strict about the course: you have to be in a medical program to even be considered. If you’re a nursing student or a biology major, you don’t qualify. So before the system, a student in medicine might have had to sift through dozens of scholarships just to find the ones meant for them. Our system uses a course‑matching feature to handle this. It looks at what course the student is taking and compares it to what the scholarship requires. If the student is in medicine, that scholarship gets a higher match score and shows up near the top of their list. So they don’t waste time looking at scholarships they can’t qualify for. It’s like having a filter that only shows you what’s actually relevant.
+According to the Commission on Higher Education (2025c), the Scholarship for Future Statisticians is aimed at students taking statistics or related courses. This shows that not all scholarships are open to everyone—some are very specific. A student in business or engineering might not even know this scholarship exists, because it’s not widely advertised outside statistics programs. In many schools, these kinds of niche scholarships are only mentioned in department announcements, and if you’re not in that department, you might never hear about them. The system helps by letting students search by their course. It also scans the scholarship descriptions for keywords like “statistics” or “data science.” So if a student is in statistics, this scholarship will naturally appear near the top of their results without them having to stumble upon it by accident. It’s like having a personal assistant who knows what you’re studying and points you to the scholarships that fit.
+According to the Commission on Higher Education (2025d), the Scholarships for Instructors’ Knowledge Advancement Program (SIKAP) is meant for teachers who want to go back to school for further studies. This is a good reminder that scholarships aren’t only for college students—they can also be for instructors, researchers, and other school staff. Often, these opportunities are overlooked because most platforms are built for undergraduates. Our system is built to be flexible. Administrators can add scholarships for any group they choose, whether it’s for undergraduate students, graduate students, teachers, or even researchers. So the platform isn’t limited to one type of user; it can grow to serve different needs. A teacher looking to get a master’s degree can log in and see scholarships specifically for educators, just like a student would see undergraduate scholarships.
+According to Riño and Daing (2022), keeping student records by hand is a real problem in many schools. They found that papers get lost, files get misplaced, and when a teacher or staff member needs to find a student’s information, it can take forever. Sometimes records are stored in different cabinets or even different offices, making things even harder. Imagine trying to find a specific student’s transcript from three years ago when the filing cabinet is overflowing and there’s no clear system. It’s frustrating and time‑consuming. In our system, we store everything in a database. Students can log in anytime to check their own information, and if staff need to verify something, they can pull it up instantly—no more digging through piles of paper. It just makes the whole process faster and a lot less frustrating. Plus, you never have to worry about a file getting lost or damaged.
+
+Foreign Literature
+According to Anwar, Furqan, and Suhardi (2024), using a decision support system with fuzzy logic can make picking scholarship winners fairer. Fuzzy logic helps computers handle things that aren’t just yes or no—there’s a lot of in‑between. Like when you decide if a student is “good enough” for a scholarship, it’s not just a yes or no; there are different degrees of good. Their research shows computers can use clear rules instead of personal feelings. Our system uses a simpler version. It gives points for good grades, matching courses, far‑off deadlines, and being close to home. Then it adds the points to give a match percentage. It’s not as complicated as fuzzy logic, but it works the same way—let the numbers decide, not feelings. That way, no student gets overlooked just because someone didn’t like their essay; they get a fair shot based on facts.
+According to Arslantaş, Gümüş, and Özder (2023), methods like AHP and SAW are used to sort students for scholarships. People like these methods because they help make decisions when there’s a lot to think about. When you’re picking who gets a scholarship, you have to look at grades, activities outside school, how much money they need, what course they’re taking—it’s a lot to juggle.What their research shows is that you can’t just look at one thing—you have to consider grades, course, and other factors together. Our system does exactly that. It combines four factors: GWA, course, deadline, and distance. Each factor gets a weight, and together they form a final score. It’s the same idea, just made simpler so it’s easier to understand and implement. For a student, seeing that their GWA got them 40 points, their course matched for 30, etc., makes it clear why they got the score they did.
+According to Kuswanto et al. (2023), the SAW method is a simple way to give points to help pick scholarship winners. The idea behind SAW is that some things should matter more than others. For example, if grades are the most important, they should have the highest weight. In our system, we follow that same principle. GWA is the most important factor, so it gets 40 points out of 100. Course match comes next with 30 points, then deadline with 15, and distance with 15. That way, the score reflects what really matters for scholarship eligibility, and students can see why they got the score they did. It’s a transparent system—no hidden math, no secrets.
+According to Martin (2024), using a decision support system saves staff a lot of time because they don’t have to manually check every student. In schools without a system, someone has to sit down and compare each student’s GWA against each scholarship’s requirement. That can take days, especially when there are hundreds of applicants. Imagine a staff member with a stack of papers and a calculator, checking every single student’s grades against a list of scholarships. It’s mind‑numbing work, and mistakes happen. Our system does that work automatically. Administrators don’t have to do the math themselves—the system does it for them. Staff can then focus on checking documents and making final decisions instead of doing repetitive math. It just makes their job easier and lets them focus on what really matters: helping students.
+According to Novianto (2023), AHP helps you make big, tricky decisions without getting lost. Instead of trying to figure everything out at once, you just compare two things at a time. You might ask yourself, “What’s more important—GWA or matching the course?” Then you compare GWA against the deadline, and so on. It’s basically breaking a big problem into smaller pieces. Our system doesn’t use AHP exactly, but it follows the same basic idea. It looks at a few simple things—like GWA, course, deadline, and how far away the scholarship is—and then mixes them together to give a single result. That way, students can easily see why a scholarship might be a good fit for them, without having to crunch a bunch of numbers themselves.It’s a straightforward way to help them make decisions, like having a checklist that tells you how well you meet each requirement.
+
+Local Studies
+According to Autor and Esguerra (2025), Transcript++ is a website that helps students keep track of their internships and volunteer work. Their study showed that putting records online makes everything easier to manage. Before, students had to keep physical folders or digital files scattered across different devices. If they needed to show proof of an internship for a job application, they might have to dig through emails or ask their professor for a copy. After using Transcript++, they had one place to see everything. In our system, students can upload their report cards and other documents, and the system keeps them all in one place. Students can check their own files whenever they want, and admins can see them too. It’s a lot like Transcript++, except that one was for activities, and this one is for scholarship papers. Either way, the point is to keep everything neat and easy to find, so when it’s time to apply, nothing’s missing.
+According to Duruin and Siddayao (2024), they built a digital system for a high school to manage student records. Before they built the system, everything was on paper. If a teacher needed to check a student’s file, they had to go to the records office, find the right cabinet, and flip through folders. That took time, and sometimes files were missing. I remember stories from teachers who spent hours looking for a single document. After they switched to a computer system, things got a lot faster. Our system does the same thing for scholarships. Instead of keeping paper applications and files, everything is stored online. That makes it easy to find a student’s documents when it’s time to review their application—no more flipping through folders or worrying about lost papers. It also means multiple people can access the same file at the same time, which is a huge improvement over paper.
+According to Mendez et al. (2025), they built a scholarship management system for Lyceum of the Philippines Cavite. One thing they really nailed was giving staff a simple panel to update scholarship details—no coding skills needed. That’s huge because the people who actually know the scholarships inside and out aren’t usually programmers. Imagine having to bug a developer every single time you need to change a deadline or add a new scholarship. That’d be slow and frustrating. In our system, we did something similar. There’s an admin panel where staff can add scholarships, change deadlines, and tweak requirements on their own. So, the folks who know the scholarships best are the ones keeping everything current, without having to wait for a programmer to do it for them. It gives them control and makes the system more responsive.
+According to Paytaren, Gonzales, and Dinlasan (2023), the system they built made things a lot smoother for Batangas State University when it came to handing out financial aid. Before that, everything was slow. Students had to fill out paper forms, staff had to go through each one by hand, and it was a pain just keeping track of who got approved. There wasn’t even a central dashboard to see all the applications in one place. You’d have stacks of papers and no easy way to know what stage each student was at. Their system changed that by bringing all the steps together. Our system works in a similar way. It brings together all the steps—uploading grades, submitting documents, applying, reviewing—into one place. So, nothing gets lost, and everything moves along faster. Students know where they stand, and staff can see everything at a glance. It’s like having a control center for scholarships.
+According to Remegio and Casquejo (2025), they built a pretty complete scholarship and grants system for state colleges. It covered everything from the initial application all the way to the actual awarding of the scholarship. Before, students had to go to different offices to apply, submit documents, and check their status. One office might handle the application, another might verify documents, and another might distribute the money. It was a maze. Their system put everything in one place, so students and staff didn’t have to jump between different offices or systems. Our system follows the same idea. We tried to put everything—browsing scholarships, uploading grades, checking documents, applying—into a single platform so nothing gets lost along the way. It’s all in one place, which makes it easier for everyone. No more running around campus trying to figure out where to go next.
+
+Foreign Studies
+According to Qodriyah, Cahyono, and Shanty (2025), using a decision support system makes choosing scholarship winners fairer because it goes by data, not personal feelings. In the old way of doing things, there’s always a chance that decisions get swayed by bias or incomplete info. Like, if someone on the committee knows a student personally, they might lean toward picking them even if their grades aren’t as good. A decision support system takes the guesswork out by using clear rules. Our system is designed to be fair in the same way. It doesn’t guess—it calculates a match percentage based on the student’s grades, course, how soon the deadline is, and how far the scholarship is from their home. The student can see exactly why the score is what it is, so there’s no mystery. It’s transparent and data‑driven. If a student doesn’t qualify, they can see exactly what they’re missing.
+Parianthana (2025) talks about the weighted product method. It’s a pretty simple way to rank students when there are a lot of things to think about. You basically give each factor a weight, multiply them together, and you get a score. Nothing too complicated. You just assign weights to each factor, multiply them together, and boom—you get a score. Nothing too crazy. It’s handy when you need to balance multiple factors—like you might want grades to matter more, but still consider extracurriculars. Our system does something similar. We give weight to things like GWA, whether the course matches, how soon the deadline is, and how far away the scholarship is. Then we roll them into one match percentage.It’s not exactly the same math, but the idea is the same—break it down, give more weight to what matters most, and let the numbers help decide. 
+Epil (2025) made a good point: when you have a system that actually helps figure out which students deserve scholarships, things move way faster. Without it, staff end up spending weeks going through applications by hand, checking grades, reading essays, and comparing students one by one—a ton of work, and easy to mess up. So by using a simple scoring approach and letting the computer handle the first round of sorting, students see only the scholarships where they have a real chance, and staff aren’t buried in endless paperwork.In the system we built, the computer handles the first round of sorting; it looks at each student’s profile and each scholarship’s requirements, then shows students only the scholarships they actually qualify for. Instead of scrolling through a bunch of opportunities that don’t fit, they see the ones where they have a real chance, so they can focus on applying to scholarships that truly match their background.
+According to Efandari et al. (2025), they built a decision support system for a vocational school to help teachers pick scholarship winners more fairly. They showed that even schools with small budgets can use these kinds of tools. You don’t need expensive servers or specialized software. A simple web application hosted on a regular server can do the job. Our system is built to work on regular web hosting, so even small schools or colleges can use it. It doesn’t need expensive computers or special training. Anyone with a computer and internet access can set it up. That makes it accessible to schools that might not have a big IT budget. It levels the playing field, allowing smaller institutions to offer the same kind of efficient scholarship management that bigger universities have.
+
+According to Adalı and Tuş (2023), using two methods together—BWM and CoCoSo—can give an accurate way to pick scholarship receiver. They’re pretty advanced, but the idea behind them is simple: look at a bunch of factors and roll them into one score. That’s the same basic thing our system does, just with a simpler approach. BWM (Best‑Worst Method) helps you determine how important each factor is, and CoCoSo (Combined Compromise Solution) then uses those weights to rank the candidates. Our system doesn’t use those complex methods, but it does combine different factors into one score, which is the same basic idea. It takes simple information like GWA, course, deadline, and distance and mixes them together to give a useful result. It’s not as high‑level as BWM or CoCoSo, but for a scholarship finder, it works fine. It helps students spot their best options without making things too complicated.
+
+
+
+
+
+
+
+
+
+
+
+
+
+Synthesis
+All these sources point to the same thing: students need a better way to find scholarships, and schools need a better way to manage them. The CHED documents show there are many scholarships, each with its own rules. Students often get confused or miss out because they don’t know where to look or how to check if they qualify.
+
+The decision support studies show that using rules and scores to rank opportunities helps make things fair and saves time. The system uses a simple but effective version of this: it calculates a match percentage based on grades, course, deadline, and location. Students can see at a glance how likely they are to get a scholarship.
+
+The local studies show that digital systems for student records and scholarships are already being used in the Philippines, and they work. Schools that switched from paper to computers found things ran smoother. The system builds on this by adding new features like automatic GWA reading from report cards, a map to show scholarship locations, and a step-by-step application guide.
+
+By putting all these ideas together, the system gives students a simple, centralized place to find scholarships, check if they qualify, upload documents, and apply. It gives staff a clear way to manage everything. This matches what the literature says is needed and improves on what already exists.
+References
+Adalı, E. A., & Tuş, A. (2023). Group decision making in best‑worst method when the decision makers have different preference structures: Scholarship student selection with BWM and CoCoSo integration. Pacific Asia Journal of the Social Sciences, 9(1), 1–15. https://dergipark.org.tr/tr/download/article-file/2978441
+Anwar, M. H., Furqan, M., & Suhardi, S. (2024). Decision support system for selection of scholarship recipient students using Tsukamoto method fuzzy logic. IJISTECH (International Journal of Information System and Technology), 8(1), 1–10. https://ijistech.org/ijistech/index.php/ijistech/article/view/341
+Arslantaş, O., Gümüş, M., & Özder, E. H. (2023). Scholarship recipient selection for higher education with AHP, SAW and TOPSIS. Journal of Turkish Operations Management, 7(2), 1685–1700. https://doi.org/10.56554/jtom.1140823
+Autor, K. P. A., & Esguerra, M. A. (2025). Transcript++: A web‑based management system for students’ experiential activities. Asia Pacific Journal of Management and Sustainable Development, 13(1), 1–15. https://ejournals.ph/article.php?id=26785
+Commission on Higher Education. (2025a). CHED memorandum order no. 13, s. 2025: Revised policies and guidelines for the CHED Merit Scholarship Program (CMSP). https://ched.gov.ph/wp-content/uploads/CMO-No.-13-S.-2025-Revised-CMSP-guidelines.pdf
+Commission on Higher Education. (2025b). Medical Scholarship and Return Service (MSRS). https://ched.gov.ph/msrs/
+Commission on Higher Education. (2025c). Scholarship for Future Statisticians (Estatistikolar). https://ched.gov.ph/estatistikolar/
+Commission on Higher Education. (2025d). Scholarships for Instructors’ Knowledge Advancement Program (SIKAP). https://ched.gov.ph/sikap/
+Duruin, R. A., & Siddayao, G. P. (2024). Development of student records management system of Magalalag National High School. AIDE Interdisciplinary Research Journal, 8(1), 84–94. https://journal.aide-inc.net/index.php/aide-irj/article/view/112
+Efandari, A., Musril, H. A., Derta, S., & Samia’an, M. I. H. bin. (2025). Design of a decision support system to determine scholarship recipients at SMKN 2 Padang Panjang. Knowbase: International Journal of Knowledge in Database, 5(1), 95–109. https://doi.org/10.30983/knowbase.v5i1.10044
+Epil, A. E. (2025). Decision support system for proposing PIP scholarship recipients. Jurnal Kajian Ilmu dan Dakwah Nasional, 8(1), 1–12. https://ejournal.sidyanusa.org/index.php/jkdn/article/download/905/572/3995
+Kuswanto, J., Kodri, M. N. A., Devana, T., Pebriantika, L., & Ningsih, S. (2023). Implementation of simple additive weighting for scholarship admission selection. TIERS Information Technology Journal, 4(1), 1–7. https://doi.org/10.38043/tiers.v4i1.4022
+Martin, A. (2024). Decision support system for scholarship admission using the SAW method. Jurnal Ilmiah Informatika dan Komputer, 2(2), 129–133. https://ejournal.radenintan.ac.id/index.php/AISJ/article/download/23054/7457
+Mendez, D. G., Lanuzo, O. D., Utrera, M. K. M., Sagun, A. G. S., Constante, R. C., & Baptista, K. M. (2025). Scholarship management system with CMS for Lyceum of the Philippines Cavite. International Journal of Computer Science and Information Technology Research, 13(2), 39–59. https://www.researchpublish.com/papers/scholarship-management-system-with-cms-for-lyceum-of-the-philippines-cavite
+Novianto, A. Y. (2023). Optimizing scholarship selection: A decision support system approach using the analytical hierarchy process. TIERS Information Technology Journal, 4(2), 144–149. https://doi.org/10.38043/tiers.v4i2.5519
+Parianthana, P. E. (2025). Implementation of the weighted product method to determine prospective scholarship recipients. Jurnal Kajian Ilmu dan Dakwah Nasional, 8(1), 1–11. https://ejournal.sidyanusa.org/index.php/jkdn/article/view/891
+Paytaren, A. V., Gonzales, H. G., & Dinlasan, R. D. (2023). Educational assistance management system for Batangas State University ARASOF‑Nasugbu. Global Journal of Computer Science and Technology, 23(H1), 33–39. https://computerresearch.org/index.php/computer/article/view/102293
+Qodriyah, E. L., Cahyono, D., & Shanty, R. N. T. (2025). Decision support system for scholarship candidate selection. Jurnal Ilmiah Informatika dan Komputer, 2(2), 129–133. https://doi.org/10.69533/fkv4qq28
+Remegio, F. M. C., & Casquejo, M. N. S. (2025). Development of a comprehensive scholarship and grants management system (SchoGMS) for state universities and colleges. International Journal of Research and Innovation in Social Science, 9(4), 3643–3653. https://doi.org/10.47772/IJRISS.2025.90400261
+Riño, J., & Daing, C. (2022). Challenges in handling student records and characteristics of student information management system in public secondary school in Marilao South District IV Bulacan. Psychology and Education: A Multidisciplinary Journal, 4(1), 105–120. https://ejournals.ph/article.php?id=20410
+      
+
+
+
+
+
+     
+
+
+
+
+
+
+Chapter 3
+TECHNICAL BACKGROUND
+25694285893JAMES LOUIS H. ROSARIO
+PROGRAMMER
+00JAMES LOUIS H. ROSARIO
+PROGRAMMER
+20471264306442MANUEL SHAWN C. SALDITOS
+FRONT END
+00MANUEL SHAWN C. SALDITOS
+FRONT END
+41636024316716ARISTON  D. ANDRADA
+DATA ANALYST
+00ARISTON  D. ANDRADA
+DATA ANALYST
+20827361588770CHARLES HOWARD A. MERCADO
+PROJECT MANAGER
+00CHARLES HOWARD A. MERCADO
+PROJECT MANAGER
+221107031310130042800273130865001184313129555002187731391160007366033424000TOrganizational Chart
+
+
+
+Figure 1. Organizational Chart of Scholarship Finder System
+Figure 1 shows the team structure behind the development of the Scholarship Finder System. It lays out who does what, so everyone knows their role, who they report to, and what they’re responsible for.
+
+Project Manager (Charles Howard A. Mercado) - Charles leads the team. He plans what needs to be done, assigns tasks, and makes sure everyone stays on track. He also keeps an eye on progress and steps in to solve problems when things get tricky. His job is to make sure the project finishes on time and meets the standards.
+Programmer (James Louis H. Rosario) - James handles the coding. He writes, tests, and fixes the system’s code, turning the team’s ideas into something that actually works. He also hunts down bugs and makes sure everything runs smoothly.
+Front-End Developer (Manuel Shawn C. Salditos) - Manuel works on how the system looks and feels. He builds the pages, buttons, and forms so users can navigate easily. He also makes sure the design works and looks good whether you’re using a computer or a phone.
+Data Analyst (Ariston D. Andrada) - Ariston is the one who handles all the data stuff. He keeps an eye on how people are actually using the system—what’s working, what’s not, where things are dragging. From that, he figures out what could be better and puts together reports so the rest of the team knows where to focus their efforts. Basically, he helps everyone make smarter decisions based on what the numbers say.
+
+
+
+
+
+
+
+
+System Flowchart
+
+1530350141505200 A system flowchart is a simple diagram that shows how a system works. It maps out the steps, where information goes, what goes in and out, and where decisions are made. It uses standard symbols to make everything clear so you can see how pieces fit together, making it easier to understand and design.
+
+Figure 2. Scholarship Finder System Landing Page
+Figure 2 shows the landing page flowchart. This is the first screen students see when they open the platform. From here, they can jump to different parts of the system depending on what they want to do: browse scholarships, upload grades, see their personalized results, use the application wizard, check out the scholarship map, or log in or sign up to manage their account. It’s basically the hub where everything starts.
+14251022000
+Figure 3. Scholarship Finder System Browse Scholarships
+Figure 3 is the flowchart for browsing scholarships. This page shows all available scholarships as cards. Each card shows the name, who’s giving it, the GWA requirement, deadline, and key benefits. If a student clicks on a card, the system pulls up the full details of that scholarship. From there, they can either start the application process—which takes them to the Application Wizard—or go back to the browse page and keep looking. This module is open to everyone, even people who aren’t logged in, so students can explore what’s out there without needing an account first.
+
+1783080571500Figure 4. Scholarship Finder System Grade Upload
+Figure 4 shows the Grade Upload module flowchart for the Scholarship Finder system. This page allows students to upload an image of their report card or transcript. The system checks the file to make sure it’s the right type—JPG, PNG, or PDF—and that it’s not over 5MB. If everything looks good, the file goes through a custom image processing module we built that pulls out the student’s GWA automatically. That GWA gets saved to their profile, and then they’re sent to the Results page where they can see scholarships matched to their grades. If something’s off with the file, the system shows an error message and takes them back to the upload page to try again.
+
+Figure 5. Scholarship Finder System Scholarships 
+Figure 5 shows the Results module flowchart for the Scholarship Finder system. This is the core page where students see personalized scholarship matches based on their profile data. The page loads the student's profile information, queries the scholarship database, and calculates match percentages for each scholarship using the Decision Support System. The results page displays a profile summary and a list of scholarships with match percentages, eligibility status, distance to provider, and days remaining. Students can filter, sort, or search the results, and click on any scholarship to view full details and proceed to the Application Wizard.
+center571500
+Figure 6.  Scholarship Finder System Application Wizard
+Figure 6 shows the Application Wizard module flowchart for the Scholarship Finder system. This three-step guided process helps students complete their scholarship applications. Step 1 checks eligibility, Step 2 handles document uploads, and Step 3 allows review and final submission.
+center17500
+
+Figure 7. Scholarship Finder System Login
+Figure 7 shows the Login module flowchart for the Scholarship Finder system. This page allows returning students to access their accounts by entering their registered email address and password. The system validates the credentials against the database, granting access to the student dashboard if correct, or displaying an error message if the credentials are invalid.
+
+center000Figure 8. Scholarship Finder System Register
+Figure 8 shows the Browse Scholarships module flowchart for the Scholarship Finder system. This page displays all available scholarships as cards, each containing the scholarship name, provider, GWA requirement, deadline, and key benefits. When a student clicks on a scholarship card, the system fetches and displays the full scholarship details page. From there, the student can choose to apply, which redirects them to the Application Wizard, or return to the main browse page to continue exploring opportunities. This module is accessible to all users, including those not logged in, to encourage exploration of available scholarships.
+
+center000
+Figure 9. Scholarship Finder System Grade Upload & GWA Extraction
+Figure 9 shows the grade upload and GWA extraction process. Students upload their academic documents, the system extracts the GWA using OCR, validates it, and saves it to the database. If any step fails, the user returns to the upload form.
+9787864679962center9080500Figure 10. Scholarship Finder System Admin Login Process
+Figure 10 shows the admin login flowchart: the system validates the request method, checks for empty fields, verifies credentials, creates a session for valid admins, and redirects to the dashboard. Invalid inputs trigger error messages and return to the login page.
+
+
+center4670
+Figure 11. Scholarship Finder System Admin Dashboard Process
+Figure 11 shows the admin dashboard process. After login, the admin is directed to the dashboard where system data and features are accessible, including the recent user list displayed for monitoring user activity and managing system data.
+
+
+
+589280972770
+Figure 12. Scholarship Finder System Manage Users Process
+Figure 12 shows the manage users process: after login, the system displays the user list. The admin can update status, edit, or delete users. Each action refreshes the list.
+
+
+
+
+
+589280511790
+Figure 13. Scholarship Finder System Edit User Process
+Figure 13 shows the edit user process: after login, the system displays the edit form with user details. On submission, it validates fields and saves updates, then returns to the user list.
+
+
+
+
+9283702641600
+
+Figure 14. Scholarship Finder System Manage Scholarship Process
+Figure 14 shows the manage scholarship process: after login, the system displays the scholarship list. The admin can add, edit, or delete scholarships. Each action refreshes the list.
+
+
+
+
+6083306059600
+Figure 15. Scholarship Finder System Add Scholarship Process
+Figure 15 shows the add scholarship process: after login, the system displays the add form. On submission, it validates required fields and image, saves the scholarship, and shows a success message.
+
+
+
+41783011684000
+Figure 16. Scholarship Finder System Edit Scholarship Process
+Figure 16 shows the edit scholarship process: after login, the system displays the edit form with current details. On submission, it checks for image changes, updates the database, then returns to the scholarship list with a success or error message.
+
+3702051089810
+Figure 17. Scholarship Finder System Manage Applications Process
+Figure 17 shows the manage applications process: after login, the system loads documents with filter options and displays them as cards. The admin can view, verify, or reject documents. Verification updates the status; rejection requires a reason. The page refreshes after each action.
+
+
+426720393700
+Figure 18. Scholarship Finder System Scholarship Map View
+Figure 18 shows the scholarship map view process: after login, the system loads scholarships with coordinates and displays a Leaflet map with markers and a list below. Clicking a marker shows a popup with scholarship details.
+
+
+center1600
+Figure 19. Scholarship Finder System Admin Login Process
+Figure 19 shows the admin login process: the system displays a login form, validates empty fields, checks credentials, and redirects to the dashboard if valid; otherwise, it shows an error.
+
+
+
+
+
+1141730310
+Figure 20. Scholarship Finder System Admin Logout Process
+Figure 20 shows the admin logout process: the system destroys active sessions and redirects to the admin login page.
+
+
+
+
+
+562610000
+Figure 21. Scholarship Finder System User Dashboard
+Figure 21 shows the user dashboard process: after login, the system loads user data and displays profile tabs for view, edit, and security.
+
+
+center000
+Figure 22. Scholarship Finder System Document View Process
+Figure 22 shows the document view process: after login, the system displays the user’s document list. The user can upload, delete, or view files.
+
+
+
+center10800
+Figure 23. Scholarship Finder System Homepage Process
+Figure 23 shows the homepage process: the system displays a list of scholarships. Users can click location to view on map or details to open a popup, then apply (redirect to login or wizard).
+
+center000
+Figure 24. Scholarship Finder System User Logout Process
+Figure 24 shows the user logout process of the Scholarship Finder system. The process begins by destroying the user session and redirects to the homepage. This module enables secure session termination for users within the system.
+
+
+
+
+48704500
+Figure 25. Scholarship Finder System Location Update Module
+Figure 25 shows the location update process: after login, the user can detect current location or save manually. Saved coordinates are stored to the profile, then redirect to results.
+
+
+center000
+Figure 26. Scholarship Finder System Quick Actions Module
+Figure 26 shows the quick actions section on the dashboard, providing buttons to upload grades, find scholarships, apply now, view documents, view map, and edit profile, redirecting users to the corresponding pages.
+
+
+
+
+
+
+2376170-20256500
+Figure 27. Scholarship Finder System System Process Flow Module
+Figure 27 shows the eight‑step system process flow displayed on the landing page: User Registration, Data Capture, Processing, Validation, Pre‑Qualification, DSS, Matching, and Application.
+
+22752051168600
+Figure 28. Scholarship Finder System Decision Support System Info Module
+Figure 28 shows the DSS information section explaining how match percentages are calculated based on GWA requirement, course compatibility, deadline proximity, and provider reputation.
+
+533404572000
+Figure 29. Context Data Flow Diagram of the Scholarship Finder System
+Figure 29 shows the context‑level data flow diagram of the Scholarship Finder system. The diagram presents the system as a single process interacting with external entities: Student, Provider, Admin, Super Admin, OCR Engine, Mapping Service, Email Service, and Guest/Public User. Arrows represent data flows between the system and each entity, indicating the inputs received and outputs produced. This high‑level view illustrates how data moves across the entire platform.
+25603190500
+Figure 30. System Architecture Diagram of the Scholarship Finder System
+Figure 30 shows the system architecture of the Scholarship Finder platform. The diagram presents the layered structure: users (Student, Provider, Admin, Super Admin, Guest) interact with their respective interfaces in the presentation layer. The application layer contains controllers for authentication, users, scholarships, documents, and applications, along with the Decision Support Service and integration services for OCR, mapping, and email. The data layer includes databases for users, student profiles, scholarships, documents, applications, and activity logs. External services (OCR Engine, Mapping Service, Email Service) are shown interacting with the application layer. This high‑level view clarifies the organization of system components and their interactions.
