@@ -926,6 +926,34 @@ $statusChecklistItems = [
         'icon' => 'fa-calendar-days',
     ],
 ];
+
+$canApplyRuleItems = [
+    $requiredGwa !== null
+        ? 'Your recorded GWA must be ' . $requiredGwaLabel . '.'
+        : 'This scholarship does not use a fixed GWA cutoff.',
+    'Your profile should match the target audience: ' . $audienceLabel . '.',
+    $requirementsCount > 0
+        ? 'All listed required documents should be uploaded and not rejected.'
+        : 'No extra required documents are listed for this scholarship right now.',
+    $deadlineClass === 'bad'
+        ? 'This scholarship is already closed.'
+        : 'The application deadline must still be open.',
+];
+
+$cantApplyRuleItems = [
+    $requiredGwa !== null
+        ? 'You cannot apply yet if your GWA is missing or above ' . $requiredGwaLabel . '.'
+        : 'GWA alone does not block this scholarship, but other checks can still do so.',
+    'You cannot apply yet if your applicant profile is incomplete or does not match the scholarship audience.',
+    $requirementsCount > 0
+        ? 'You cannot apply yet if required files are missing, rejected, or still waiting for review.'
+        : 'If the provider adds required documents later, those will need to be completed before submission.',
+    !empty($scholarship['deadline'])
+        ? 'You cannot apply after ' . $deadlineDisplay . '.'
+        : 'There is no fixed closing date listed right now, but the provider can still update the posting.',
+];
+
+$rulesInfoNote = 'These rules explain system readiness only. Final approval still depends on the provider review process.';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -1018,8 +1046,10 @@ $statusChecklistItems = [
                         </div>
 
                         <div class="detail-hero-answer is-<?php echo htmlspecialchars($nextStepTone); ?>">
-                            <strong><?php echo htmlspecialchars($eligibilityStatusTitle); ?></strong>
-                            <p><?php echo htmlspecialchars($eligibilityStatusSummary); ?></p>
+                            <div class="detail-hero-answer-copy">
+                                <strong><?php echo htmlspecialchars($eligibilityStatusTitle); ?></strong>
+                                <p><?php echo htmlspecialchars($eligibilityStatusSummary); ?></p>
+                            </div>
                         </div>
 
                         <div class="detail-action-row">
@@ -1054,207 +1084,291 @@ $statusChecklistItems = [
             </article>
         </section>
 
-        <div class="detail-content-layout">
-            <div class="detail-main-column">
-                <section class="detail-panel">
-                    <div class="detail-panel-header">
-                        <span class="detail-panel-kicker">Your checklist</span>
+        <div class="detail-page-stack">
+            <section class="detail-panel detail-panel-highlight">
+                <div class="detail-panel-header detail-panel-header-with-action">
+                    <div>
+                        <span class="detail-panel-kicker">Your result</span>
                         <h2>Can you apply right now?</h2>
-                        <p>These are the main things students usually need before they can submit an application.</p>
+                        <p>This section explains the current result and the main checks the system uses before you apply.</p>
                     </div>
+                    <button type="button" class="detail-info-trigger" id="detailRulesOpen" aria-haspopup="dialog" aria-controls="detailRulesModal">
+                        <i class="fas fa-circle-info"></i>
+                        How this is decided
+                    </button>
+                </div>
 
-                    <div class="detail-checklist-grid">
-                        <?php foreach ($statusChecklistItems as $statusChecklistItem): ?>
-                            <article class="detail-check-item is-<?php echo htmlspecialchars((string) ($statusChecklistItem['class'] ?? 'info')); ?>">
-                                <div class="detail-check-icon">
-                                    <i class="fas <?php echo htmlspecialchars((string) ($statusChecklistItem['icon'] ?? 'fa-circle-info')); ?>"></i>
-                                </div>
-                                <div class="detail-check-copy">
-                                    <span><?php echo htmlspecialchars((string) ($statusChecklistItem['label'] ?? 'Check')); ?></span>
-                                    <strong><?php echo htmlspecialchars((string) ($statusChecklistItem['value'] ?? '')); ?></strong>
-                                    <p><?php echo htmlspecialchars((string) ($statusChecklistItem['detail'] ?? '')); ?></p>
-                                </div>
-                            </article>
-                        <?php endforeach; ?>
-                    </div>
-                </section>
+                <div class="detail-checklist-grid">
+                    <?php foreach ($statusChecklistItems as $statusChecklistItem): ?>
+                        <article class="detail-check-item is-<?php echo htmlspecialchars((string) ($statusChecklistItem['class'] ?? 'info')); ?>">
+                            <div class="detail-check-icon">
+                                <i class="fas <?php echo htmlspecialchars((string) ($statusChecklistItem['icon'] ?? 'fa-circle-info')); ?>"></i>
+                            </div>
+                            <div class="detail-check-copy">
+                                <span><?php echo htmlspecialchars((string) ($statusChecklistItem['label'] ?? 'Check')); ?></span>
+                                <strong><?php echo htmlspecialchars((string) ($statusChecklistItem['value'] ?? '')); ?></strong>
+                                <p><?php echo htmlspecialchars((string) ($statusChecklistItem['detail'] ?? '')); ?></p>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
 
-                <section class="detail-panel">
-                    <div class="detail-panel-header">
-                        <span class="detail-panel-kicker">Overview</span>
-                        <h2>About this scholarship</h2>
-                    </div>
+                <div class="detail-reason-grid">
+                    <article class="detail-reason-card is-positive">
+                        <h3>Why the system says yes</h3>
+                        <?php if (!empty($matchedReasons)): ?>
+                            <ul class="detail-bullet-list is-positive">
+                                <?php foreach ($matchedReasons as $matchedReason): ?>
+                                    <li><?php echo htmlspecialchars($matchedReason); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php else: ?>
+                            <p class="detail-empty-copy">The system has not confirmed strong fit signals yet.</p>
+                        <?php endif; ?>
+                    </article>
 
-                    <div class="detail-copy-block">
-                        <p><?php echo nl2br(htmlspecialchars($descriptionFullText)); ?></p>
-                    </div>
+                    <article class="detail-reason-card is-warning">
+                        <h3>What is blocking you now</h3>
+                        <?php if (!empty($attentionReasons)): ?>
+                            <ul class="detail-bullet-list is-warning">
+                                <?php foreach ($attentionReasons as $attentionReason): ?>
+                                    <li><?php echo htmlspecialchars($attentionReason); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php else: ?>
+                            <p class="detail-empty-copy">No blockers were found. You can continue with the next step above.</p>
+                        <?php endif; ?>
+                    </article>
+                </div>
+            </section>
 
-                    <?php if ($hasEligibilityNotes): ?>
-                        <div class="detail-note-inline">
-                            <span>Provider notes on eligibility</span>
-                            <p><?php echo nl2br(htmlspecialchars($eligibilityNotesText)); ?></p>
+            <section class="detail-panel">
+                <div class="detail-split-grid">
+                    <div class="detail-content-block">
+                        <div class="detail-panel-header compact">
+                            <span class="detail-panel-kicker">Overview</span>
+                            <h2>About this scholarship</h2>
                         </div>
-                    <?php endif; ?>
-                </section>
-
-                <section class="detail-panel">
-                    <div class="detail-panel-header is-split">
-                        <div>
-                            <span class="detail-panel-kicker">Requirements</span>
-                            <h2>Documents you need</h2>
-                            <p>These are the files the provider listed for this scholarship.</p>
+                        <div class="detail-copy-block">
+                            <p><?php echo nl2br(htmlspecialchars($descriptionFullText)); ?></p>
                         </div>
-                        <span class="detail-summary-pill">
-                            <i class="fas fa-file-circle-check"></i>
-                            <?php echo htmlspecialchars($requirementsSummary); ?>
-                        </span>
+                        <?php if ($hasEligibilityNotes): ?>
+                            <div class="detail-note-inline">
+                                <span>Provider notes on eligibility</span>
+                                <p><?php echo nl2br(htmlspecialchars($eligibilityNotesText)); ?></p>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
-                    <?php if (empty($requiredDocuments)): ?>
-                        <div class="detail-empty-state">No required documents were configured for this scholarship yet.</div>
-                    <?php else: ?>
-                        <div class="detail-requirements-grid">
-                            <?php foreach ($requiredDocuments as $doc): ?>
-                                <?php
-                                $docName = $doc['name'] ?? $doc['document_type'];
-                                $docStatus = 'missing';
-                                $statusLabel = $isLoggedIn ? 'Missing' : 'Login to track';
-                                if ($isLoggedIn) {
-                                    foreach (($documentSummary['requirements'] ?? []) as $req) {
-                                        if (($req['type'] ?? '') === ($doc['document_type'] ?? '')) {
-                                            $rawStatus = strtolower((string) ($req['status'] ?? 'missing'));
-                                            $statusLabel = ucfirst($rawStatus);
-                                            if (in_array($rawStatus, ['verified', 'pending', 'missing', 'rejected'], true)) {
-                                                $docStatus = $rawStatus;
-                                            }
-                                            break;
+                    <div class="detail-content-block">
+                        <div class="detail-panel-header compact">
+                            <span class="detail-panel-kicker">Benefits</span>
+                            <h2>What you can get</h2>
+                        </div>
+                        <div class="detail-copy-block">
+                            <p><?php echo nl2br(htmlspecialchars($benefitsDisplayText)); ?></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="detail-panel">
+                <div class="detail-panel-header is-split">
+                    <div>
+                        <span class="detail-panel-kicker">Requirements</span>
+                        <h2>Documents you need</h2>
+                        <p>These are the files the provider listed for this scholarship.</p>
+                    </div>
+                    <span class="detail-summary-pill">
+                        <i class="fas fa-file-circle-check"></i>
+                        <?php echo htmlspecialchars($requirementsSummary); ?>
+                    </span>
+                </div>
+
+                <?php if (empty($requiredDocuments)): ?>
+                    <div class="detail-empty-state">No required documents were configured for this scholarship yet.</div>
+                <?php else: ?>
+                    <div class="detail-requirements-grid">
+                        <?php foreach ($requiredDocuments as $doc): ?>
+                            <?php
+                            $docName = $doc['name'] ?? $doc['document_type'];
+                            $docStatus = 'missing';
+                            $statusLabel = $isLoggedIn ? 'Missing' : 'Login to track';
+                            if ($isLoggedIn) {
+                                foreach (($documentSummary['requirements'] ?? []) as $req) {
+                                    if (($req['type'] ?? '') === ($doc['document_type'] ?? '')) {
+                                        $rawStatus = strtolower((string) ($req['status'] ?? 'missing'));
+                                        $statusLabel = ucfirst($rawStatus);
+                                        if (in_array($rawStatus, ['verified', 'pending', 'missing', 'rejected'], true)) {
+                                            $docStatus = $rawStatus;
                                         }
+                                        break;
                                     }
                                 }
-                                $docHelper = !empty($doc['description'])
-                                    ? (string) $doc['description']
-                                    : 'Upload this file to complete the scholarship requirement.';
-                                ?>
-                                <a class="detail-requirement-card <?php echo htmlspecialchars($docStatus); ?>" href="documents.php#doc-card-<?php echo htmlspecialchars((string) $doc['document_type']); ?>">
-                                    <div class="detail-requirement-icon">
-                                        <i class="fas <?php echo $docStatus === 'verified' ? 'fa-check-circle' : ($docStatus === 'pending' ? 'fa-clock' : ($docStatus === 'rejected' ? 'fa-triangle-exclamation' : 'fa-file-circle-plus')); ?>"></i>
-                                    </div>
-                                    <div class="detail-requirement-copy">
-                                        <strong><?php echo htmlspecialchars((string) $docName); ?></strong>
-                                        <span><?php echo htmlspecialchars($docHelper); ?></span>
-                                        <em><?php echo htmlspecialchars($statusLabel); ?></em>
-                                    </div>
-                                    <span class="detail-requirement-link">Open</span>
-                                </a>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                </section>
-
-                <section class="detail-panel">
-                    <div class="detail-panel-header">
-                        <span class="detail-panel-kicker">Timeline</span>
-                        <h2>How the application works</h2>
-                        <p>Use this to understand the deadline, extra steps, and what to expect next.</p>
-                    </div>
-
-                    <div class="detail-process-list">
-                        <?php foreach ($timelineItems as $timelineItem): ?>
-                            <article class="detail-process-item">
-                                <div class="detail-process-label"><?php echo htmlspecialchars((string) ($timelineItem['label'] ?? 'Step')); ?></div>
-                                <div class="detail-process-body">
-                                    <strong><?php echo htmlspecialchars((string) ($timelineItem['value'] ?? '')); ?></strong>
-                                    <p><?php echo htmlspecialchars((string) ($timelineItem['detail'] ?? '')); ?></p>
+                            }
+                            $docHelper = !empty($doc['description'])
+                                ? (string) $doc['description']
+                                : 'Upload this file to complete the scholarship requirement.';
+                            ?>
+                            <a class="detail-requirement-card <?php echo htmlspecialchars($docStatus); ?>" href="documents.php#doc-card-<?php echo htmlspecialchars((string) $doc['document_type']); ?>">
+                                <div class="detail-requirement-icon">
+                                    <i class="fas <?php echo $docStatus === 'verified' ? 'fa-check-circle' : ($docStatus === 'pending' ? 'fa-clock' : ($docStatus === 'rejected' ? 'fa-triangle-exclamation' : 'fa-file-circle-plus')); ?>"></i>
                                 </div>
-                            </article>
+                                <div class="detail-requirement-copy">
+                                    <strong><?php echo htmlspecialchars((string) $docName); ?></strong>
+                                    <span><?php echo htmlspecialchars($docHelper); ?></span>
+                                    <em><?php echo htmlspecialchars($statusLabel); ?></em>
+                                </div>
+                                <span class="detail-requirement-link">Open</span>
+                            </a>
                         <?php endforeach; ?>
                     </div>
+                <?php endif; ?>
+            </section>
 
-                    <?php if (!empty($scholarship['assessment_details'])): ?>
-                        <div class="detail-note-inline">
-                            <span>Provider instructions</span>
-                            <p><?php echo nl2br(htmlspecialchars((string) $scholarship['assessment_details'])); ?></p>
+            <section class="detail-panel">
+                <div class="detail-split-grid detail-split-grid-bottom">
+                    <div class="detail-content-block">
+                        <div class="detail-panel-header compact">
+                            <span class="detail-panel-kicker">Timeline</span>
+                            <h2>How the application works</h2>
+                            <p>Use this to understand the deadline, extra steps, and what to expect next.</p>
                         </div>
-                    <?php endif; ?>
-                </section>
-            </div>
 
-            <aside class="detail-side-column">
-                <section class="detail-panel">
-                    <div class="detail-panel-header">
-                        <span class="detail-panel-kicker">Fit</span>
-                        <h2>Why this can fit you</h2>
+                        <div class="detail-process-list">
+                            <?php foreach ($timelineItems as $timelineItem): ?>
+                                <article class="detail-process-item">
+                                    <div class="detail-process-label"><?php echo htmlspecialchars((string) ($timelineItem['label'] ?? 'Step')); ?></div>
+                                    <div class="detail-process-body">
+                                        <strong><?php echo htmlspecialchars((string) ($timelineItem['value'] ?? '')); ?></strong>
+                                        <p><?php echo htmlspecialchars((string) ($timelineItem['detail'] ?? '')); ?></p>
+                                    </div>
+                                </article>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <?php if (!empty($scholarship['assessment_details'])): ?>
+                            <div class="detail-note-inline">
+                                <span>Provider instructions</span>
+                                <p><?php echo nl2br(htmlspecialchars((string) $scholarship['assessment_details'])); ?></p>
+                            </div>
+                        <?php endif; ?>
                     </div>
 
-                    <?php if (!empty($matchedReasons)): ?>
+                    <div class="detail-content-block">
+                        <div class="detail-panel-header compact">
+                            <span class="detail-panel-kicker">Provider</span>
+                            <h2>Provider and important notes</h2>
+                        </div>
+
+                        <div class="detail-info-list">
+                            <?php foreach ($providerInfoItems as $providerInfoItem): ?>
+                                <article class="detail-info-item">
+                                    <span><?php echo htmlspecialchars((string) ($providerInfoItem['label'] ?? 'Info')); ?></span>
+                                    <strong><?php echo htmlspecialchars((string) ($providerInfoItem['value'] ?? '')); ?></strong>
+                                    <p><?php echo htmlspecialchars((string) ($providerInfoItem['detail'] ?? '')); ?></p>
+                                </article>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <div class="detail-note-inline">
+                            <span>Helpful reminder</span>
+                            <p>Competition level, renewal conditions, result release dates, and return-service obligations should still be confirmed directly with the provider because they are not fully listed in this posting.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <div class="detail-info-modal" id="detailRulesModal" hidden>
+            <div class="detail-info-backdrop" data-close-detail-rules></div>
+            <div class="detail-info-dialog" role="dialog" aria-modal="true" aria-labelledby="detailRulesTitle">
+                <div class="detail-info-dialog-header">
+                    <div>
+                        <span class="detail-panel-kicker">System guide</span>
+                        <h2 id="detailRulesTitle">How the system decides if you can apply</h2>
+                    </div>
+                    <button type="button" class="detail-info-close" data-close-detail-rules aria-label="Close information panel">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <p class="detail-info-copy">This explains the system checks only. Final approval still depends on the provider review process.</p>
+
+                <div class="detail-info-current">
+                    <span class="detail-status-pill <?php echo htmlspecialchars($detailCardStatusClass); ?>">
+                        <i class="fas fa-<?php echo $detailCardStatusClass === 'expired' ? 'clock' : ($detailCardStatusClass === 'ready' ? 'check-circle' : ($detailCardStatusClass === 'estimated' ? 'chart-line' : ($detailCardStatusClass === 'docs' ? 'file-circle-exclamation' : ($detailCardStatusClass === 'profile' ? 'user-gear' : 'ban')))); ?>"></i>
+                        <?php echo htmlspecialchars($detailCardStatusLabel); ?>
+                    </span>
+                    <p><?php echo htmlspecialchars($eligibilityStatusSummary); ?></p>
+                </div>
+
+                <div class="detail-info-rule-grid">
+                    <section class="detail-info-rule-card is-positive">
+                        <h3>You can apply when</h3>
                         <ul class="detail-bullet-list is-positive">
-                            <?php foreach ($matchedReasons as $matchedReason): ?>
-                                <li><?php echo htmlspecialchars($matchedReason); ?></li>
+                            <?php foreach ($canApplyRuleItems as $canApplyRuleItem): ?>
+                                <li><?php echo htmlspecialchars($canApplyRuleItem); ?></li>
                             <?php endforeach; ?>
                         </ul>
-                    <?php else: ?>
-                        <p class="detail-empty-copy">The system has not confirmed strong fit signals yet.</p>
-                    <?php endif; ?>
-                </section>
+                    </section>
 
-                <section class="detail-panel">
-                    <div class="detail-panel-header">
-                        <span class="detail-panel-kicker">Missing</span>
-                        <h2>What you still need</h2>
-                    </div>
-
-                    <?php if (!empty($attentionReasons)): ?>
+                    <section class="detail-info-rule-card is-warning">
+                        <h3>You cannot apply yet when</h3>
                         <ul class="detail-bullet-list is-warning">
-                            <?php foreach ($attentionReasons as $attentionReason): ?>
-                                <li><?php echo htmlspecialchars($attentionReason); ?></li>
+                            <?php foreach ($cantApplyRuleItems as $cantApplyRuleItem): ?>
+                                <li><?php echo htmlspecialchars($cantApplyRuleItem); ?></li>
                             <?php endforeach; ?>
                         </ul>
-                    <?php else: ?>
-                        <p class="detail-empty-copy">No blockers were found. You can continue with the next step above.</p>
-                    <?php endif; ?>
-                </section>
+                    </section>
+                </div>
 
-                <section class="detail-panel">
-                    <div class="detail-panel-header">
-                        <span class="detail-panel-kicker">Benefits</span>
-                        <h2>What you can get</h2>
-                    </div>
-
-                    <div class="detail-copy-block">
-                        <p><?php echo nl2br(htmlspecialchars($benefitsDisplayText)); ?></p>
-                    </div>
-                </section>
-
-                <section class="detail-panel">
-                    <div class="detail-panel-header">
-                        <span class="detail-panel-kicker">Provider</span>
-                        <h2>Provider and important notes</h2>
-                    </div>
-
-                    <div class="detail-info-list">
-                        <?php foreach ($providerInfoItems as $providerInfoItem): ?>
-                            <article class="detail-info-item">
-                                <span><?php echo htmlspecialchars((string) ($providerInfoItem['label'] ?? 'Info')); ?></span>
-                                <strong><?php echo htmlspecialchars((string) ($providerInfoItem['value'] ?? '')); ?></strong>
-                                <p><?php echo htmlspecialchars((string) ($providerInfoItem['detail'] ?? '')); ?></p>
-                            </article>
-                        <?php endforeach; ?>
-                    </div>
-
-                    <div class="detail-note-inline">
-                        <span>Helpful reminder</span>
-                        <p>Competition level, renewal conditions, result release dates, and return-service obligations should still be confirmed directly with the provider because they are not fully listed in this posting.</p>
-                    </div>
-                </section>
-            </aside>
+                <div class="detail-note-inline detail-note-inline-tight">
+                    <span>Important note</span>
+                    <p><?php echo htmlspecialchars($rulesInfoNote); ?></p>
+                </div>
+            </div>
         </div>
     </div>
 </section>
 
 <?php include 'layout/footer.php'; ?>
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/script.js')); ?>"></script>
+<script>
+(function () {
+    const modal = document.getElementById('detailRulesModal');
+    const openButton = document.getElementById('detailRulesOpen');
+    if (!modal || !openButton) {
+        return;
+    }
+
+    const closeElements = modal.querySelectorAll('[data-close-detail-rules]');
+
+    function openModal() {
+        modal.hidden = false;
+        document.body.classList.add('detail-modal-open');
+    }
+
+    function closeModal() {
+        modal.hidden = true;
+        document.body.classList.remove('detail-modal-open');
+    }
+
+    openButton.addEventListener('click', openModal);
+    closeElements.forEach(function (element) {
+        element.addEventListener('click', closeModal);
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !modal.hidden) {
+            closeModal();
+        }
+    });
+})();
+</script>
 </body>
 </html>
+
 
 
 
