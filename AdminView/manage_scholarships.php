@@ -141,6 +141,8 @@ if ($status_filter !== 'all') {
 $scholarshipSummaryText .= '.';
 
 $scholarshipCssVersion = @filemtime(__DIR__ . '/../AdminPublic/css/manage-scholarship.css') ?: time();
+$addScholarshipUrl = normalizeAppUrl('AdminView/add_scholarship.php');
+$manageScholarshipsUrl = normalizeAppUrl('AdminView/manage_scholarships.php');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -173,7 +175,7 @@ $scholarshipCssVersion = @filemtime(__DIR__ . '/../AdminPublic/css/manage-schola
                 </p>
             </div>
             <div class="scholarships-hero-actions">
-                <a href="add_scholarship.php" class="btn-add">
+                <a href="<?php echo htmlspecialchars($addScholarshipUrl); ?>" class="btn-add">
                     <i class="fas fa-plus"></i>
                     Add New Scholarship
                 </a>
@@ -256,7 +258,7 @@ $scholarshipCssVersion = @filemtime(__DIR__ . '/../AdminPublic/css/manage-schola
                         <i class="fas fa-sliders"></i> Apply
                     </button>
                     <?php if ($search !== '' || $status_filter !== 'all'): ?>
-                    <a href="manage_scholarships.php" class="btn-clear">
+                    <a href="<?php echo htmlspecialchars($manageScholarshipsUrl); ?>" class="btn-clear">
                         <i class="fas fa-times"></i> Reset
                     </a>
                     <?php endif; ?>
@@ -333,7 +335,7 @@ $scholarshipCssVersion = @filemtime(__DIR__ . '/../AdminPublic/css/manage-schola
                                         <?php endif; ?>
                                     </p>
                                     <?php if ($search === ''): ?>
-                                    <a href="add_scholarship.php" class="btn-add scholarship-empty-action">
+                                    <a href="<?php echo htmlspecialchars($addScholarshipUrl); ?>" class="btn-add scholarship-empty-action">
                                         <i class="fas fa-plus"></i>
                                         Add Scholarship
                                     </a>

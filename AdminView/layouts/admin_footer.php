@@ -14,6 +14,12 @@ $footerTitle = $currentRole === 'provider' ? 'Scholarship Finder Provider' : 'Sc
 $footerDescription = $currentRole === 'provider'
     ? 'Provider scholarship workspace'
     : 'Administrative scholarship workspace';
+$adminDashboardUrl = normalizeAppUrl('AdminView/admin_dashboard.php');
+$adminProfileUrl = normalizeAppUrl('AdminView/profile.php');
+$adminManageUsersUrl = normalizeAppUrl('AdminView/manage_users.php');
+$adminManageScholarshipsUrl = normalizeAppUrl('AdminView/manage_scholarships.php');
+$adminReviewsUrl = normalizeAppUrl('AdminView/reviews.php');
+$adminLogsUrl = normalizeAppUrl('AdminView/activity_logs.php');
 ?>
         <footer class="admin-footer">
             <div class="container">
@@ -26,19 +32,19 @@ $footerDescription = $currentRole === 'provider'
                     <div class="admin-footer-section">
                         <h4>Quick Links</h4>
                         <ul class="admin-footer-links">
-                            <li><a href="admin_dashboard.php">Dashboard</a></li>
-                            <li><a href="profile.php">Profile</a></li>
+                            <li><a href="<?php echo htmlspecialchars($adminDashboardUrl); ?>">Dashboard</a></li>
+                            <li><a href="<?php echo htmlspecialchars($adminProfileUrl); ?>">Profile</a></li>
                             <?php if ($canManageUsers): ?>
-                            <li><a href="manage_users.php">Accounts</a></li>
+                            <li><a href="<?php echo htmlspecialchars($adminManageUsersUrl); ?>">Accounts</a></li>
                             <?php endif; ?>
                             <?php if ($canManageScholarships): ?>
-                            <li><a href="manage_scholarships.php">Scholarships</a></li>
+                            <li><a href="<?php echo htmlspecialchars($adminManageScholarshipsUrl); ?>">Scholarships</a></li>
                             <?php endif; ?>
                             <?php if ($canManageApplications || $canVerifyDocuments || $canReviewProviders || $canReviewScholarships || $canReviewGwaReports || $canReviewUserIssueReports): ?>
-                            <li><a href="reviews.php">Reviews</a></li>
+                            <li><a href="<?php echo htmlspecialchars($adminReviewsUrl); ?>">Reviews</a></li>
                             <?php endif; ?>
                             <?php if ($canViewActivityLogs): ?>
-                            <li><a href="activity_logs.php">Logs</a></li>
+                            <li><a href="<?php echo htmlspecialchars($adminLogsUrl); ?>">Logs</a></li>
                             <?php endif; ?>
                         </ul>
                     </div>

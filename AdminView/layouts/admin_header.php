@@ -31,45 +31,53 @@ foreach ($names as $name) {
 $initials = $initials ?: 'A';
 $roleLabel = ucwords(str_replace('_', ' ', (string) $currentRole));
 
+$adminDashboardUrl = normalizeAppUrl('AdminView/admin_dashboard.php');
+$adminProfileUrl = normalizeAppUrl('AdminView/profile.php');
+$adminManageUsersUrl = normalizeAppUrl('AdminView/manage_users.php');
+$adminManageScholarshipsUrl = normalizeAppUrl('AdminView/manage_scholarships.php');
+$adminReviewsUrl = normalizeAppUrl('AdminView/reviews.php');
+$adminLogsUrl = normalizeAppUrl('AdminView/activity_logs.php');
+$adminLogoutUrl = normalizeAppUrl('View/logout.php');
+
 $adminNavItems = [
     [
         'show' => true,
-        'href' => 'admin_dashboard.php',
+        'href' => $adminDashboardUrl,
         'label' => 'Dashboard',
         'icon' => 'fa-gauge-high',
         'active' => $currentPage === 'admin_dashboard.php',
     ],
     [
         'show' => true,
-        'href' => 'profile.php',
+        'href' => $adminProfileUrl,
         'label' => 'Profile',
         'icon' => 'fa-id-badge',
         'active' => $currentPage === 'profile.php',
     ],
     [
         'show' => $canManageUsers,
-        'href' => 'manage_users.php',
+        'href' => $adminManageUsersUrl,
         'label' => 'Accounts',
         'icon' => 'fa-users',
         'active' => in_array($currentPage, ['manage_users.php', 'edit_user.php', 'addUsers.php'], true),
     ],
     [
         'show' => $canManageScholarships,
-        'href' => 'manage_scholarships.php',
+        'href' => $adminManageScholarshipsUrl,
         'label' => 'Scholarships',
         'icon' => 'fa-graduation-cap',
         'active' => in_array($currentPage, ['manage_scholarships.php', 'add_scholarship.php', 'edit_scholarship.php', 'scholarship_map.php'], true),
     ],
     [
         'show' => $canManageApplications || $canVerifyDocuments || $canReviewProviders || $canReviewScholarships || $canReviewGwaReports || $canReviewUserIssueReports,
-        'href' => 'reviews.php',
+        'href' => $adminReviewsUrl,
         'label' => 'Reviews',
         'icon' => 'fa-clipboard-check',
         'active' => $isReviewsPage,
     ],
     [
         'show' => $canViewActivityLogs,
-        'href' => 'activity_logs.php',
+        'href' => $adminLogsUrl,
         'label' => 'Logs',
         'icon' => 'fa-clock-rotate-left',
         'active' => $currentPage === 'activity_logs.php',
@@ -80,7 +88,7 @@ $adminNavItems = [
     <aside class="admin-sidebar" data-admin-sidebar>
         <div class="admin-sidebar-inner">
             <div class="admin-sidebar-top">
-                <a href="admin_dashboard.php" class="admin-sidebar-brand">
+                <a href="<?php echo htmlspecialchars($adminDashboardUrl); ?>" class="admin-sidebar-brand">
                     <span class="admin-sidebar-brand-icon"><i class="fas fa-lock" aria-hidden="true"></i></span>
                     <span class="admin-sidebar-brand-copy">
                         <strong><?php echo htmlspecialchars($panelLabel); ?></strong>
@@ -112,8 +120,8 @@ $adminNavItems = [
                     </div>
                 </div>
                 <div class="admin-sidebar-profile-actions">
-                    <a href="profile.php" class="btn btn-outline btn-sm">Open Profile</a>
-                    <a href="../View/logout.php" class="btn btn-primary btn-sm">Logout</a>
+                    <a href="<?php echo htmlspecialchars($adminProfileUrl); ?>" class="btn btn-outline btn-sm">Open Profile</a>
+                    <a href="<?php echo htmlspecialchars($adminLogoutUrl); ?>" class="btn btn-primary btn-sm">Logout</a>
                 </div>
             </div>
         </div>
@@ -126,11 +134,11 @@ $adminNavItems = [
             <button type="button" class="admin-sidebar-toggle" data-admin-sidebar-toggle aria-label="Open admin navigation" aria-expanded="false">
                 <i class="fas fa-bars" aria-hidden="true"></i>
             </button>
-            <a href="admin_dashboard.php" class="admin-mobile-brand">
+            <a href="<?php echo htmlspecialchars($adminDashboardUrl); ?>" class="admin-mobile-brand">
                 <i class="fas fa-lock" aria-hidden="true"></i>
                 <span><?php echo htmlspecialchars($panelLabel); ?></span>
             </a>
-            <a href="../View/logout.php" class="admin-mobile-logout" aria-label="Logout">
+            <a href="<?php echo htmlspecialchars($adminLogoutUrl); ?>" class="admin-mobile-logout" aria-label="Logout">
                 <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
             </a>
         </div>

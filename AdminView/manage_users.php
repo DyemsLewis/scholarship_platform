@@ -303,6 +303,8 @@ if ($canManageStaffAccounts) {
         ? ' for ' . implode(' | ', $summaryParts) . '.'
         : ' across the visible account sections.';
     $accountsCssVersion = @filemtime(__DIR__ . '/../AdminPublic/css/manage-accounts.css') ?: time();
+    $addUsersUrl = normalizeAppUrl('AdminView/addUsers.php');
+    $manageUsersUrl = normalizeAppUrl('AdminView/manage_users.php');
     ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -327,7 +329,7 @@ if ($canManageStaffAccounts) {
                 </div>
                 <?php if($canManageStaffAccounts): ?>
                 <div class="accounts-hero-actions">
-                    <a href="addUsers.php" class="btn-add">
+                    <a href="<?php echo htmlspecialchars($addUsersUrl); ?>" class="btn-add">
                         <i class="fas fa-plus"></i>
                         Add Admin Account
                     </a>
@@ -437,7 +439,7 @@ if ($canManageStaffAccounts) {
                             <i class="fas fa-sliders"></i> Apply
                         </button>
                         <?php if($search || $role_filter || $status_filter): ?>
-                        <a href="manage_users.php" class="btn-clear">
+                        <a href="<?php echo htmlspecialchars($manageUsersUrl); ?>" class="btn-clear">
                             <i class="fas fa-times"></i> Reset
                         </a>
                         <?php endif; ?>

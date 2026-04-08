@@ -7,6 +7,35 @@ document.addEventListener('DOMContentLoaded', function() {
     const eligibleCheckbox = document.getElementById('showOnlyEligible');
     const scholarshipsContainer = document.getElementById('scholarshipsContainer');
     const resultsCount = document.getElementById('resultsCount');
+
+    function createNoResultsMessage(searchTerm, showOnlyEligible) {
+        const wrapper = document.createElement('div');
+        wrapper.id = 'noResultsMessage';
+        wrapper.className = 'scholarship-empty-state scholarship-empty-state-filter';
+
+        const message = showOnlyEligible
+            ? 'Try turning off "Show only ready to apply" or update your profile and documents to unlock more scholarships.'
+            : 'Try changing your search term or clearing the filters to see more scholarship matches.';
+
+        wrapper.innerHTML = `
+            <div class="scholarship-empty-icon">
+                <i class="fas fa-search"></i>
+            </div>
+            <div class="scholarship-empty-copy">
+                <span class="scholarship-empty-kicker">Search Result</span>
+                <h3>No matching scholarships found</h3>
+                <p>${message}</p>
+            </div>
+            <div class="scholarship-empty-actions">
+                <button type="button" class="scholarship-empty-action" data-clear-scholarship-filters="true">
+                    <i class="fas fa-sliders"></i>
+                    Clear Filters
+                </button>
+            </div>
+        `;
+
+        return wrapper;
+    }
     
     // Debug: Check if elements exist
     console.log('Elements found:', {
@@ -174,17 +203,7 @@ document.addEventListener('DOMContentLoaded', function() {
         let noResultsMsg = document.getElementById('noResultsMessage');
         if (filteredScholarships.length === 0) {
             if (!noResultsMsg) {
-                noResultsMsg = document.createElement('div');
-                noResultsMsg.id = 'noResultsMessage';
-                noResultsMsg.className = 'guest-warning';
-                noResultsMsg.style.margin = '30px 0';
-                noResultsMsg.style.textAlign = 'center';
-                noResultsMsg.style.padding = '40px';
-                noResultsMsg.innerHTML = `
-                    <i class="fas fa-exclamation-circle" style="font-size: 48px; color: #f44336; margin-bottom: 15px;"></i>
-                    <h3>No matching scholarships found</h3>
-                    <p>Try adjusting your search or filters to see more results.</p>
-                `;
+                noResultsMsg = createNoResultsMessage(searchTerm, showOnlyEligible);
                 scholarshipsContainer.appendChild(noResultsMsg);
             }
         } else if (noResultsMsg) {
@@ -219,6 +238,25 @@ document.addEventListener('DOMContentLoaded', function() {
         eligibleCheckbox.addEventListener('change', filterAndSortScholarships);
         console.log('Added change listener to eligibility checkbox');
     }
+
+    document.addEventListener('click', function (event) {
+        const clearButton = event.target.closest('[data-clear-scholarship-filters="true"]');
+        if (!clearButton) {
+            return;
+        }
+
+        if (searchInput) {
+            searchInput.value = '';
+        }
+        if (eligibleCheckbox) {
+            eligibleCheckbox.checked = false;
+        }
+        if (sortSelect) {
+            sortSelect.value = 'requirements-high';
+        }
+
+        filterAndSortScholarships();
+    });
     
     // Add clear search button functionality
     if (searchInput) {

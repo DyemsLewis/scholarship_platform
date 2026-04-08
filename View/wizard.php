@@ -323,6 +323,214 @@ $scholarshipAddress = implode(', ', $addressParts);
 $remoteExamMapUrl = $scholarshipId > 0
     ? buildEntityUrl('remote_exam_map.php', 'scholarship', $scholarshipId, 'view', ['id' => $scholarshipId])
     : '';
+
+$wizardDefaultScholarshipImage = resolvePublicUploadUrl(null, '../');
+$wizardScholarshipImage = resolvePublicUploadUrl($scholarship['image'] ?? null, '../');
+$wizardDescriptionPreview = trim(strip_tags((string) ($scholarship['description'] ?? '')));
+if ($wizardDescriptionPreview === '') {
+    $wizardDescriptionPreview = 'Review your readiness, required documents, and final confirmation before you submit.';
+} elseif (strlen($wizardDescriptionPreview) > 170) {
+    $wizardDescriptionPreview = substr($wizardDescriptionPreview, 0, 167) . '...';
+}
+
+$formattedRequiredGwa = $requiredGwa !== null
+    ? rtrim(rtrim(number_format((float) $requiredGwa, 2), '0'), '.')
+    : '';
+$gwaDisplayValue = $gwaRequired && $formattedRequiredGwa !== ''
+    ? $formattedRequiredGwa . ' or better'
+    : 'No minimum GWA';
+
+$documentsSummaryText = $totalRequired > 0
+    ? ($uploadedRequired . '/' . $totalRequired . ' uploaded')
+    : 'No required documents';
+
+$documentsHelperText = 'Nothing else needed';
+if ($totalRequired > 0) {
+    if (($missingRequired + $rejectedRequired) > 0) {
+        $documentsHelperText = ($missingRequired + $rejectedRequired) . ' need action';
+    } elseif ($pendingRequired > 0) {
+        $documentsHelperText = $pendingRequired . ' pending review';
+    } elseif ($verifiedRequired === $totalRequired) {
+        $documentsHelperText = 'All verified';
+    } else {
+        $documentsHelperText = 'Ready for review';
+    }
+}
+
+$wizardCardState = 'estimated';
+$wizardStatusLabel = 'Preparing';
+$wizardStatusIcon = 'fa-hourglass-half';
+
+if ($alreadyApplied) {
+    $wizardCardState = 'estimated';
+    $wizardStatusLabel = 'Already Applied';
+    $wizardStatusIcon = 'fa-check-double';
+} elseif ($deadlinePassed) {
+    $wizardCardState = 'expired';
+    $wizardStatusLabel = 'Closed';
+    $wizardStatusIcon = 'fa-calendar-xmark';
+} elseif ($applicationNotYetOpen) {
+    $wizardCardState = 'estimated';
+    $wizardStatusLabel = 'Opens Soon';
+    $wizardStatusIcon = 'fa-hourglass-half';
+} elseif ($canSubmit) {
+    $wizardCardState = 'ready';
+    $wizardStatusLabel = 'Ready to Submit';
+    $wizardStatusIcon = 'fa-circle-check';
+} elseif ($missingRequired > 0 || $rejectedRequired > 0) {
+    $wizardCardState = 'docs';
+    $wizardStatusLabel = 'Documents Needed';
+    $wizardStatusIcon = 'fa-folder-open';
+} elseif (($profileEvaluation['pending'] ?? 0) > 0) {
+    $wizardCardState = 'profile';
+    $wizardStatusLabel = 'Complete Profile';
+    $wizardStatusIcon = 'fa-user-gear';
+} elseif (($profileEvaluation['failed'] ?? 0) > 0 || ($gwaRequired && $profileHasGwa && !$gwaWithinRequirement)) {
+    $wizardCardState = 'ineligible';
+    $wizardStatusLabel = 'Not Ready Yet';
+    $wizardStatusIcon = 'fa-triangle-exclamation';
+} elseif ($pendingRequired > 0) {
+    $wizardCardState = 'estimated';
+    $wizardStatusLabel = 'Pending Review';
+    $wizardStatusIcon = 'fa-clock';
+}
+
+$wizardNextTone = 'info';
+$wizardNextMessage = 'Work through the three steps below to review your application before you submit.';
+if ($alreadyApplied && !empty($existingApplication['applied_at'])) {
+    $wizardNextMessage = 'You already submitted this scholarship on ' . date('F d, Y h:i A', strtotime((string) $existingApplication['applied_at'])) . '.';
+} elseif ($canSubmit) {
+    $wizardNextTone = 'success';
+    $wizardNextMessage = 'Your profile and required documents are ready. Finish the final review when you are ready to submit.';
+} elseif ($deadlinePassed) {
+    $wizardNextTone = 'muted';
+    $wizardNextMessage = 'This scholarship is already closed, so new submissions are no longer accepted.';
+} elseif ($applicationNotYetOpen) {
+    $wizardNextTone = 'info';
+    $wizardNextMessage = 'Applications open on ' . $applicationOpenDateLabel . '. You can still prepare your profile and documents now.';
+} elseif ($blockReason !== '') {
+    $wizardNextTone = 'warning';
+    $wizardNextMessage = $blockReason;
+}
+
+$wizardSupportChips = [];
+if ($applicationProcessLabel !== '') {
+    $wizardSupportChips[] = [
+        'icon' => 'fa-list-check',
+        'label' => $applicationProcessLabel
+    ];
+}
+if ($assessmentLabel !== 'None') {
+    $wizardSupportChips[] = [
+        'icon' => 'fa-file-signature',
+        'label' => $assessmentLabel
+    ];
+}
+$wizardSupportChips[] = [
+    'icon' => 'fa-calendar-days',
+    'label' => $applicationNotYetOpen ? ('Opens ' . $applicationOpenDateLabel) : 'Applications open now'
+];
+
+$wizardSignalChips = [];
+if ($documentsSummaryText !== '') {
+    $wizardSignalChips[] = [
+        'tone' => ($missingRequired + $rejectedRequired) > 0 ? 'warning' : 'info',
+        'icon' => 'fa-folder-open',
+        'label' => $documentsSummaryText
+    ];
+}
+if (($missingRequired + $rejectedRequired) > 0) {
+    $wizardSignalChips[] = [
+        'tone' => 'warning',
+        'icon' => 'fa-triangle-exclamation',
+        'label' => ($missingRequired + $rejectedRequired) . ' document issue(s)'
+    ];
+}
+if (($profileEvaluation['pending'] ?? 0) > 0) {
+    $wizardSignalChips[] = [
+        'tone' => 'warning',
+        'icon' => 'fa-user-gear',
+        'label' => (int) ($profileEvaluation['pending'] ?? 0) . ' profile item(s) to complete'
+    ];
+}
+if ($pendingRequired > 0) {
+    $wizardSignalChips[] = [
+        'tone' => 'info',
+        'icon' => 'fa-clock',
+        'label' => $pendingRequired . ' pending review'
+    ];
+}
+
+$assessmentDetails = trim((string) ($scholarship['assessment_details'] ?? ''));
+
+$wizardEligibilityChecks = [];
+$wizardEligibilityChecks[] = [
+    'title' => 'GWA requirement',
+    'state' => !$gwaRequired ? 'ok' : (!$profileHasGwa ? 'attention' : ($gwaWithinRequirement ? 'ok' : 'blocked')),
+    'icon' => !$gwaRequired ? 'fa-circle-check' : (!$profileHasGwa ? 'fa-chart-line' : ($gwaWithinRequirement ? 'fa-circle-check' : 'fa-ban')),
+    'detail' => !$gwaRequired
+        ? 'This scholarship does not set a fixed minimum GWA.'
+        : (!$profileHasGwa
+            ? 'Upload your academic record so the system can read your GWA.'
+            : ($gwaWithinRequirement
+                ? ('Your current GWA of ' . number_format((float) $userGWA, 2) . ' meets the required ' . $formattedRequiredGwa . ' or better.')
+                : ('Your current GWA of ' . number_format((float) $userGWA, 2) . ' is above the required ' . $formattedRequiredGwa . '.')))
+];
+$wizardEligibilityChecks[] = [
+    'title' => 'Applicant profile',
+    'state' => (($profileEvaluation['failed'] ?? 0) > 0) ? 'blocked' : ((($profileEvaluation['pending'] ?? 0) > 0) ? 'attention' : 'ok'),
+    'icon' => (($profileEvaluation['failed'] ?? 0) > 0) ? 'fa-user-xmark' : ((($profileEvaluation['pending'] ?? 0) > 0) ? 'fa-user-gear' : 'fa-user-check'),
+    'detail' => (($profileEvaluation['failed'] ?? 0) > 0)
+        ? (string) ($profileEvaluation['label'] ?? 'Your current profile does not match this scholarship policy.')
+        : ((($profileEvaluation['pending'] ?? 0) > 0)
+            ? (string) ($profileEvaluation['label'] ?? 'Complete your applicant profile first.')
+            : 'Your current applicant profile matches the target audience for this scholarship.')
+];
+$wizardEligibilityChecks[] = [
+    'title' => 'Required documents',
+    'state' => $totalRequired === 0 ? 'ok' : ($rejectedRequired > 0 ? 'blocked' : ($missingRequired > 0 ? 'attention' : ($pendingRequired > 0 ? 'info' : 'ok'))),
+    'icon' => $totalRequired === 0 ? 'fa-circle-check' : ($rejectedRequired > 0 ? 'fa-xmark-circle' : ($missingRequired > 0 ? 'fa-folder-open' : ($pendingRequired > 0 ? 'fa-clock' : 'fa-circle-check'))),
+    'detail' => $totalRequired === 0
+        ? 'This scholarship does not list required documents.'
+        : ($rejectedRequired > 0
+            ? 'Re-upload rejected required documents before you continue.'
+            : ($missingRequired > 0
+                ? 'Upload all missing required documents before you continue.'
+                : ($pendingRequired > 0
+                    ? ($pendingRequired . ' required document(s) are still pending review, but you can continue.')
+                    : 'All required documents are uploaded.')))
+];
+$wizardEligibilityChecks[] = [
+    'title' => 'Application window',
+    'state' => $alreadyApplied ? 'info' : ($deadlinePassed ? 'blocked' : ($applicationNotYetOpen ? 'attention' : 'ok')),
+    'icon' => $alreadyApplied ? 'fa-check-double' : ($deadlinePassed ? 'fa-calendar-xmark' : ($applicationNotYetOpen ? 'fa-hourglass-half' : 'fa-calendar-check')),
+    'detail' => $alreadyApplied
+        ? ('You already applied on ' . date('F d, Y h:i A', strtotime((string) ($existingApplication['applied_at'] ?? 'now'))) . '.')
+        : ($deadlinePassed
+            ? 'The deadline has passed for this scholarship.'
+            : ($applicationNotYetOpen
+                ? ('Applications open on ' . $applicationOpenDateLabel . '.')
+                : ('Applications are open until ' . $deadlineLabel . '.')))
+];
+
+$wizardProfileRuleCards = [];
+foreach (($profileEvaluation['checks'] ?? []) as $check) {
+    $profileCheckStatus = strtolower((string) ($check['status'] ?? 'info'));
+    $profileCheckTone = 'info';
+    if ($profileCheckStatus === 'met') {
+        $profileCheckTone = 'ok';
+    } elseif ($profileCheckStatus === 'pending') {
+        $profileCheckTone = 'attention';
+    } elseif ($profileCheckStatus === 'failed') {
+        $profileCheckTone = 'blocked';
+    }
+
+    $wizardProfileRuleCards[] = [
+        'tone' => $profileCheckTone,
+        'label' => (string) ($check['label'] ?? 'Policy check'),
+        'detail' => (string) ($check['detail'] ?? '')
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -422,242 +630,225 @@ $remoteExamMapUrl = $scholarshipId > 0
                 </div>
             </div>
         <?php else: ?>
-            <div class="wizard-page-header app-page-hero">
-                <div class="wizard-page-header-copy app-page-hero-copy">
-                    <h1>
-                        <i class="fas fa-file-signature"></i>
-                        Application Wizard
-                        <span class="wizard-role-badge app-page-hero-badge">
-                            <i class="fas fa-graduation-cap"></i>
-                            <?php echo htmlspecialchars((string) $scholarship['name']); ?>
-                        </span>
-                    </h1>
-                    <p>Review your readiness, confirm documents, and submit your scholarship application.</p>
-                </div>
-                <div class="app-page-hero-side">
-                    <a href="scholarships.php" class="btn btn-white wizard-back-link app-page-hero-action">
-                        <i class="fas fa-arrow-left"></i>
-                        Back to Scholarships
-                    </a>
-                </div>
-            </div>
-
-            <div class="wizard-layout">
-                <div class="wizard-main-column">
-                    <?php if ($alreadyApplied): ?>
-                        <div class="wizard-alert info">
-                            <i class="fas fa-circle-info"></i>
-                            <div>
-                                <h4>Application Already Submitted</h4>
-                                <p>
-                                    Submitted on <strong><?php echo date('F d, Y h:i A', strtotime((string) $existingApplication['applied_at'])); ?></strong>
-                                    with status <strong><?php echo htmlspecialchars(ucfirst((string) $existingApplication['status'])); ?></strong>.
-                                </p>
+            <div class="wizard-selected-shell">
+                <div class="wizard-selected-card state-<?php echo htmlspecialchars($wizardCardState); ?>">
+                    <div class="wizard-selected-card-inner">
+                        <div class="wizard-selected-brand">
+                            <div class="wizard-selected-kicker">
+                                <span class="wizard-brand-pill">
+                                    <i class="fas fa-file-signature"></i>
+                                    Scholarship Wizard
+                                </span>
+                                <span class="wizard-selected-status state-<?php echo htmlspecialchars($wizardCardState); ?>">
+                                    <i class="fas <?php echo htmlspecialchars($wizardStatusIcon); ?>"></i>
+                                    <?php echo htmlspecialchars($wizardStatusLabel); ?>
+                                </span>
                             </div>
-                        </div>
-                    <?php endif; ?>
 
-                    <?php if ($missingRequired > 0): ?>
-                        <div class="wizard-alert danger">
-                            <i class="fas fa-triangle-exclamation"></i>
-                            <div>
-                                <h4>Missing Required Documents</h4>
-                                <p>You must upload all missing required documents before submission.</p>
+                            <div class="wizard-logo-stage">
+                                <img
+                                    src="<?php echo htmlspecialchars($wizardScholarshipImage); ?>"
+                                    alt="<?php echo htmlspecialchars((string) $scholarship['name']); ?>"
+                                    class="wizard-logo-image"
+                                    onerror="this.src='<?php echo htmlspecialchars($wizardDefaultScholarshipImage); ?>'"
+                                >
                             </div>
-                            <a href="documents.php" class="btn btn-outline">Open Documents</a>
-                        </div>
-                    <?php endif; ?>
 
-                    <?php if ($rejectedRequired > 0): ?>
-                        <div class="wizard-alert danger">
-                            <i class="fas fa-xmark-circle"></i>
-                            <div>
-                                <h4>Rejected Documents Found</h4>
-                                <p>Re-upload rejected required documents before submitting your application.</p>
-                            </div>
-                            <a href="documents.php" class="btn btn-outline">Re-upload</a>
-                        </div>
-                    <?php endif; ?>
+                            <div class="wizard-provider-name"><?php echo htmlspecialchars((string) ($scholarship['provider'] ?? 'Provider not specified')); ?></div>
+                            <p class="wizard-provider-note">We’ll guide you through the same three steps every scholarship uses: eligibility, documents, and final review.</p>
 
-                    <?php if ($pendingRequired > 0): ?>
-                        <div class="wizard-alert warning">
-                            <i class="fas fa-clock"></i>
-                            <div>
-                                <h4>Pending Verification</h4>
-                                <p>You can still apply while <?php echo $pendingRequired; ?> required document(s) are pending review.</p>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if (($profileEvaluation['pending'] ?? 0) > 0): ?>
-                        <div class="wizard-alert warning">
-                            <i class="fas fa-user-gear"></i>
-                            <div>
-                                <h4>Profile Details Needed</h4>
-                                <p><?php echo htmlspecialchars((string) ($profileEvaluation['label'] ?? 'Complete your profile to continue.')); ?></p>
-                            </div>
-                            <a href="profile.php" class="btn btn-outline">Open Profile</a>
-                        </div>
-                    <?php elseif (($profileEvaluation['failed'] ?? 0) > 0): ?>
-                        <div class="wizard-alert danger">
-                            <i class="fas fa-user-xmark"></i>
-                            <div>
-                                <h4>Profile Policy Not Met</h4>
-                                <p><?php echo htmlspecialchars((string) ($profileEvaluation['label'] ?? 'Your current profile does not match this scholarship policy.')); ?></p>
-                            </div>
-                            <a href="profile.php" class="btn btn-outline">Review Profile</a>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if ($deadlinePassed): ?>
-                        <div class="wizard-alert danger">
-                            <i class="fas fa-calendar-xmark"></i>
-                            <div>
-                                <h4>Application Closed</h4>
-                                <p>The deadline has passed for this scholarship.</p>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <?php if ($applicationNotYetOpen): ?>
-                        <div class="wizard-alert info">
-                            <i class="fas fa-hourglass-half"></i>
-                            <div>
-                                <h4>Applications Open Soon</h4>
-                                <p>This scholarship starts accepting applications on <?php echo htmlspecialchars($applicationOpenDateLabel); ?>. You can still use this page to prepare your profile and documents.</p>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="form-card-modern wizard-overview-card">
-                        <div class="card-header">
-                            <h3><i class="fas fa-list-check"></i> Application Overview</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="wizard-intro">
-                                <div>
-                                    <h2><?php echo htmlspecialchars((string) $scholarship['name']); ?></h2>
-                                    <p><?php echo htmlspecialchars((string) ($scholarship['provider'] ?? 'Provider not specified')); ?></p>
+                            <?php if (!empty($wizardSupportChips)): ?>
+                                <div class="wizard-support-chip-row">
+                                    <?php foreach ($wizardSupportChips as $supportChip): ?>
+                                        <span class="wizard-support-chip">
+                                            <i class="fas <?php echo htmlspecialchars((string) $supportChip['icon']); ?>"></i>
+                                            <?php echo htmlspecialchars((string) $supportChip['label']); ?>
+                                        </span>
+                                    <?php endforeach; ?>
                                 </div>
-                                <div class="wizard-meta-grid">
-                                    <div class="meta-card">
-                                        <span class="meta-label">Application Opens</span>
-                                        <strong><?php echo htmlspecialchars($applicationOpenDateLabel); ?></strong>
-                                    </div>
-                                    <div class="meta-card">
-                                        <span class="meta-label">Deadline</span>
-                                        <strong><?php echo htmlspecialchars($deadlineLabel); ?></strong>
-                                    </div>
-                                    <div class="meta-card">
-                                        <span class="meta-label">Target Applicants</span>
-                                        <strong><?php echo htmlspecialchars($audienceLabel); ?></strong>
-                                    </div>
-                                    <div class="meta-card">
-                                        <span class="meta-label">Documents</span>
-                                        <strong><?php echo $uploadedRequired; ?>/<?php echo $totalRequired; ?> uploaded</strong>
-                                    </div>
-                                    <?php if ($gwaRequired): ?>
-                                    <div class="meta-card">
-                                        <span class="meta-label">Required GWA</span>
-                                        <strong><= <?php echo htmlspecialchars(number_format((float) $requiredGwa, 2)); ?></strong>
-                                    </div>
-                                    <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="wizard-selected-content">
+                            <div class="wizard-selected-header">
+                                <div class="wizard-selected-title-wrap">
+                                    <h1 class="wizard-selected-title"><?php echo htmlspecialchars((string) $scholarship['name']); ?></h1>
+                                    <p class="wizard-selected-description"><?php echo htmlspecialchars($wizardDescriptionPreview); ?></p>
+                                </div>
+
+                                <a href="scholarships.php" class="wizard-header-link">
+                                    <i class="fas fa-arrow-left"></i>
+                                    Back to Scholarships
+                                </a>
+                            </div>
+
+                            <div class="wizard-selected-facts">
+                                <div class="wizard-selected-fact">
+                                    <span class="wizard-selected-fact-label">Minimum GWA</span>
+                                    <strong><?php echo htmlspecialchars($gwaDisplayValue); ?></strong>
+                                </div>
+                                <div class="wizard-selected-fact">
+                                    <span class="wizard-selected-fact-label">Deadline</span>
+                                    <strong><?php echo htmlspecialchars($deadlineLabel); ?></strong>
+                                </div>
+                                <div class="wizard-selected-fact">
+                                    <span class="wizard-selected-fact-label">Audience</span>
+                                    <strong><?php echo htmlspecialchars($audienceLabel); ?></strong>
+                                </div>
+                                <div class="wizard-selected-fact">
+                                    <span class="wizard-selected-fact-label">Documents</span>
+                                    <strong><?php echo htmlspecialchars($documentsSummaryText); ?></strong>
+                                    <small><?php echo htmlspecialchars($documentsHelperText); ?></small>
                                 </div>
                             </div>
 
-                            <div class="wizard-stepper" role="tablist" aria-label="Application steps">
+                            <div class="wizard-next-step-banner is-<?php echo htmlspecialchars($wizardNextTone); ?>">
+                                <i class="fas <?php echo htmlspecialchars($wizardStatusIcon); ?>"></i>
+                                <span><?php echo htmlspecialchars($wizardNextMessage); ?></span>
+                            </div>
+
+                            <?php if (!empty($wizardSignalChips)): ?>
+                                <div class="wizard-signal-chip-row">
+                                    <?php foreach ($wizardSignalChips as $signalChip): ?>
+                                        <span class="wizard-signal-chip is-<?php echo htmlspecialchars((string) $signalChip['tone']); ?>">
+                                            <i class="fas <?php echo htmlspecialchars((string) $signalChip['icon']); ?>"></i>
+                                            <?php echo htmlspecialchars((string) $signalChip['label']); ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="wizard-selected-actions">
+                                <a href="documents.php" class="wizard-quick-link">
+                                    <i class="fas fa-file-upload"></i>
+                                    Manage Documents
+                                </a>
+                                <a href="profile.php" class="wizard-quick-link">
+                                    <i class="fas fa-user-pen"></i>
+                                    Open Profile
+                                </a>
+                                <?php if ($assessmentType === 'remote_examination' && !empty($remoteExamLocations)): ?>
+                                    <a href="<?php echo htmlspecialchars($remoteExamMapUrl); ?>" class="wizard-quick-link">
+                                        <i class="fas fa-map-location-dot"></i>
+                                        View Exam Map
+                                    </a>
+                                <?php elseif (!empty($scholarship['assessment_link'])): ?>
+                                    <a href="<?php echo htmlspecialchars((string) $scholarship['assessment_link']); ?>" class="wizard-quick-link" target="_blank" rel="noopener noreferrer">
+                                        <i class="fas fa-up-right-from-square"></i>
+                                        Open Assessment Link
+                                    </a>
+                                <?php endif; ?>
+                            </div>
+
+                            <div class="wizard-stepper wizard-stepper-card" role="tablist" aria-label="Application steps">
                                 <button type="button" class="wizard-step-pill is-active" data-step-target="1"><span>1</span> Eligibility</button>
                                 <button type="button" class="wizard-step-pill" data-step-target="2"><span>2</span> Documents</button>
                                 <button type="button" class="wizard-step-pill" data-step-target="3"><span>3</span> Review & Submit</button>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <form id="applicationForm" class="wizard-form" method="POST" action="../app/Controllers/submit_application.php" data-can-submit="<?php echo $canSubmit ? '1' : '0'; ?>" data-block-reason="<?php echo htmlspecialchars($blockReason, ENT_QUOTES); ?>">
-                        <div class="wizard-step-panel is-active form-card-modern" data-step-panel="1">
-                            <div class="card-header">
-                                <h3><i class="fas fa-user-check"></i> Eligibility Check</h3>
-                            </div>
-                            <div class="card-body">
-                                <p class="panel-subtitle">Confirm your academic profile against this scholarship's requirements.</p>
-
-                                <div class="panel-grid">
-                                    <div class="info-card">
-                                        <h4><i class="fas fa-user"></i> Your Profile</h4>
-                                        <ul class="info-list">
-                                            <li><strong>Name:</strong> <?php echo htmlspecialchars((string) $applicantDisplayName); ?></li>
-                                            <li><strong>Email:</strong> <?php echo htmlspecialchars((string) $userEmail); ?></li>
-                                            <li><strong>Applicant Type:</strong> <?php echo htmlspecialchars(formatApplicantTypeLabel($userApplicantType ?: '')); ?></li>
-                                            <li><strong>School:</strong> <?php echo htmlspecialchars((string) ($userSchool ?: 'Not set')); ?></li>
-                                            <li><strong>Course:</strong> <?php echo htmlspecialchars((string) ($userCourse ?: 'Not set')); ?></li>
-                                            <li><strong>Admission Status:</strong> <?php echo htmlspecialchars(formatAdmissionStatusLabel($userAdmissionStatus ?: '')); ?></li>
-                                            <li><strong>Year Level:</strong> <?php echo htmlspecialchars(formatYearLevelLabel($userYearLevel ?: '')); ?></li>
-                                            <?php if ($showShsDetails): ?>
-                                            <li><strong>SHS Strand:</strong> <?php echo htmlspecialchars((string) ($userShsStrand ?: 'Not set')); ?></li>
-                                            <?php endif; ?>
-                                            <li><strong>GWA:</strong> <?php echo $profileHasGwa ? htmlspecialchars(number_format((float) $userGWA, 2)) : '<span class="pill-badge warning">Not uploaded</span>'; ?></li>
-                                        </ul>
-                                    </div>
-
-                                    <div class="info-card">
-                                        <h4><i class="fas fa-clipboard-check"></i> Scholarship Rules</h4>
-                                        <ul class="info-list">
-                                            <li><strong>Required GWA:</strong> <?php echo $gwaRequired ? ('<= ' . htmlspecialchars(number_format((float) $requiredGwa, 2))) : 'No fixed requirement'; ?></li>
-                                            <li><strong>Target Applicants:</strong> <?php echo htmlspecialchars($audienceLabel); ?></li>
-                                            <li><strong>Application Opens:</strong> <?php echo htmlspecialchars($applicationOpenDateLabel); ?></li>
-                                            <li><strong>Process:</strong> <?php echo htmlspecialchars($applicationProcessLabel); ?></li>
-                                            <li><strong>Assessment:</strong> <?php echo htmlspecialchars($assessmentLabel); ?></li>
-                                            <li><strong>Deadline:</strong> <?php echo htmlspecialchars($deadlineLabel); ?></li>
-                                            <li><strong>Status:</strong> <?php echo $deadlinePassed ? '<span class="pill-badge danger">Closed</span>' : ($applicationNotYetOpen ? '<span class="pill-badge warning">Opens Soon</span>' : '<span class="pill-badge success">Open</span>'); ?></li>
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <?php if (($profileEvaluation['total'] ?? 0) > 0): ?>
-                                    <div class="info-card" style="margin-top: 16px;">
-                                        <h4><i class="fas fa-user-shield"></i> Profile Policy Checks</h4>
-                                        <ul class="info-list">
-                                            <?php foreach (($profileEvaluation['checks'] ?? []) as $check): ?>
-                                                <li>
-                                                    <strong><?php echo htmlspecialchars((string) ($check['label'] ?? 'Policy')); ?>:</strong>
-                                                    <?php echo htmlspecialchars((string) ($check['detail'] ?? '')); ?>
-                                                </li>
-                                            <?php endforeach; ?>
-                                        </ul>
-                                    </div>
-                                <?php endif; ?>
-
-                                <div class="wizard-navigation">
-                                    <a href="scholarships.php" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back to Scholarships</a>
-                                    <button type="button" class="btn btn-primary" data-next-step="2">Continue to Documents <i class="fas fa-arrow-right"></i></button>
-                                </div>
+                <form id="applicationForm" class="wizard-form wizard-form-selected" method="POST" action="../app/Controllers/submit_application.php" data-can-submit="<?php echo $canSubmit ? '1' : '0'; ?>" data-block-reason="<?php echo htmlspecialchars($blockReason, ENT_QUOTES); ?>">
+                    <div class="wizard-step-panel is-active form-card-modern wizard-step-surface" data-step-panel="1">
+                        <div class="card-header wizard-step-header">
+                            <div>
+                                <h3><i class="fas fa-user-check"></i> Step 1: Eligibility</h3>
+                                <p>Check your profile against the rules before moving to documents.</p>
                             </div>
                         </div>
-
-                        <div class="wizard-step-panel form-card-modern" data-step-panel="2">
-                            <div class="card-header">
-                                <h3><i class="fas fa-folder-open"></i> Required Documents</h3>
-                            </div>
-                            <div class="card-body">
-                                <p class="panel-subtitle">Missing and rejected documents block submission. Pending documents are allowed.</p>
-
-                                <div class="document-summary-grid">
-                                    <div class="summary-tile"><span class="tile-label">Required</span><span class="tile-value"><?php echo $totalRequired; ?></span></div>
-                                    <div class="summary-tile"><span class="tile-label">Verified</span><span class="tile-value"><?php echo $verifiedRequired; ?></span></div>
-                                    <div class="summary-tile"><span class="tile-label">Pending</span><span class="tile-value"><?php echo $pendingRequired; ?></span></div>
-                                    <div class="summary-tile <?php echo ($missingRequired + $rejectedRequired) > 0 ? 'danger' : ''; ?>"><span class="tile-label">Need Action</span><span class="tile-value"><?php echo $missingRequired + $rejectedRequired; ?></span></div>
+                        <div class="card-body">
+                            <div class="wizard-panel-grid">
+                                <div class="wizard-section-card">
+                                    <h4>Your information</h4>
+                                    <dl class="wizard-detail-list">
+                                        <div><dt>Name</dt><dd><?php echo htmlspecialchars((string) $applicantDisplayName); ?></dd></div>
+                                        <div><dt>Email</dt><dd><?php echo htmlspecialchars((string) $userEmail); ?></dd></div>
+                                        <div><dt>Applicant Type</dt><dd><?php echo htmlspecialchars(formatApplicantTypeLabel($userApplicantType ?: '')); ?></dd></div>
+                                        <div><dt>School</dt><dd><?php echo htmlspecialchars((string) ($userSchool ?: 'Not set')); ?></dd></div>
+                                        <div><dt>Course</dt><dd><?php echo htmlspecialchars((string) ($userCourse ?: 'Not set')); ?></dd></div>
+                                        <div><dt>Admission Status</dt><dd><?php echo htmlspecialchars(formatAdmissionStatusLabel($userAdmissionStatus ?: '')); ?></dd></div>
+                                        <div><dt>Year Level</dt><dd><?php echo htmlspecialchars(formatYearLevelLabel($userYearLevel ?: '')); ?></dd></div>
+                                        <?php if ($showShsDetails): ?>
+                                            <div><dt>SHS Strand</dt><dd><?php echo htmlspecialchars((string) ($userShsStrand ?: 'Not set')); ?></dd></div>
+                                        <?php endif; ?>
+                                        <div><dt>GWA</dt><dd><?php echo $profileHasGwa ? htmlspecialchars(number_format((float) $userGWA, 2)) : 'Not uploaded'; ?></dd></div>
+                                    </dl>
                                 </div>
 
-                                <?php if ($totalRequired === 0): ?>
-                                    <div class="wizard-alert info">
-                                        <i class="fas fa-circle-info"></i>
-                                        <div>
-                                            <h4>No Required Documents Configured</h4>
-                                            <p>This scholarship currently has no required documents configured.</p>
-                                        </div>
+                                <div class="wizard-section-card">
+                                    <h4>Checks before you continue</h4>
+                                    <div class="wizard-check-list">
+                                        <?php foreach ($wizardEligibilityChecks as $eligibilityCheck): ?>
+                                            <div class="wizard-check-item is-<?php echo htmlspecialchars((string) $eligibilityCheck['state']); ?>">
+                                                <div class="wizard-check-icon">
+                                                    <i class="fas <?php echo htmlspecialchars((string) $eligibilityCheck['icon']); ?>"></i>
+                                                </div>
+                                                <div class="wizard-check-copy">
+                                                    <strong><?php echo htmlspecialchars((string) $eligibilityCheck['title']); ?></strong>
+                                                    <p><?php echo htmlspecialchars((string) $eligibilityCheck['detail']); ?></p>
+                                                </div>
+                                            </div>
+                                        <?php endforeach; ?>
                                     </div>
-                                <?php else: ?>
-                                    <div class="document-list">
+                                </div>
+                            </div>
+
+                            <?php if (!empty($wizardProfileRuleCards)): ?>
+                                <div class="wizard-section-card wizard-section-card-wide">
+                                    <h4>Audience rules</h4>
+                                    <div class="wizard-rule-grid">
+                                        <?php foreach ($wizardProfileRuleCards as $profileRule): ?>
+                                            <div class="wizard-rule-card is-<?php echo htmlspecialchars((string) $profileRule['tone']); ?>">
+                                                <strong><?php echo htmlspecialchars((string) $profileRule['label']); ?></strong>
+                                                <p><?php echo htmlspecialchars((string) $profileRule['detail']); ?></p>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+
+                            <div class="wizard-navigation">
+                                <a href="scholarships.php" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back to Scholarships</a>
+                                <button type="button" class="btn btn-primary" data-next-step="2">Continue to Documents <i class="fas fa-arrow-right"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wizard-step-panel form-card-modern wizard-step-surface" data-step-panel="2">
+                        <div class="card-header wizard-step-header">
+                            <div>
+                                <h3><i class="fas fa-folder-open"></i> Step 2: Documents</h3>
+                                <p>Missing and rejected documents stop submission. Pending documents can still move forward.</p>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="wizard-doc-summary">
+                                <div class="wizard-doc-stat">
+                                    <span>Required</span>
+                                    <strong><?php echo $totalRequired; ?></strong>
+                                </div>
+                                <div class="wizard-doc-stat">
+                                    <span>Verified</span>
+                                    <strong><?php echo $verifiedRequired; ?></strong>
+                                </div>
+                                <div class="wizard-doc-stat">
+                                    <span>Pending</span>
+                                    <strong><?php echo $pendingRequired; ?></strong>
+                                </div>
+                                <div class="wizard-doc-stat is-warning">
+                                    <span>Need Action</span>
+                                    <strong><?php echo $missingRequired + $rejectedRequired; ?></strong>
+                                </div>
+                            </div>
+
+                            <?php if ($totalRequired === 0): ?>
+                                <div class="wizard-next-step-banner is-info">
+                                    <i class="fas fa-circle-info"></i>
+                                    <span>This scholarship currently has no required documents configured.</span>
+                                </div>
+                            <?php else: ?>
+                                <div class="wizard-doc-list-modern">
                                     <?php foreach ($docRequirements as $requirement): ?>
                                         <?php
                                         $docStatus = strtolower((string) ($requirement['status'] ?? 'missing'));
@@ -670,144 +861,115 @@ $remoteExamMapUrl = $scholarshipId > 0
                                         if ($docStatusClass === 'rejected') $docIcon = 'fa-xmark-circle';
                                         $docFile = $requirement['document'] ?? null;
                                         ?>
-                                        <div class="document-row <?php echo $docStatusClass; ?>">
-                                            <div class="document-meta">
-                                                <h4><?php echo htmlspecialchars((string) ($requirement['name'] ?? 'Required Document')); ?></h4>
-                                                <p>Code: <code><?php echo htmlspecialchars((string) ($requirement['type'] ?? 'N/A')); ?></code></p>
-                                                <?php if (!empty($docFile['file_name'])): ?><p>File: <?php echo htmlspecialchars((string) $docFile['file_name']); ?></p><?php endif; ?>
-                                                <?php if (!empty($docFile['uploaded_at'])): ?><p>Uploaded: <?php echo date('M d, Y h:i A', strtotime((string) $docFile['uploaded_at'])); ?></p><?php endif; ?>
-                                                <?php if (!empty($docFile['admin_notes'])): ?><p class="doc-note"><strong>Admin note:</strong> <?php echo htmlspecialchars((string) $docFile['admin_notes']); ?></p><?php endif; ?>
+                                        <div class="wizard-doc-item-modern is-<?php echo $docStatusClass; ?>">
+                                            <div class="wizard-doc-main">
+                                                <div class="wizard-doc-icon">
+                                                    <i class="fas <?php echo $docIcon; ?>"></i>
+                                                </div>
+                                                <div class="wizard-doc-copy">
+                                                    <strong><?php echo htmlspecialchars((string) ($requirement['name'] ?? 'Required Document')); ?></strong>
+                                                    <p>Code: <code><?php echo htmlspecialchars((string) ($requirement['type'] ?? 'N/A')); ?></code></p>
+                                                    <?php if (!empty($docFile['file_name'])): ?><p>File: <?php echo htmlspecialchars((string) $docFile['file_name']); ?></p><?php endif; ?>
+                                                    <?php if (!empty($docFile['uploaded_at'])): ?><p>Uploaded: <?php echo date('M d, Y h:i A', strtotime((string) $docFile['uploaded_at'])); ?></p><?php endif; ?>
+                                                    <?php if (!empty($docFile['admin_notes'])): ?><p class="wizard-doc-note"><strong>Admin note:</strong> <?php echo htmlspecialchars((string) $docFile['admin_notes']); ?></p><?php endif; ?>
+                                                </div>
                                             </div>
-                                            <div class="document-state">
-                                                <span class="pill-badge <?php echo $docStatusClass; ?>"><i class="fas <?php echo $docIcon; ?>"></i> <?php echo htmlspecialchars($docStatusLabel); ?></span>
+                                            <div class="wizard-doc-side">
+                                                <span class="pill-badge <?php echo $docStatusClass; ?>">
+                                                    <i class="fas <?php echo $docIcon; ?>"></i>
+                                                    <?php echo htmlspecialchars($docStatusLabel); ?>
+                                                </span>
                                                 <?php if (in_array($docStatusClass, ['missing', 'rejected'], true)): ?>
-                                                    <a href="documents.php" class="btn btn-outline btn-sm">Upload / Replace</a>
+                                                    <a href="documents.php" class="wizard-inline-action">Upload / Replace</a>
                                                 <?php endif; ?>
                                             </div>
                                         </div>
                                     <?php endforeach; ?>
-                                    </div>
-                                <?php endif; ?>
-
-                                <div class="wizard-navigation">
-                                    <button type="button" class="btn btn-outline" data-prev-step="1"><i class="fas fa-arrow-left"></i> Back</button>
-                                    <button type="button" class="btn btn-primary" data-next-step="3">Continue to Review <i class="fas fa-arrow-right"></i></button>
                                 </div>
+                            <?php endif; ?>
+
+                            <div class="wizard-navigation">
+                                <button type="button" class="btn btn-outline" data-prev-step="1"><i class="fas fa-arrow-left"></i> Back</button>
+                                <button type="button" class="btn btn-primary" data-next-step="3">Continue to Review <i class="fas fa-arrow-right"></i></button>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="wizard-step-panel form-card-modern" data-step-panel="3">
-                            <div class="card-header">
-                                <h3><i class="fas fa-paper-plane"></i> Review and Submit</h3>
+                    <div class="wizard-step-panel form-card-modern wizard-step-surface" data-step-panel="3">
+                        <div class="card-header wizard-step-header">
+                            <div>
+                                <h3><i class="fas fa-paper-plane"></i> Step 3: Review & Submit</h3>
+                                <p>Confirm the essentials one last time before you send your application.</p>
                             </div>
-                            <div class="card-body">
-                                <p class="panel-subtitle">Final check before submitting your scholarship application.</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="wizard-review-grid-modern">
+                                <div class="wizard-review-card"><span>Applicant</span><strong><?php echo htmlspecialchars((string) $applicantDisplayName); ?></strong></div>
+                                <div class="wizard-review-card"><span>Scholarship</span><strong><?php echo htmlspecialchars((string) $scholarship['name']); ?></strong></div>
+                                <div class="wizard-review-card"><span>Profile</span><strong><?php echo htmlspecialchars((string) ($profileEvaluation['label'] ?? 'Open profile policy')); ?></strong></div>
+                                <div class="wizard-review-card"><span>Documents</span><strong><?php echo $documentsReady ? 'Ready (pending allowed)' : 'Not ready'; ?></strong></div>
+                                <div class="wizard-review-card"><span>Application Opens</span><strong><?php echo htmlspecialchars($applicationOpenDateLabel); ?></strong></div>
+                                <div class="wizard-review-card"><span>Deadline</span><strong><?php echo htmlspecialchars($deadlineLabel); ?></strong></div>
+                            </div>
 
-                                <div class="review-grid">
-                                    <div class="review-card"><span>Applicant</span><strong><?php echo htmlspecialchars((string) $applicantDisplayName); ?></strong></div>
-                                    <div class="review-card"><span>Scholarship</span><strong><?php echo htmlspecialchars((string) $scholarship['name']); ?></strong></div>
-                                    <div class="review-card"><span>Profile Policy</span><strong><?php echo htmlspecialchars((string) ($profileEvaluation['label'] ?? 'Open profile policy')); ?></strong></div>
-                                    <div class="review-card"><span>Documents</span><strong><?php echo $documentsReady ? 'Ready (pending allowed)' : 'Not ready'; ?></strong></div>
-                                    <div class="review-card"><span>Application Opens</span><strong><?php echo htmlspecialchars($applicationOpenDateLabel); ?></strong></div>
-                                    <div class="review-card"><span>Deadline</span><strong><?php echo htmlspecialchars($deadlineLabel); ?></strong></div>
-                                </div>
-
-                                <div class="terms-box">
-                                    <h4>Terms and Confirmation</h4>
-                                    <label class="checkbox-line"><input type="checkbox" id="agreeTerms" name="agree_terms" value="1" required><span>I agree to the scholarship terms and verification policy.</span></label>
-                                    <label class="checkbox-line"><input type="checkbox" id="confirmInfo" name="confirm_info" value="1" required><span>I confirm all submitted information is true and complete.</span></label>
-                                </div>
-
-                                <div class="wizard-navigation">
-                                    <button type="button" class="btn btn-outline" data-prev-step="2"><i class="fas fa-arrow-left"></i> Back</button>
-                                    <?php if ($canSubmit): ?>
-                                        <button type="submit" class="btn btn-primary" id="submitApplication"><i class="fas fa-paper-plane"></i> Submit Application</button>
-                                    <?php else: ?>
-                                        <button type="button" class="btn btn-primary" id="submitApplication" disabled title="<?php echo htmlspecialchars($blockReason); ?>"><i class="fas fa-ban"></i> Not Ready to Submit</button>
+                            <div class="wizard-section-card wizard-section-card-wide wizard-submit-panel">
+                                <h4>After you submit</h4>
+                                <div class="wizard-submit-meta">
+                                    <div>
+                                        <span>Process</span>
+                                        <strong><?php echo htmlspecialchars($applicationProcessLabel); ?></strong>
+                                    </div>
+                                    <?php if ($assessmentLabel !== 'None'): ?>
+                                        <div>
+                                            <span>Assessment</span>
+                                            <strong><?php echo htmlspecialchars($assessmentLabel); ?></strong>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div>
+                                        <span>Next step</span>
+                                        <strong><?php echo htmlspecialchars($postApplicationSteps); ?></strong>
+                                    </div>
+                                    <?php if ($assessmentDetails !== ''): ?>
+                                        <div>
+                                            <span>Assessment details</span>
+                                            <strong><?php echo htmlspecialchars($assessmentDetails); ?></strong>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if ($assessmentType === 'remote_examination' && !empty($remoteExamLocations)): ?>
+                                        <div>
+                                            <span>Exam sites</span>
+                                            <strong><a href="<?php echo htmlspecialchars($remoteExamMapUrl); ?>" class="wizard-inline-action">View all sites on map</a></strong>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                             </div>
-                        </div>
 
-                        <input type="hidden" name="scholarship_id" value="<?php echo (int) $scholarshipId; ?>">
-                        <input type="hidden" id="missingDocsCount" value="<?php echo (int) $missingRequired; ?>">
-                        <input type="hidden" id="rejectedDocsCount" value="<?php echo (int) $rejectedRequired; ?>">
-                        <input type="hidden" id="wizardProfilePendingCount" value="<?php echo (int) ($profileEvaluation['pending'] ?? 0); ?>">
-                        <input type="hidden" id="wizardProfileFailedCount" value="<?php echo (int) ($profileEvaluation['failed'] ?? 0); ?>">
-                        <input type="hidden" id="wizardGwaRequired" value="<?php echo $gwaRequired ? '1' : '0'; ?>">
-                        <input type="hidden" id="wizardHasGwa" value="<?php echo $profileHasGwa ? '1' : '0'; ?>">
-                        <input type="hidden" id="wizardGwaWithinRequirement" value="<?php echo $gwaWithinRequirement ? '1' : '0'; ?>">
-                    </form>
-                </div>
-
-                <aside class="wizard-sidebar">
-                    <div class="form-card-modern">
-                        <div class="card-header">
-                            <h3><i class="fas fa-circle-info"></i> Scholarship Snapshot</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="summary-avatar">
-                                <i class="fas fa-graduation-cap"></i>
-                            </div>
-                            <div class="summary-name"><?php echo htmlspecialchars((string) $scholarship['name']); ?></div>
-                            <div class="summary-email"><?php echo htmlspecialchars((string) ($scholarship['provider'] ?? 'Provider not specified')); ?></div>
-                            <div class="summary-role">
-                                <i class="fas fa-calendar-days"></i>
-                                Deadline: <?php echo htmlspecialchars($deadlineLabel); ?>
+                            <div class="terms-box">
+                                <h4>Terms and Confirmation</h4>
+                                <label class="checkbox-line"><input type="checkbox" id="agreeTerms" name="agree_terms" value="1" required><span>I agree to the scholarship terms and verification policy.</span></label>
+                                <label class="checkbox-line"><input type="checkbox" id="confirmInfo" name="confirm_info" value="1" required><span>I confirm all submitted information is true and complete.</span></label>
                             </div>
 
-                            <ul class="sidebar-list">
-                                <li><strong>Application Opens:</strong> <?php echo htmlspecialchars($applicationOpenDateLabel); ?></li>
-                                <li><strong>Process:</strong> <?php echo htmlspecialchars($applicationProcessLabel); ?></li>
-                                <li><strong>Assessment:</strong> <?php echo htmlspecialchars($assessmentLabel); ?></li>
-                                <?php if ($scholarshipAddress !== ''): ?><li><strong>Address:</strong> <?php echo htmlspecialchars($scholarshipAddress); ?></li><?php endif; ?>
-                                <li><strong>After You Apply:</strong> <?php echo htmlspecialchars($postApplicationSteps); ?></li>
-                                <?php if ($renewalConditions !== ''): ?><li><strong>Renewal:</strong> <?php echo htmlspecialchars($renewalConditions); ?></li><?php endif; ?>
-                                <?php if ($scholarshipRestrictions !== ''): ?><li><strong>Restrictions:</strong> <?php echo htmlspecialchars($scholarshipRestrictions); ?></li><?php endif; ?>
-                            </ul>
-                            <?php if (!empty($scholarship['assessment_link'])): ?>
-                                <a href="<?php echo htmlspecialchars((string) $scholarship['assessment_link']); ?>" class="sidebar-link" target="_blank" rel="noopener noreferrer"><i class="fas fa-up-right-from-square"></i> Open Assessment Link</a>
-                            <?php endif; ?>
+                            <div class="wizard-navigation">
+                                <button type="button" class="btn btn-outline" data-prev-step="2"><i class="fas fa-arrow-left"></i> Back</button>
+                                <?php if ($canSubmit): ?>
+                                    <button type="submit" class="btn btn-primary" id="submitApplication"><i class="fas fa-paper-plane"></i> Submit Application</button>
+                                <?php else: ?>
+                                    <button type="button" class="btn btn-primary" id="submitApplication" disabled title="<?php echo htmlspecialchars($blockReason); ?>"><i class="fas fa-ban"></i> Not Ready to Submit</button>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
 
-                    <?php if ($assessmentType === 'remote_examination' && !empty($remoteExamLocations)): ?>
-                        <div class="form-card-modern">
-                            <div class="card-header">
-                                <h3><i class="fas fa-location-dot"></i> Remote Exam Sites</h3>
-                            </div>
-                            <div class="card-body">
-                                <ul class="sidebar-list">
-                                    <?php foreach (array_slice($remoteExamLocations, 0, 4) as $site): ?>
-                                        <?php
-                                        $parts = [];
-                                        if (!empty($site['site_name'])) $parts[] = (string) $site['site_name'];
-                                        if (!empty($site['address'])) $parts[] = (string) $site['address'];
-                                        if (!empty($site['city'])) $parts[] = (string) $site['city'];
-                                        if (!empty($site['province'])) $parts[] = (string) $site['province'];
-                                        $siteLabel = implode(', ', $parts);
-                                        ?>
-                                        <?php if ($siteLabel !== ''): ?><li><?php echo htmlspecialchars($siteLabel); ?></li><?php endif; ?>
-                                    <?php endforeach; ?>
-                                </ul>
-                                <a href="<?php echo htmlspecialchars($remoteExamMapUrl); ?>" class="sidebar-link">
-                                    <i class="fas fa-map-location-dot"></i> View all sites on map
-                                </a>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <div class="form-card-modern">
-                        <div class="card-header">
-                            <h3><i class="fas fa-bolt"></i> Quick Actions</h3>
-                        </div>
-                        <div class="card-body">
-                            <a href="documents.php" class="sidebar-link"><i class="fas fa-file-upload"></i> Manage Documents</a>
-                            <a href="upload.php" class="sidebar-link"><i class="fas fa-scroll"></i> Upload TOR / Grades</a>
-                            <a href="scholarships.php" class="sidebar-link"><i class="fas fa-graduation-cap"></i> Back to Scholarships</a>
-                        </div>
-                    </div>
-                </aside>
+                    <input type="hidden" name="scholarship_id" value="<?php echo (int) $scholarshipId; ?>">
+                    <input type="hidden" id="missingDocsCount" value="<?php echo (int) $missingRequired; ?>">
+                    <input type="hidden" id="rejectedDocsCount" value="<?php echo (int) $rejectedRequired; ?>">
+                    <input type="hidden" id="wizardProfilePendingCount" value="<?php echo (int) ($profileEvaluation['pending'] ?? 0); ?>">
+                    <input type="hidden" id="wizardProfileFailedCount" value="<?php echo (int) ($profileEvaluation['failed'] ?? 0); ?>">
+                    <input type="hidden" id="wizardGwaRequired" value="<?php echo $gwaRequired ? '1' : '0'; ?>">
+                    <input type="hidden" id="wizardHasGwa" value="<?php echo $profileHasGwa ? '1' : '0'; ?>">
+                    <input type="hidden" id="wizardGwaWithinRequirement" value="<?php echo $gwaWithinRequirement ? '1' : '0'; ?>">
+                </form>
             </div>
         <?php endif; ?>
     </div>

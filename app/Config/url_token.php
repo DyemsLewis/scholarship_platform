@@ -64,9 +64,48 @@ if (!function_exists('isValidEntityUrlToken')) {
 }
 
 if (!function_exists('buildEntityUrl')) {
+    function resolveEntityPagePath(string $path): string
+    {
+        $trimmed = trim($path);
+        if ($trimmed === '') {
+            return $trimmed;
+        }
+
+        $normalized = str_replace('\\', '/', $trimmed);
+        if (str_contains($normalized, '/')
+            || str_starts_with($normalized, '.')
+            || str_starts_with($normalized, '?')
+            || str_starts_with($normalized, '#')
+        ) {
+            return $normalized;
+        }
+
+        $scriptName = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+        $scriptDir = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+
+        if ($scriptDir === '.' || $scriptDir === '') {
+            return $normalized;
+        }
+
+        if (str_ends_with($scriptDir, '/View')
+            || str_ends_with($scriptDir, '/View/layout')
+            || str_ends_with($scriptDir, '/View/partials')
+        ) {
+            return 'View/' . ltrim($normalized, '/');
+        }
+
+        if (str_ends_with($scriptDir, '/AdminView')
+            || str_ends_with($scriptDir, '/AdminView/layouts')
+        ) {
+            return 'AdminView/' . ltrim($normalized, '/');
+        }
+
+        return $normalized;
+    }
+
     function buildEntityUrl(string $path, string $entityType, int $entityId, string $intent = 'view', array $query = []): string
     {
-        $normalizedPath = normalizeAppUrl($path);
+        $normalizedPath = normalizeAppUrl(resolveEntityPagePath($path));
 
         if ($entityId <= 0) {
             return $normalizedPath;

@@ -226,9 +226,21 @@ require_once __DIR__ . '/../app/Models/UserDocument.php';
                     <!-- Scholarships Container - Compact Modern Design -->
                     <div id="scholarshipsContainer" class="scholarships-container-modern" data-pagination="cards" data-page-size="6" data-item-selector=".scholarship-card" data-pagination-label="scholarships">
                 <?php if (empty($matchedScholarships)): ?>
-                    <div class="guest-warning" style="margin: 6px 0 0;">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <p><strong>No scholarships found.</strong> There are currently no active scholarships available. Check back later for new opportunities.</p>
+                    <div class="scholarship-empty-state scholarship-empty-state-server">
+                        <div class="scholarship-empty-icon">
+                            <i class="fas fa-compass"></i>
+                        </div>
+                        <div class="scholarship-empty-copy">
+                            <span class="scholarship-empty-kicker">Scholarship Board</span>
+                            <h3>No scholarships found</h3>
+                            <p>There are no active scholarships available right now. Check back later for new opportunities from providers and partner institutions.</p>
+                        </div>
+                        <div class="scholarship-empty-actions">
+                            <a href="scholarships.php" class="scholarship-empty-action">
+                                <i class="fas fa-rotate-right"></i>
+                                Refresh Board
+                            </a>
+                        </div>
                     </div>
                 <?php else: 
                     foreach ($matchedScholarships as $scholarship): 
