@@ -369,6 +369,54 @@ body.detail-modal-open {
     gap: 18px;
 }
 
+.detail-accordion {
+    background: #ffffff;
+    border-radius: 24px;
+    border: 1px solid rgba(137, 175, 231, 0.2);
+    box-shadow: 0 18px 36px rgba(9, 25, 56, 0.06);
+    overflow: hidden;
+}
+
+.detail-accordion-summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 22px;
+    cursor: pointer;
+}
+
+.detail-accordion-summary::-webkit-details-marker {
+    display: none;
+}
+
+.detail-accordion-summary > span:first-child {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.detail-accordion-summary strong {
+    color: #17305e;
+    font-size: 1.02rem;
+    line-height: 1.35;
+}
+
+.detail-accordion-summary i.fa-chevron-down {
+    color: #365da1;
+    transition: transform 0.18s ease;
+}
+
+.detail-accordion[open] .detail-accordion-summary i.fa-chevron-down {
+    transform: rotate(180deg);
+}
+
+.detail-accordion-body {
+    padding: 0 22px 22px;
+    border-top: 1px solid #edf2f7;
+}
+
 .detail-panel {
     background: #ffffff;
     border-radius: 24px;
@@ -561,6 +609,7 @@ body.detail-modal-open {
     border-radius: 18px;
     border: 1px solid #e5edf7;
     background: #fbfdff;
+    margin-top: 14px;
 }
 
 .detail-reason-card.is-positive {
@@ -878,7 +927,8 @@ body.detail-modal-open {
     .detail-hero-topline,
     .detail-panel-header-with-action,
     .detail-panel-header.is-split,
-    .detail-info-dialog-header {
+    .detail-info-dialog-header,
+    .detail-accordion-summary {
         flex-direction: column;
         align-items: flex-start;
     }
