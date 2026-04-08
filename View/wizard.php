@@ -98,6 +98,21 @@ $audienceLabel = 'Open to all applicants';
 
 if ($isLoggedIn && $scholarshipId > 0) {
     try {
+        $applicationOpenDateSelect = tableHasColumn($pdo, 'scholarship_data', 'application_open_date')
+            ? 'sd.application_open_date'
+            : 'NULL AS application_open_date';
+        $applicationProcessLabelSelect = tableHasColumn($pdo, 'scholarship_data', 'application_process_label')
+            ? 'sd.application_process_label'
+            : 'NULL AS application_process_label';
+        $postApplicationStepsSelect = tableHasColumn($pdo, 'scholarship_data', 'post_application_steps')
+            ? 'sd.post_application_steps'
+            : 'NULL AS post_application_steps';
+        $renewalConditionsSelect = tableHasColumn($pdo, 'scholarship_data', 'renewal_conditions')
+            ? 'sd.renewal_conditions'
+            : 'NULL AS renewal_conditions';
+        $scholarshipRestrictionsSelect = tableHasColumn($pdo, 'scholarship_data', 'scholarship_restrictions')
+            ? 'sd.scholarship_restrictions'
+            : 'NULL AS scholarship_restrictions';
         $assessmentRequirementSelect = tableHasColumn($pdo, 'scholarship_data', 'assessment_requirement')
             ? 'sd.assessment_requirement'
             : 'NULL AS assessment_requirement';
@@ -108,7 +123,7 @@ if ($isLoggedIn && $scholarshipId > 0) {
             ? 'sd.assessment_details'
             : 'NULL AS assessment_details';
 
-        $stmt = $pdo->prepare("\n            SELECT\n                s.*,\n                sd.provider,\n                sd.benefits,\n                sd.address,\n                sd.city,\n                sd.province,\n                sd.deadline,\n                {$assessmentRequirementSelect},\n                {$assessmentLinkSelect},\n                {$assessmentDetailsSelect}\n            FROM scholarships s\n            LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id\n            WHERE s.id = ? AND s.status = 'active'\n            LIMIT 1\n        ");
+        $stmt = $pdo->prepare("\n            SELECT\n                s.*,\n                sd.provider,\n                sd.benefits,\n                sd.address,\n                sd.city,\n                sd.province,\n                {$applicationOpenDateSelect},\n                sd.deadline,\n                {$applicationProcessLabelSelect},\n                {$assessmentRequirementSelect},\n                {$assessmentLinkSelect},\n                {$assessmentDetailsSelect},\n                {$postApplicationStepsSelect},\n                {$renewalConditionsSelect},\n                {$scholarshipRestrictionsSelect}\n            FROM scholarships s\n            LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id\n            WHERE s.id = ? AND s.status = 'active'\n            LIMIT 1\n        ");
         $stmt->execute([$scholarshipId]);
         $scholarship = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     } catch (Throwable $e) {
@@ -211,6 +226,20 @@ if ($scholarship && !empty($scholarship['deadline'])) {
     }
 }
 
+$applicationNotYetOpen = false;
+$applicationOpenDateLabel = 'Open now';
+if ($scholarship && !empty($scholarship['application_open_date'])) {
+    try {
+        $applicationOpenDate = new DateTime((string) $scholarship['application_open_date']);
+        $applicationOpenDate->setTime(0, 0, 0);
+        $applicationOpenDateLabel = $applicationOpenDate->format('M d, Y');
+        $applicationNotYetOpen = $applicationOpenDate > new DateTime();
+    } catch (Throwable $e) {
+        $applicationNotYetOpen = false;
+        $applicationOpenDateLabel = 'Open now';
+    }
+}
+
 $alreadyApplied = $existingApplication !== null;
 $documentsReady = ($missingRequired === 0 && $rejectedRequired === 0);
 $profileRulesReady = !empty($profileEvaluation['eligible']);
@@ -218,6 +247,7 @@ $profileRulesReady = !empty($profileEvaluation['eligible']);
 $canSubmit = $isLoggedIn
     && $scholarship !== null
     && !$alreadyApplied
+    && !$applicationNotYetOpen
     && !$deadlinePassed
     && $documentsReady
     && $profileRulesReady
@@ -230,6 +260,8 @@ if (!$isLoggedIn) {
     $blockReason = 'Scholarship not found or inactive.';
 } elseif ($alreadyApplied) {
     $blockReason = 'You already submitted this scholarship application.';
+} elseif ($applicationNotYetOpen) {
+    $blockReason = 'This scholarship opens on ' . $applicationOpenDateLabel . '.';
 } elseif ($deadlinePassed) {
     $blockReason = 'This scholarship is already closed.';
 } elseif ($missingRequired > 0) {
@@ -262,6 +294,25 @@ if ($assessmentType === 'online_exam') {
     $assessmentLabel = 'Online Evaluation';
 }
 
+$applicationProcessLabel = trim((string) ($scholarship['application_process_label'] ?? ''));
+if ($applicationProcessLabel === '') {
+    if ($assessmentType !== 'none' && $assessmentLabel !== 'None') {
+        $applicationProcessLabel = 'Documents + ' . $assessmentLabel;
+    } elseif ($totalRequired > 0) {
+        $applicationProcessLabel = 'Documents + Provider Review';
+    } else {
+        $applicationProcessLabel = 'Provider Review';
+    }
+}
+
+$postApplicationSteps = trim((string) ($scholarship['post_application_steps'] ?? ''));
+if ($postApplicationSteps === '') {
+    $postApplicationSteps = 'After submission, the provider reviews your profile and documents, then sends the result through the system.';
+}
+
+$renewalConditions = trim((string) ($scholarship['renewal_conditions'] ?? ''));
+$scholarshipRestrictions = trim((string) ($scholarship['scholarship_restrictions'] ?? ''));
+
 $addressParts = [];
 if (is_array($scholarship)) {
     if (!empty($scholarship['address'])) $addressParts[] = (string) $scholarship['address'];
@@ -269,6 +320,9 @@ if (is_array($scholarship)) {
     if (!empty($scholarship['province'])) $addressParts[] = (string) $scholarship['province'];
 }
 $scholarshipAddress = implode(', ', $addressParts);
+$remoteExamMapUrl = $scholarshipId > 0
+    ? buildEntityUrl('remote_exam_map.php', 'scholarship', $scholarshipId, 'view', ['id' => $scholarshipId])
+    : '';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -465,6 +519,16 @@ $scholarshipAddress = implode(', ', $addressParts);
                         </div>
                     <?php endif; ?>
 
+                    <?php if ($applicationNotYetOpen): ?>
+                        <div class="wizard-alert info">
+                            <i class="fas fa-hourglass-half"></i>
+                            <div>
+                                <h4>Applications Open Soon</h4>
+                                <p>This scholarship starts accepting applications on <?php echo htmlspecialchars($applicationOpenDateLabel); ?>. You can still use this page to prepare your profile and documents.</p>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+
                     <div class="form-card-modern wizard-overview-card">
                         <div class="card-header">
                             <h3><i class="fas fa-list-check"></i> Application Overview</h3>
@@ -476,6 +540,10 @@ $scholarshipAddress = implode(', ', $addressParts);
                                     <p><?php echo htmlspecialchars((string) ($scholarship['provider'] ?? 'Provider not specified')); ?></p>
                                 </div>
                                 <div class="wizard-meta-grid">
+                                    <div class="meta-card">
+                                        <span class="meta-label">Application Opens</span>
+                                        <strong><?php echo htmlspecialchars($applicationOpenDateLabel); ?></strong>
+                                    </div>
                                     <div class="meta-card">
                                         <span class="meta-label">Deadline</span>
                                         <strong><?php echo htmlspecialchars($deadlineLabel); ?></strong>
@@ -536,9 +604,11 @@ $scholarshipAddress = implode(', ', $addressParts);
                                         <ul class="info-list">
                                             <li><strong>Required GWA:</strong> <?php echo $gwaRequired ? ('<= ' . htmlspecialchars(number_format((float) $requiredGwa, 2))) : 'No fixed requirement'; ?></li>
                                             <li><strong>Target Applicants:</strong> <?php echo htmlspecialchars($audienceLabel); ?></li>
+                                            <li><strong>Application Opens:</strong> <?php echo htmlspecialchars($applicationOpenDateLabel); ?></li>
+                                            <li><strong>Process:</strong> <?php echo htmlspecialchars($applicationProcessLabel); ?></li>
                                             <li><strong>Assessment:</strong> <?php echo htmlspecialchars($assessmentLabel); ?></li>
                                             <li><strong>Deadline:</strong> <?php echo htmlspecialchars($deadlineLabel); ?></li>
-                                            <li><strong>Status:</strong> <?php echo $deadlinePassed ? '<span class="pill-badge danger">Closed</span>' : '<span class="pill-badge success">Open</span>'; ?></li>
+                                            <li><strong>Status:</strong> <?php echo $deadlinePassed ? '<span class="pill-badge danger">Closed</span>' : ($applicationNotYetOpen ? '<span class="pill-badge warning">Opens Soon</span>' : '<span class="pill-badge success">Open</span>'); ?></li>
                                         </ul>
                                     </div>
                                 </div>
@@ -638,6 +708,7 @@ $scholarshipAddress = implode(', ', $addressParts);
                                     <div class="review-card"><span>Scholarship</span><strong><?php echo htmlspecialchars((string) $scholarship['name']); ?></strong></div>
                                     <div class="review-card"><span>Profile Policy</span><strong><?php echo htmlspecialchars((string) ($profileEvaluation['label'] ?? 'Open profile policy')); ?></strong></div>
                                     <div class="review-card"><span>Documents</span><strong><?php echo $documentsReady ? 'Ready (pending allowed)' : 'Not ready'; ?></strong></div>
+                                    <div class="review-card"><span>Application Opens</span><strong><?php echo htmlspecialchars($applicationOpenDateLabel); ?></strong></div>
                                     <div class="review-card"><span>Deadline</span><strong><?php echo htmlspecialchars($deadlineLabel); ?></strong></div>
                                 </div>
 
@@ -686,8 +757,13 @@ $scholarshipAddress = implode(', ', $addressParts);
                             </div>
 
                             <ul class="sidebar-list">
+                                <li><strong>Application Opens:</strong> <?php echo htmlspecialchars($applicationOpenDateLabel); ?></li>
+                                <li><strong>Process:</strong> <?php echo htmlspecialchars($applicationProcessLabel); ?></li>
                                 <li><strong>Assessment:</strong> <?php echo htmlspecialchars($assessmentLabel); ?></li>
                                 <?php if ($scholarshipAddress !== ''): ?><li><strong>Address:</strong> <?php echo htmlspecialchars($scholarshipAddress); ?></li><?php endif; ?>
+                                <li><strong>After You Apply:</strong> <?php echo htmlspecialchars($postApplicationSteps); ?></li>
+                                <?php if ($renewalConditions !== ''): ?><li><strong>Renewal:</strong> <?php echo htmlspecialchars($renewalConditions); ?></li><?php endif; ?>
+                                <?php if ($scholarshipRestrictions !== ''): ?><li><strong>Restrictions:</strong> <?php echo htmlspecialchars($scholarshipRestrictions); ?></li><?php endif; ?>
                             </ul>
                             <?php if (!empty($scholarship['assessment_link'])): ?>
                                 <a href="<?php echo htmlspecialchars((string) $scholarship['assessment_link']); ?>" class="sidebar-link" target="_blank" rel="noopener noreferrer"><i class="fas fa-up-right-from-square"></i> Open Assessment Link</a>
@@ -714,7 +790,7 @@ $scholarshipAddress = implode(', ', $addressParts);
                                         <?php if ($siteLabel !== ''): ?><li><?php echo htmlspecialchars($siteLabel); ?></li><?php endif; ?>
                                     <?php endforeach; ?>
                                 </ul>
-                                <a href="remote_exam_map.php?id=<?php echo (int) $scholarshipId; ?>" class="sidebar-link">
+                                <a href="<?php echo htmlspecialchars($remoteExamMapUrl); ?>" class="sidebar-link">
                                     <i class="fas fa-map-location-dot"></i> View all sites on map
                                 </a>
                             </div>

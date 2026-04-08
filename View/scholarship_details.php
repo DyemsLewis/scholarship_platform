@@ -278,11 +278,72 @@ if (!empty($scholarship['deadline'])) {
     }
 }
 
+$applicationNotYetOpen = false;
+$applicationOpenDateDisplay = 'Open now';
+$applicationOpenDateDetail = 'This scholarship does not list a separate opening date.';
+if (!empty($scholarship['application_open_date'])) {
+    try {
+        $applicationOpenDate = new DateTime((string) $scholarship['application_open_date']);
+        $applicationOpenDate->setTime(0, 0, 0);
+        $applicationOpenDateDisplay = $applicationOpenDate->format('M d, Y');
+        if ($applicationOpenDate > new DateTime()) {
+            $applicationNotYetOpen = true;
+            $applicationOpenDateDetail = 'Applications open on ' . $applicationOpenDateDisplay . '.';
+        } else {
+            $applicationOpenDateDetail = 'Applications opened on ' . $applicationOpenDateDisplay . '.';
+        }
+    } catch (Throwable $e) {
+        $applicationNotYetOpen = false;
+        $applicationOpenDateDisplay = 'Open now';
+    }
+}
+
+$applicationWindowDecision = 'Open now';
+$applicationWindowClass = 'good';
+$applicationWindowDetail = $applicationOpenDateDetail;
+if ($deadlineClass === 'bad') {
+    $applicationWindowDecision = 'Closed';
+    $applicationWindowClass = 'bad';
+    $applicationWindowDetail = 'This scholarship is already closed.';
+} elseif ($applicationNotYetOpen) {
+    $applicationWindowDecision = 'Opens ' . $applicationOpenDateDisplay;
+    $applicationWindowClass = 'warn';
+    $applicationWindowDetail = 'You can prepare your profile and documents now, but submissions start on ' . $applicationOpenDateDisplay . '.';
+} elseif (!empty($scholarship['deadline'])) {
+    $applicationWindowDetail = 'Applications are open now. The current deadline is ' . $deadlineDisplay . '.';
+}
+
 $assessmentLabel = 'None';
 if ($assessmentRequirement === 'online_exam') $assessmentLabel = 'Online Exam';
 if ($assessmentRequirement === 'remote_examination') $assessmentLabel = 'Remote Examination';
 if ($assessmentRequirement === 'assessment') $assessmentLabel = 'Online Assessment';
 if ($assessmentRequirement === 'evaluation') $assessmentLabel = 'Online Evaluation';
+
+$applicationProcessLabelDisplay = trim((string) ($scholarship['application_process_label'] ?? ''));
+if ($applicationProcessLabelDisplay === '') {
+    if ($hasAssessment) {
+        $applicationProcessLabelDisplay = 'Documents + ' . $assessmentLabel;
+    } elseif ($requirementsCount > 0) {
+        $applicationProcessLabelDisplay = 'Documents + Provider Review';
+    } else {
+        $applicationProcessLabelDisplay = 'Provider Review';
+    }
+}
+
+$postApplicationStepsText = trim((string) ($scholarship['post_application_steps'] ?? ''));
+if ($postApplicationStepsText === '') {
+    $postApplicationStepsText = 'After submission, the provider reviews your profile and documents, then sends the result through the system.';
+}
+
+$renewalConditionsText = trim((string) ($scholarship['renewal_conditions'] ?? ''));
+if ($renewalConditionsText === '') {
+    $renewalConditionsText = 'The provider did not list renewal conditions in this posting.';
+}
+
+$scholarshipRestrictionsText = trim((string) ($scholarship['scholarship_restrictions'] ?? ''));
+if ($scholarshipRestrictionsText === '') {
+    $scholarshipRestrictionsText = 'The provider did not list extra restrictions or service obligations in this posting.';
+}
 
 $benefitItems = [];
 $benefitsRaw = trim((string) ($scholarship['benefits'] ?? ''));
@@ -522,6 +583,25 @@ $buildScholarshipCheckReason = static function (array $check, string $status): s
     return $detail !== '' ? $detail : $label;
 };
 
+$buildCompactScholarshipText = static function (string $text, string $fallback = 'Not specified'): string {
+    $normalized = trim(preg_replace('/\s+/', ' ', strip_tags($text)) ?? $text);
+    if ($normalized === '') {
+        return $fallback;
+    }
+
+    $maxLength = 62;
+    $currentLength = function_exists('mb_strlen') ? mb_strlen($normalized) : strlen($normalized);
+    if ($currentLength <= $maxLength) {
+        return $normalized;
+    }
+
+    $trimmed = function_exists('mb_substr')
+        ? mb_substr($normalized, 0, $maxLength - 3)
+        : substr($normalized, 0, $maxLength - 3);
+
+    return rtrim($trimmed, " \t\n\r\0\x0B.,;:") . '...';
+};
+
 $profileRequirementPending = (int) ($profileEvaluation['pending'] ?? 0);
 $profileRequirementFailed = (int) ($profileEvaluation['failed'] ?? 0);
 $profileRequirementMet = (int) ($profileEvaluation['met'] ?? 0);
@@ -591,18 +671,14 @@ if (!empty($scholarship['location_name'])) {
     );
 }
 
-$resultsReleaseValue = 'Not specified';
-$resultsReleaseDetail = 'The provider did not list a result release date in this posting.';
-
-$applicationEffortValue = 'Standard';
-$applicationEffortDetail = 'This is based on the listed documents and whether an extra assessment step is required.';
-if (!$hasAssessment && $requirementsCount <= 2) {
-    $applicationEffortValue = 'Simple';
-} elseif ($hasAssessment || $requirementsCount >= 5) {
-    $applicationEffortValue = 'More steps';
-}
-
 $timelineItems = [
+    [
+        'label' => 'Application opens',
+        'value' => $applicationOpenDateDisplay,
+        'detail' => $applicationNotYetOpen
+            ? 'Submissions start on ' . $applicationOpenDateDisplay . '.'
+            : 'You can already prepare and submit while the scholarship stays open.',
+    ],
     [
         'label' => 'Application deadline',
         'value' => $deadlineDisplay,
@@ -613,21 +689,16 @@ $timelineItems = [
                 : 'This is the current deadline shown by the provider.'),
     ],
     [
-        'label' => 'Assessment or interview',
-        'value' => $hasAssessment ? $assessmentLabel : 'No extra step listed',
+        'label' => 'Application process',
+        'value' => $applicationProcessLabelDisplay,
         'detail' => $hasAssessment
             ? $assessmentSummary
-            : 'The posting does not list an exam, interview, or extra assessment step.',
+            : 'The provider reviews your profile and uploaded requirements after submission.',
     ],
     [
-        'label' => 'Application effort',
-        'value' => $applicationEffortValue,
-        'detail' => $applicationEffortDetail,
-    ],
-    [
-        'label' => 'Result release',
-        'value' => $resultsReleaseValue,
-        'detail' => $resultsReleaseDetail,
+        'label' => 'After you apply',
+        'value' => 'Provider review',
+        'detail' => $postApplicationStepsText,
     ],
 ];
 
@@ -671,6 +742,9 @@ if ($visitSiteUrl !== '') {
     $providerWebsiteDetail = 'You can open the provider site from the action buttons above.';
 }
 
+$renewalConditionsValue = $buildCompactScholarshipText($renewalConditionsText, 'Not specified');
+$scholarshipRestrictionsValue = $buildCompactScholarshipText($scholarshipRestrictionsText, 'Not specified');
+
 $providerInfoItems = [
     [
         'label' => 'Scholarship provider',
@@ -683,14 +757,14 @@ $providerInfoItems = [
         'detail' => $providerWebsiteDetail,
     ],
     [
-        'label' => 'Slots or acceptance rate',
-        'value' => 'Not specified',
-        'detail' => 'The provider did not list how many students will be accepted.',
+        'label' => 'Renewal conditions',
+        'value' => $renewalConditionsValue,
+        'detail' => $renewalConditionsText,
     ],
     [
-        'label' => 'Renewal or return service',
-        'value' => 'Check with provider',
-        'detail' => 'Renewal rules, maintaining grades, or return-service obligations are not listed here.',
+        'label' => 'Restrictions or obligations',
+        'value' => $scholarshipRestrictionsValue,
+        'detail' => $scholarshipRestrictionsText,
     ],
 ];
 
@@ -709,12 +783,15 @@ $remoteExamMapUrl = ($assessmentRequirement === 'remote_examination' && !empty($
     ? buildEntityUrl('remote_exam_map.php', 'scholarship', $scholarshipId, 'view', ['id' => $scholarshipId])
     : '';
 
-$readyToApplyNow = $isLoggedIn && $isEligible && $hasAllRequired && !$requiresGwa && $deadlineClass !== 'bad';
+$readyToApplyNow = $isLoggedIn && $isEligible && $hasAllRequired && !$requiresGwa && !$applicationNotYetOpen && $deadlineClass !== 'bad';
 $detailCardStatusClass = 'ineligible';
 $detailCardStatusLabel = 'Not Eligible';
 if ($deadlineClass === 'bad') {
     $detailCardStatusClass = 'expired';
     $detailCardStatusLabel = 'Expired';
+} elseif ($applicationNotYetOpen) {
+    $detailCardStatusClass = 'estimated';
+    $detailCardStatusLabel = 'Not Open Yet';
 } elseif ($requiresGwa) {
     $detailCardStatusClass = 'estimated';
     $detailCardStatusLabel = 'Needs GWA';
@@ -727,6 +804,21 @@ if ($deadlineClass === 'bad') {
 } elseif ($profileRequirementFailed > 0 || $profileRequirementPending > 0) {
     $detailCardStatusClass = 'profile';
     $detailCardStatusLabel = 'Profile Needed';
+}
+
+$detailStatusIcon = 'fa-ban';
+if ($detailCardStatusClass === 'expired') {
+    $detailStatusIcon = 'fa-clock';
+} elseif ($detailCardStatusClass === 'ready') {
+    $detailStatusIcon = 'fa-check-circle';
+} elseif ($applicationNotYetOpen) {
+    $detailStatusIcon = 'fa-hourglass-half';
+} elseif ($requiresGwa) {
+    $detailStatusIcon = 'fa-chart-line';
+} elseif ($detailCardStatusClass === 'docs') {
+    $detailStatusIcon = 'fa-file-circle-exclamation';
+} elseif ($detailCardStatusClass === 'profile') {
+    $detailStatusIcon = 'fa-user-gear';
 }
 
 $requirementsBadgeText = 'Requirements checked';
@@ -759,6 +851,8 @@ if ($requiredGwa !== null) {
 
 if ($deadlineClass === 'bad') {
     $pushReason($attentionReasons, 'The application period for this scholarship has already closed');
+} elseif ($applicationNotYetOpen) {
+    $pushReason($attentionReasons, 'Applications open on ' . $applicationOpenDateDisplay);
 } else {
     $pushReason($matchedReasons, 'The scholarship is currently open for applications');
 }
@@ -806,6 +900,9 @@ if ($readyToApplyNow) {
 $nextStepTone = 'info';
 $nextStepIcon = 'fa-circle-info';
 $nextStepMessage = 'Review the scholarship details and listed requirements before applying.';
+$openingDatePrepPrefix = $applicationNotYetOpen
+    ? ('Applications open on ' . $applicationOpenDateDisplay . '. ')
+    : '';
 
 $primaryActionType = 'link';
 $primaryActionHref = 'scholarships.php';
@@ -824,7 +921,7 @@ if ($deadlineClass === 'bad') {
 } elseif ($requiresGwa) {
     $nextStepTone = 'warning';
     $nextStepIcon = 'fa-chart-line';
-    $nextStepMessage = 'Upload your grades to complete the academic requirement check.';
+    $nextStepMessage = $openingDatePrepPrefix . 'Upload your grades to complete the academic requirement check.';
     $primaryActionHref = 'upload.php';
     $primaryActionClass = 'btn-warning-modern';
     $primaryActionIcon = 'fa-upload';
@@ -832,7 +929,7 @@ if ($deadlineClass === 'bad') {
 } elseif ($profileRequirementPending > 0) {
     $nextStepTone = 'warning';
     $nextStepIcon = 'fa-user-gear';
-    $nextStepMessage = 'Complete your applicant profile so the system can finish the scholarship policy check.';
+    $nextStepMessage = $openingDatePrepPrefix . 'Complete your applicant profile so the system can finish the scholarship policy check.';
     $primaryActionHref = 'profile.php';
     $primaryActionClass = 'btn-warning-modern';
     $primaryActionIcon = 'fa-user-pen';
@@ -840,11 +937,19 @@ if ($deadlineClass === 'bad') {
 } elseif ($profileRequirementFailed > 0) {
     $nextStepTone = 'warning';
     $nextStepIcon = 'fa-user-xmark';
-    $nextStepMessage = 'Your current applicant profile does not yet match the target audience for this scholarship.';
+    $nextStepMessage = $openingDatePrepPrefix . 'Your current applicant profile does not yet match the target audience for this scholarship.';
     $primaryActionHref = 'profile.php';
     $primaryActionClass = 'btn-outline-modern';
     $primaryActionIcon = 'fa-user-pen';
     $primaryActionLabel = 'Review Profile';
+} elseif ($applicationNotYetOpen) {
+    $nextStepTone = 'info';
+    $nextStepIcon = 'fa-hourglass-half';
+    $nextStepMessage = 'Applications open on ' . $applicationOpenDateDisplay . '. This scholarship is not accepting submissions yet.';
+    $primaryActionType = 'button';
+    $primaryActionClass = 'btn-disabled-modern';
+    $primaryActionIcon = 'fa-hourglass-half';
+    $primaryActionLabel = 'Opens Soon';
 } elseif ($readyToApplyNow) {
     $nextStepTone = 'success';
     $nextStepIcon = 'fa-circle-check';
@@ -856,7 +961,7 @@ if ($deadlineClass === 'bad') {
 } elseif ($isEligible) {
     $nextStepTone = 'warning';
     $nextStepIcon = 'fa-upload';
-    $nextStepMessage = 'Upload the remaining required documents before you submit your application.';
+    $nextStepMessage = $openingDatePrepPrefix . 'Upload the remaining required documents before you submit your application.';
     $primaryActionHref = 'documents.php';
     $primaryActionClass = 'btn-warning-modern';
     $primaryActionIcon = 'fa-upload';
@@ -877,6 +982,9 @@ $eligibilityStatusSummary = $nextStepMessage;
 if ($detailCardStatusClass === 'ready') {
     $eligibilityStatusTitle = 'Yes, you can apply now.';
     $eligibilityStatusSummary = 'Your profile, academic record, and listed requirements currently line up with this scholarship.';
+} elseif ($applicationNotYetOpen) {
+    $eligibilityStatusTitle = 'Not yet. Applications open on ' . $applicationOpenDateDisplay . '.';
+    $eligibilityStatusSummary = 'Use this time to prepare your profile and required documents so you are ready once the application window starts.';
 } elseif ($detailCardStatusClass === 'docs') {
     $eligibilityStatusTitle = 'Almost there. You still need some documents.';
     $eligibilityStatusSummary = 'Your profile fits the scholarship, but the required files are not fully complete or verified yet.';
@@ -919,10 +1027,10 @@ $statusChecklistItems = [
         'icon' => 'fa-folder-open',
     ],
     [
-        'label' => 'Deadline',
-        'value' => $deadlineDecision,
-        'detail' => $deadlineDetail,
-        'class' => $deadlineClass,
+        'label' => 'Application window',
+        'value' => $applicationWindowDecision,
+        'detail' => $applicationWindowDetail,
+        'class' => $applicationWindowClass,
         'icon' => 'fa-calendar-days',
     ],
 ];
@@ -935,9 +1043,9 @@ $canApplyRuleItems = [
     $requirementsCount > 0
         ? 'All listed required documents should be uploaded and not rejected.'
         : 'No extra required documents are listed for this scholarship right now.',
-    $deadlineClass === 'bad'
-        ? 'This scholarship is already closed.'
-        : 'The application deadline must still be open.',
+    $applicationNotYetOpen
+        ? 'The application window starts on ' . $applicationOpenDateDisplay . '.'
+        : 'The application window must already be open and not past the deadline.',
 ];
 
 $cantApplyRuleItems = [
@@ -948,15 +1056,17 @@ $cantApplyRuleItems = [
     $requirementsCount > 0
         ? 'You cannot apply yet if required files are missing, rejected, or still waiting for review.'
         : 'If the provider adds required documents later, those will need to be completed before submission.',
-    !empty($scholarship['deadline'])
-        ? 'You cannot apply after ' . $deadlineDisplay . '.'
-        : 'There is no fixed closing date listed right now, but the provider can still update the posting.',
+    $applicationNotYetOpen
+        ? 'You cannot apply before ' . $applicationOpenDateDisplay . '.'
+        : (!empty($scholarship['deadline'])
+            ? 'You cannot apply after ' . $deadlineDisplay . '.'
+            : 'There is no fixed closing date listed right now, but the provider can still update the posting.'),
 ];
 
 $rulesInfoNote = 'These rules explain system readiness only. Final approval still depends on the provider review process.';
 $studentFocusItems = !empty($attentionReasons) ? $attentionReasons : $matchedReasons;
 $studentFocusTone = !empty($attentionReasons) ? 'warning' : 'positive';
-$studentFocusTitle = !empty($attentionReasons) ? 'What to fix first' : 'Why you can continue';
+$studentFocusTitle = !empty($attentionReasons) ? 'Why you cannot apply yet' : 'Why you can apply right now';
 $studentFocusEmpty = !empty($attentionReasons)
     ? 'No blockers were found. You can continue with the next step above.'
     : 'The system has not confirmed strong fit signals yet.';
@@ -1024,7 +1134,7 @@ $studentFocusEmpty = !empty($attentionReasons)
                             </div>
 
                             <span class="detail-status-pill <?php echo htmlspecialchars($detailCardStatusClass); ?>">
-                                <i class="fas fa-<?php echo $detailCardStatusClass === 'expired' ? 'clock' : ($detailCardStatusClass === 'ready' ? 'check-circle' : ($detailCardStatusClass === 'estimated' ? 'chart-line' : ($detailCardStatusClass === 'docs' ? 'file-circle-exclamation' : ($detailCardStatusClass === 'profile' ? 'user-gear' : 'ban')))); ?>"></i>
+                                <i class="fas <?php echo htmlspecialchars($detailStatusIcon); ?>"></i>
                                 <?php echo htmlspecialchars($detailCardStatusLabel); ?>
                             </span>
                         </div>
@@ -1222,7 +1332,7 @@ $studentFocusEmpty = !empty($attentionReasons)
                 <summary class="detail-accordion-summary">
                     <span>
                         <span class="detail-panel-kicker">Process</span>
-                        <strong>Timeline and provider notes</strong>
+                        <strong>Application process and important notes</strong>
                     </span>
                     <i class="fas fa-chevron-down"></i>
                 </summary>
@@ -1262,7 +1372,7 @@ $studentFocusEmpty = !empty($attentionReasons)
 
                             <div class="detail-note-inline">
                                 <span>Helpful reminder</span>
-                                <p>Competition level, renewal conditions, result release dates, and return-service obligations should still be confirmed directly with the provider because they are not fully listed in this posting.</p>
+                                <p>If opening dates, renewal conditions, restrictions, or result timelines are not fully listed here, confirm them directly with the scholarship provider before you apply.</p>
                             </div>
                         </div>
                     </div>
@@ -1287,7 +1397,7 @@ $studentFocusEmpty = !empty($attentionReasons)
 
                 <div class="detail-info-current">
                     <span class="detail-status-pill <?php echo htmlspecialchars($detailCardStatusClass); ?>">
-                        <i class="fas fa-<?php echo $detailCardStatusClass === 'expired' ? 'clock' : ($detailCardStatusClass === 'ready' ? 'check-circle' : ($detailCardStatusClass === 'estimated' ? 'chart-line' : ($detailCardStatusClass === 'docs' ? 'file-circle-exclamation' : ($detailCardStatusClass === 'profile' ? 'user-gear' : 'ban')))); ?>"></i>
+                        <i class="fas <?php echo htmlspecialchars($detailStatusIcon); ?>"></i>
                         <?php echo htmlspecialchars($detailCardStatusLabel); ?>
                     </span>
                     <p><?php echo htmlspecialchars($eligibilityStatusSummary); ?></p>

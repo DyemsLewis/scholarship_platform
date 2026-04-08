@@ -58,6 +58,24 @@ function tableExists(PDO $pdo, string $tableName): bool {
     return $exists;
 }
 
+function ensureScholarshipStudentInfoColumns(PDO $pdo): void {
+    $columnDefinitions = [
+        'application_open_date' => "ALTER TABLE scholarship_data ADD COLUMN application_open_date DATE NULL",
+        'application_process_label' => "ALTER TABLE scholarship_data ADD COLUMN application_process_label VARCHAR(150) NULL",
+        'post_application_steps' => "ALTER TABLE scholarship_data ADD COLUMN post_application_steps TEXT NULL",
+        'renewal_conditions' => "ALTER TABLE scholarship_data ADD COLUMN renewal_conditions TEXT NULL",
+        'scholarship_restrictions' => "ALTER TABLE scholarship_data ADD COLUMN scholarship_restrictions TEXT NULL",
+    ];
+
+    foreach ($columnDefinitions as $columnName => $sql) {
+        if (tableHasColumn($pdo, 'scholarship_data', $columnName)) {
+            continue;
+        }
+
+        $pdo->exec($sql);
+    }
+}
+
 function nullableString($value): ?string {
     $trimmed = trim((string) $value);
     return $trimmed === '' ? null : $trimmed;
@@ -97,6 +115,25 @@ function validateScholarshipDeadline(string $deadline, array &$errors): ?string 
     return $normalized;
 }
 
+function validateScholarshipCalendarDate(string $dateValue, string $label, array &$errors): ?string {
+    $normalized = trim($dateValue);
+    if ($normalized === '') {
+        return null;
+    }
+
+    $date = DateTime::createFromFormat('Y-m-d', $normalized);
+    $formatErrors = DateTime::getLastErrors();
+    $hasDateErrors = is_array($formatErrors)
+        && (($formatErrors['warning_count'] ?? 0) > 0 || ($formatErrors['error_count'] ?? 0) > 0);
+
+    if (!$date || $hasDateErrors || $date->format('Y-m-d') !== $normalized) {
+        $errors[] = $label . ' must be a valid date.';
+        return null;
+    }
+
+    return $normalized;
+}
+
 function storeScholarshipOldInput(array $input): void {
     $allowedKeys = [
         'action',
@@ -108,8 +145,13 @@ function storeScholarshipOldInput(array $input): void {
         'max_gwa',
         'provider',
         'benefits',
+        'application_open_date',
         'deadline',
         'status',
+        'application_process_label',
+        'post_application_steps',
+        'renewal_conditions',
+        'scholarship_restrictions',
         'target_applicant_type',
         'target_year_level',
         'required_admission_status',
@@ -322,8 +364,13 @@ function buildScholarshipDataPayload(PDO $pdo, array $input, ?string $image): ar
     $payload = [
         'provider' => nullableString($input['provider'] ?? ''),
         'benefits' => nullableString($input['benefits'] ?? ''),
+        'application_open_date' => nullableString($input['application_open_date'] ?? ''),
         'deadline' => nullableString($input['deadline'] ?? ''),
-        'image' => nullableString($image)
+        'image' => nullableString($image),
+        'application_process_label' => nullableString($input['application_process_label'] ?? ''),
+        'post_application_steps' => nullableString($input['post_application_steps'] ?? ''),
+        'renewal_conditions' => nullableString($input['renewal_conditions'] ?? ''),
+        'scholarship_restrictions' => nullableString($input['scholarship_restrictions'] ?? ''),
     ];
 
     if (tableHasColumn($pdo, 'scholarship_data', 'address')) {
@@ -841,9 +888,14 @@ $eligibility = trim((string) ($_POST['eligibility'] ?? ''));
 $minGwaRaw = trim((string) ($_POST['min_gwa'] ?? ''));
 $minGwa = $minGwaRaw === '' ? null : (float) $minGwaRaw;
 $benefits = trim((string) ($_POST['benefits'] ?? ''));
+$applicationOpenDate = trim((string) ($_POST['application_open_date'] ?? ''));
 $deadline = trim((string) ($_POST['deadline'] ?? ''));
 $provider = trim((string) ($_POST['provider'] ?? ''));
 $status = trim((string) ($_POST['status'] ?? 'active'));
+$applicationProcessLabel = trim((string) ($_POST['application_process_label'] ?? ''));
+$postApplicationSteps = trim((string) ($_POST['post_application_steps'] ?? ''));
+$renewalConditions = trim((string) ($_POST['renewal_conditions'] ?? ''));
+$scholarshipRestrictions = trim((string) ($_POST['scholarship_restrictions'] ?? ''));
 $allowedTargetApplicantTypes = ['all', 'incoming_freshman', 'current_college', 'transferee', 'continuing_student'];
 $allowedTargetYearLevels = ['any', '1st_year', '2nd_year', '3rd_year', '4th_year', '5th_year_plus'];
 $allowedAdmissionStatuses = ['any', 'not_yet_applied', 'applied', 'admitted', 'enrolled'];
@@ -915,6 +967,13 @@ if ($deadline === '') {
         $deadline = $validatedDeadline;
     }
 }
+$validatedOpenDate = validateScholarshipCalendarDate($applicationOpenDate, 'Application opening date', $errors);
+if ($validatedOpenDate !== null) {
+    $applicationOpenDate = $validatedOpenDate;
+}
+if ($applicationOpenDate !== '' && $deadline !== '' && empty($errors) && strcmp($applicationOpenDate, $deadline) > 0) {
+    $errors[] = 'Application opening date cannot be later than the deadline.';
+}
 if ($provider === '') {
     $errors[] = 'Provider is required';
 }
@@ -967,6 +1026,9 @@ if ($targetIncomeBracket === null) {
 if ($targetSpecialCategory === null) {
     $errors[] = 'Target special category is invalid';
 }
+if ($applicationProcessLabel !== '' && (function_exists('mb_strlen') ? mb_strlen($applicationProcessLabel) : strlen($applicationProcessLabel)) > 150) {
+    $errors[] = 'Application process label is too long.';
+}
 
 [$latitude, $longitude] = parseCoordinates($latitudeRaw, $longitudeRaw, $errors);
 
@@ -998,6 +1060,7 @@ if (strtolower($assessmentRequirement) === 'remote_examination') {
 
 try {
     $pdo->beginTransaction();
+    ensureScholarshipStudentInfoColumns($pdo);
 
     if ($isUpdate) {
         $stmt = $pdo->prepare("
@@ -1034,7 +1097,12 @@ try {
     $scholarshipDataInput = [
         'provider' => $provider,
         'benefits' => $benefits,
+        'application_open_date' => $applicationOpenDate,
         'deadline' => $deadline,
+        'application_process_label' => $applicationProcessLabel,
+        'post_application_steps' => $postApplicationSteps,
+        'renewal_conditions' => $renewalConditions,
+        'scholarship_restrictions' => $scholarshipRestrictions,
         'target_applicant_type' => $targetApplicantType,
         'target_year_level' => $targetYearLevel,
         'required_admission_status' => $requiredAdmissionStatus,
@@ -1088,9 +1156,11 @@ try {
         'entity_name' => $name,
         'details' => [
             'provider' => $provider,
+            'application_open_date' => $applicationOpenDate !== '' ? $applicationOpenDate : null,
             'status' => $status,
             'deadline' => $deadline,
             'minimum_gwa' => $minGwa,
+            'application_process_label' => $applicationProcessLabel !== '' ? $applicationProcessLabel : null,
             'target_applicant_type' => $targetApplicantType,
             'target_year_level' => $targetYearLevel,
             'required_admission_status' => $requiredAdmissionStatus,

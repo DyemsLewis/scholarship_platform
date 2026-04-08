@@ -770,7 +770,7 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
                                     <textarea name="description" rows="4"><?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'description', (string) ($scholarship['description'] ?? ''))); ?></textarea>
                                 </div>
 
-                                  <div class="form-row-modern">
+                                <div class="form-row-modern">
                                       <div class="form-group-modern">
                                           <label><i class="fas fa-building"></i> Provider/Organization *</label>
                                         <input
@@ -787,6 +787,19 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
                                       <div class="form-group-modern">
                                           <label><i class="fas fa-calendar-alt"></i> Application Deadline *</label>
                                         <input type="date" name="deadline" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'deadline', (string) ($scholarshipData['deadline'] ?? ''))); ?>" min="<?php echo htmlspecialchars(date('Y-m-d')); ?>" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-row-modern">
+                                    <div class="form-group-modern">
+                                        <label><i class="fas fa-door-open"></i> Application Opening Date</label>
+                                        <input type="date" name="application_open_date" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'application_open_date', (string) ($scholarshipData['application_open_date'] ?? ''))); ?>">
+                                        <small class="helper-text">Optional: use this if the scholarship opens on a specific date.</small>
+                                    </div>
+                                    <div class="form-group-modern">
+                                        <label><i class="fas fa-list-check"></i> Simple Application Process</label>
+                                        <input type="text" name="application_process_label" maxlength="150" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'application_process_label', (string) ($scholarshipData['application_process_label'] ?? ''))); ?>" placeholder="e.g., Documents + Interview">
+                                        <small class="helper-text">Keep this short so students can understand it quickly.</small>
                                     </div>
                                 </div>
 
@@ -923,6 +936,30 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
                                 <div class="form-group-modern">
                                     <label><i class="fas fa-note-sticky"></i> Assessment Details</label>
                                     <textarea name="assessment_details" rows="3" placeholder="Instructions, schedule, or evaluation notes"><?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'assessment_details', (string) ($scholarshipData['assessment_details'] ?? ''))); ?></textarea>
+                                </div>
+
+                                <div class="form-card-modern" style="margin-top: 24px; border: 1px solid var(--gray-200); box-shadow: none;">
+                                    <div class="card-header">
+                                        <h3><i class="fas fa-user-check"></i> Student-Facing Details</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-group-modern">
+                                            <label><i class="fas fa-route"></i> What Happens After Applying</label>
+                                            <textarea name="post_application_steps" rows="3" placeholder="Example: After submission, the provider reviews documents, shortlists applicants, then releases the final decision."><?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'post_application_steps', (string) ($scholarshipData['post_application_steps'] ?? ''))); ?></textarea>
+                                            <small class="helper-text">Explain the next stage in simple language so students know what to expect.</small>
+                                        </div>
+
+                                        <div class="form-row-modern">
+                                            <div class="form-group-modern">
+                                                <label><i class="fas fa-rotate"></i> Renewal Conditions</label>
+                                                <textarea name="renewal_conditions" rows="3" placeholder="Example: Maintain a 2.00 GWA, no failing grades, and renew every semester."><?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'renewal_conditions', (string) ($scholarshipData['renewal_conditions'] ?? ''))); ?></textarea>
+                                            </div>
+                                            <div class="form-group-modern">
+                                                <label><i class="fas fa-triangle-exclamation"></i> Restrictions / Obligations</label>
+                                                <textarea name="scholarship_restrictions" rows="3" placeholder="Example: Full-time enrollment only, selected campuses only, or return-service obligation."><?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'scholarship_restrictions', (string) ($scholarshipData['scholarship_restrictions'] ?? ''))); ?></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div id="remoteExamSitesContainer" class="form-group-modern" style="display: none;">

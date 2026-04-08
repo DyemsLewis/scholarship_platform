@@ -367,8 +367,25 @@ require_once __DIR__ . '/../app/Models/UserDocument.php';
 
                         $scholarshipDetailsUrl = buildEntityUrl('scholarship_details.php', 'scholarship', (int) $scholarship['id'], 'view', ['id' => (int) $scholarship['id']]);
                         $wizardApplyUrl = buildEntityUrl('wizard.php', 'scholarship', (int) $scholarship['id'], 'apply', ['scholarship_id' => (int) $scholarship['id']]);
+                        $applicationNotYetOpen = false;
+                        $applicationOpenDateLabel = 'Open now';
+                        if (!empty($scholarship['application_open_date'])) {
+                            try {
+                                $applicationOpenDate = new DateTime((string) $scholarship['application_open_date']);
+                                $applicationOpenDate->setTime(0, 0, 0);
+                                $applicationOpenDateLabel = $applicationOpenDate->format('M d, Y');
+                                $applicationNotYetOpen = $applicationOpenDate > new DateTime();
+                            } catch (Throwable $e) {
+                                $applicationNotYetOpen = false;
+                                $applicationOpenDateLabel = 'Open now';
+                            }
+                        }
+                        $readyToApplyNow = !empty($scholarship['is_eligible']) && $hasAllRequired && empty($scholarship['is_expired']) && !$applicationNotYetOpen;
 
-                        if ($requiresGwa) {
+                        if ($applicationNotYetOpen) {
+                            $cardStatusClass = 'estimated';
+                            $cardStatusLabel = 'Opens Soon';
+                        } elseif ($requiresGwa) {
                             $cardStatusClass = 'estimated';
                             $cardStatusLabel = 'Needs GWA';
                         } elseif ($readyToApplyNow) {
@@ -390,6 +407,21 @@ require_once __DIR__ . '/../app/Models/UserDocument.php';
                             $cardStatusLabel = 'Expired';
                             $scholarship['is_eligible'] = false;
                             $requiresGwa = false;
+                        }
+
+                        $cardStatusIcon = 'fa-ban';
+                        if ($cardStatusClass === 'expired') {
+                            $cardStatusIcon = 'fa-clock';
+                        } elseif ($applicationNotYetOpen) {
+                            $cardStatusIcon = 'fa-hourglass-half';
+                        } elseif ($requiresGwa) {
+                            $cardStatusIcon = 'fa-chart-line';
+                        } elseif ($readyToApplyNow) {
+                            $cardStatusIcon = 'fa-check-circle';
+                        } elseif ($cardStatusClass === 'docs') {
+                            $cardStatusIcon = 'fa-file-circle-exclamation';
+                        } elseif ($cardStatusClass === 'profile') {
+                            $cardStatusIcon = 'fa-user-gear';
                         }
 
                         if ($requirementsCount > 0) {
@@ -556,7 +588,7 @@ require_once __DIR__ . '/../app/Models/UserDocument.php';
                                     </div>
                                     <div class="scholarship-topline">
                                         <span class="card-status-pill <?php echo $cardStatusClass; ?>">
-                                            <i class="fas fa-<?php echo !empty($scholarship['is_expired']) ? 'clock' : ($requiresGwa ? 'chart-line' : ($scholarship['is_eligible'] ? 'check-circle' : 'ban')); ?>"></i>
+                                            <i class="fas <?php echo htmlspecialchars($cardStatusIcon); ?>"></i>
                                             <?php echo $cardStatusLabel; ?>
                                         </span>
                                     </div>
@@ -659,6 +691,12 @@ require_once __DIR__ . '/../app/Models/UserDocument.php';
                                         }
                                     }
 
+                                    if ($applicationNotYetOpen) {
+                                        $pushReason($attentionReasons, 'Applications open on ' . $applicationOpenDateLabel);
+                                    } else {
+                                        $pushReason($matchedReasons, 'The scholarship is currently open for applications');
+                                    }
+
                                     if ($requirementsCount > 0) {
                                         if ($missingCount > 0) {
                                             $pushReason($attentionReasons, $missingCount . ' required document' . ($missingCount === 1 ? ' is' : 's are') . ' still missing');
@@ -703,6 +741,10 @@ require_once __DIR__ . '/../app/Models/UserDocument.php';
                                     $primaryActionIcon = 'fa-circle-info';
                                     $primaryActionLabel = 'Review Details';
 
+                                    $openingDatePrepPrefix = $applicationNotYetOpen
+                                        ? ('Applications open on ' . $applicationOpenDateLabel . '. ')
+                                        : '';
+
                                     if (!empty($scholarship['is_expired'])) {
                                         $nextStepTone = 'muted';
                                         $nextStepIcon = 'fa-calendar-times';
@@ -713,14 +755,14 @@ require_once __DIR__ . '/../app/Models/UserDocument.php';
                                         $primaryActionLabel = 'Closed';
                                     } elseif ($requiresGwa) {
                                         $nextStepIcon = 'fa-chart-line';
-                                        $nextStepMessage = 'Upload your grades to complete the academic requirement check.';
+                                        $nextStepMessage = $openingDatePrepPrefix . 'Upload your grades to complete the academic requirement check.';
                                         $primaryActionHref = 'upload.php';
                                         $primaryActionClass = 'btn-warning-modern';
                                         $primaryActionIcon = 'fa-upload';
                                         $primaryActionLabel = 'Upload Grades';
                                     } elseif ($profileRequirementPending > 0) {
                                         $nextStepIcon = 'fa-user-gear';
-                                        $nextStepMessage = 'Complete your applicant profile so the system can finish the scholarship policy check.';
+                                        $nextStepMessage = $openingDatePrepPrefix . 'Complete your applicant profile so the system can finish the scholarship policy check.';
                                         $primaryActionHref = 'profile.php';
                                         $primaryActionClass = 'btn-warning-modern';
                                         $primaryActionIcon = 'fa-user-pen';
@@ -728,11 +770,19 @@ require_once __DIR__ . '/../app/Models/UserDocument.php';
                                     } elseif ($profileRequirementFailed > 0) {
                                         $nextStepTone = 'warning';
                                         $nextStepIcon = 'fa-user-xmark';
-                                        $nextStepMessage = 'Your current applicant profile does not yet match the target audience for this scholarship.';
+                                        $nextStepMessage = $openingDatePrepPrefix . 'Your current applicant profile does not yet match the target audience for this scholarship.';
                                         $primaryActionHref = 'profile.php';
                                         $primaryActionClass = 'btn-outline-modern';
                                         $primaryActionIcon = 'fa-user-pen';
                                         $primaryActionLabel = 'Review Profile';
+                                    } elseif ($applicationNotYetOpen) {
+                                        $nextStepTone = 'info';
+                                        $nextStepIcon = 'fa-hourglass-half';
+                                        $nextStepMessage = 'Applications open on ' . $applicationOpenDateLabel . '. This scholarship is not accepting submissions yet.';
+                                        $primaryActionType = 'button';
+                                        $primaryActionClass = 'btn-disabled-modern';
+                                        $primaryActionIcon = 'fa-hourglass-half';
+                                        $primaryActionLabel = 'Opens Soon';
                                     } elseif (!empty($scholarship['is_eligible']) && $hasAllRequired) {
                                         $nextStepTone = 'success';
                                         $nextStepIcon = 'fa-circle-check';
@@ -743,7 +793,7 @@ require_once __DIR__ . '/../app/Models/UserDocument.php';
                                         $primaryActionLabel = 'Apply Now';
                                     } elseif (!empty($scholarship['is_eligible'])) {
                                         $nextStepIcon = 'fa-upload';
-                                        $nextStepMessage = 'Upload the remaining required documents before you submit your application.';
+                                        $nextStepMessage = $openingDatePrepPrefix . 'Upload the remaining required documents before you submit your application.';
                                         $primaryActionHref = 'documents.php';
                                         $primaryActionClass = 'btn-warning-modern';
                                         $primaryActionIcon = 'fa-upload';

@@ -9,6 +9,32 @@ require_once __DIR__ . '/../Controllers/scholarshipResultController.php';
 
 header('Content-Type: application/json; charset=UTF-8');
 
+if (!function_exists('tableHasColumn')) {
+    function tableHasColumn(PDO $pdo, string $tableName, string $columnName): bool
+    {
+        static $cache = [];
+        $cacheKey = $tableName . '.' . $columnName;
+        if (isset($cache[$cacheKey])) {
+            return $cache[$cacheKey];
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*)
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = :table_name
+              AND COLUMN_NAME = :column_name
+        ");
+        $stmt->execute([
+            ':table_name' => $tableName,
+            ':column_name' => $columnName
+        ]);
+
+        $cache[$cacheKey] = ((int) $stmt->fetchColumn()) > 0;
+        return $cache[$cacheKey];
+    }
+}
+
 function jsonResponse(int $statusCode, array $payload): void {
     http_response_code($statusCode);
     echo json_encode($payload);
@@ -123,8 +149,12 @@ if (!$agreedTerms || !$confirmedInfo) {
 $mailConfig = require __DIR__ . '/../Config/mail_config.php';
 
 try {
+    $applicationOpenDateSelect = tableHasColumn($pdo, 'scholarship_data', 'application_open_date')
+        ? 'sd.application_open_date'
+        : 'NULL AS application_open_date';
+
     $stmt = $pdo->prepare("
-        SELECT s.id, s.name, s.status, sd.provider, sd.deadline
+        SELECT s.id, s.name, s.status, sd.provider, sd.deadline, {$applicationOpenDateSelect}
         FROM scholarships s
         LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id
         WHERE s.id = ?
@@ -138,6 +168,21 @@ try {
             'success' => false,
             'message' => 'Scholarship not found or inactive.'
         ]);
+    }
+
+    if (!empty($scholarship['application_open_date'])) {
+        try {
+            $applicationOpenDate = new DateTime((string) $scholarship['application_open_date']);
+            $applicationOpenDate->setTime(0, 0, 0);
+            if ($applicationOpenDate > new DateTime()) {
+                jsonResponse(422, [
+                    'success' => false,
+                    'message' => 'This scholarship opens on ' . $applicationOpenDate->format('M d, Y') . '.'
+                ]);
+            }
+        } catch (Throwable $openDateError) {
+            // Ignore malformed open-date values and continue with the remaining checks.
+        }
     }
 
     if (!empty($scholarship['deadline'])) {
