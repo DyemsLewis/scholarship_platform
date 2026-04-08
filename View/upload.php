@@ -1,5 +1,5 @@
 <?php
-require_once '../Config/init.php';
+require_once __DIR__ . '/../app/Config/init.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -42,7 +42,7 @@ require_once '../Config/init.php';
     $documentsUploaded = 0;
     if ($isLoggedIn) {
         try {
-            require_once '../Model/UserDocument.php';
+            require_once __DIR__ . '/../app/Models/UserDocument.php';
             $docModel = new UserDocument($pdo);
             $docs = $docModel->getUserDocuments($_SESSION['user_id']);
             $documentsUploaded = count($docs);
@@ -210,7 +210,7 @@ require_once '../Config/init.php';
                     </div>
                     
                     <!-- Upload Form -->
-                    <form action="../Controller/process_upload.php" method="POST" enctype="multipart/form-data" id="uploadForm">
+                    <form action="../app/Controllers/process_upload.php" method="POST" enctype="multipart/form-data" id="uploadForm">
                         <div class="upload-zone-modern" id="uploadArea">
                             <i class="fas fa-cloud-upload-alt"></i>
                             <h3>Drag & drop your academic record</h3>
@@ -269,7 +269,7 @@ require_once '../Config/init.php';
                         <?php endif; ?>
                     </div>
 
-                    <form action="../Controller/report_gwa_issue.php" method="POST" id="gwaReportForm">
+                    <form action="../app/Controllers/report_gwa_issue.php" method="POST" id="gwaReportForm">
                         <input type="hidden" name="document_id" value="<?php echo $lastTorDocumentId > 0 ? (int) $lastTorDocumentId : ''; ?>">
                         <input type="hidden" name="extracted_gwa" value="<?php echo $lastExtractedGwa !== null ? htmlspecialchars(number_format((float) $lastExtractedGwa, 2, '.', '')) : ''; ?>">
 

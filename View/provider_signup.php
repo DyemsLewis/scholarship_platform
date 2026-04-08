@@ -1,10 +1,10 @@
 <?php
-require_once '../Config/session_bootstrap.php';
-require_once '../Config/init.php';
-require_once '../Config/db_config.php';
-require_once '../Config/csrf.php';
-require_once '../Config/signup_verification.php';
-require_once '../Model/StaffAccountProfile.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/init.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
+require_once __DIR__ . '/../app/Config/signup_verification.php';
+require_once __DIR__ . '/../app/Models/StaffAccountProfile.php';
 
 if ($isLoggedIn) {
     redirect($isProviderOrAdmin ? '../AdminView/admin_dashboard.php' : 'index.php');
@@ -135,7 +135,7 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
                 </div>
             <?php endif; ?>
 
-            <form id="providerSignupForm" method="POST" action="../Controller/providerRegisterController.php" enctype="multipart/form-data" novalidate>
+            <form id="providerSignupForm" method="POST" action="../app/Controllers/providerRegisterController.php" enctype="multipart/form-data" novalidate>
                 <?php echo csrfInputField('provider_signup'); ?>
                 <input type="hidden" id="verifiedEmailState" value="<?php echo htmlspecialchars($verifiedEmailStateValue); ?>">
 
@@ -414,7 +414,7 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
         if (!email || !validEmail(email)) { Swal.fire({ icon: 'error', title: 'Invalid Email', text: 'Enter a valid login email address first.', confirmButtonColor: '#3085d6' }); return; }
         sendBtn.disabled = true;
         try {
-            const response = await fetch('../Controller/send_signup_verification.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: new URLSearchParams({ email }) });
+            const response = await fetch('../app/Controllers/send_signup_verification.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: new URLSearchParams({ email }) });
             const data = await response.json();
             if (!response.ok || !data.success) { throw new Error(data.message || 'Unable to send verification code.'); }
             if (data.already_verified) { markVerified(email); } else { clearVerified(false); setStatus(data.message || 'Verification code sent. Please check your inbox.', 'pending'); }
@@ -433,7 +433,7 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
         if (!/^\d{6}$/.test(code)) { Swal.fire({ icon: 'error', title: 'Invalid Code', text: 'Enter the 6-digit verification code sent to your email.', confirmButtonColor: '#3085d6' }); return; }
         verifyBtn.disabled = true;
         try {
-            const response = await fetch('../Controller/verify_signup_code.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: new URLSearchParams({ email, code }) });
+            const response = await fetch('../app/Controllers/verify_signup_code.php', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: new URLSearchParams({ email, code }) });
             const data = await response.json();
             if (!response.ok || !data.success) { throw new Error(data.message || 'Unable to verify email.'); }
             markVerified(email);

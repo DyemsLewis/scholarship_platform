@@ -1,8 +1,8 @@
 <?php
-require_once '../Config/session_bootstrap.php';
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Model/ActivityLog.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Models/ActivityLog.php';
 
 $logoutMessage = 'You have been successfully logged out.';
 $actorUserId = isset($_SESSION['user_id']) && is_numeric($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;

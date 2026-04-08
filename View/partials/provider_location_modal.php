@@ -229,7 +229,7 @@ $providerHasCoordinates = $providerModalLatitude !== '' && $providerModalLongitu
             params.append(key, payload[key]);
         });
 
-        return fetch('../Controller/geocode_controller.php', {
+        return fetch('../app/Controllers/geocode_controller.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'

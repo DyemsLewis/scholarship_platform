@@ -190,7 +190,7 @@ $locationModalHasCoordinates = !($locationModalLatitude === 0.0 && $locationModa
         saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
         showWarning('');
 
-        fetch('../Controller/location_controller.php', {
+        fetch('../app/Controllers/location_controller.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'

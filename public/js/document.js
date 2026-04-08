@@ -417,7 +417,7 @@ class DocumentManager {
         }
         
         try {
-            const response = await fetch('../Controller/document_controller.php', {
+            const response = await fetch('../app/Controllers/document_controller.php', {
                 method: 'POST',
                 body: formData
             });

@@ -1,14 +1,14 @@
 <?php
 // process_document_upload.php
-require_once __DIR__ . '/../Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
 // Check if user is logged in
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
-require_once '../Config/db_config.php';
-require_once '../Model/UserDocument.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Models/UserDocument.php';
 
 $docModel = new UserDocument($pdo);
 

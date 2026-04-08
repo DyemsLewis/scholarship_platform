@@ -1,11 +1,11 @@
 <?php 
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Config/admin_account_options.php';
-require_once '../Config/csrf.php';
-require_once '../Config/url_token.php';
-require_once '../Model/StaffAccountProfile.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Config/admin_account_options.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
+require_once __DIR__ . '/../app/Config/url_token.php';
+require_once __DIR__ . '/../app/Models/StaffAccountProfile.php';
 
 requireRoles(['super_admin'], '../AdminView/admin_dashboard.php', 'Only super administrators can edit account records.');
 $actorRole = getCurrentSessionRole();
@@ -413,7 +413,7 @@ $editUsersCssVersion = @filemtime(__DIR__ . '/../AdminPublic/css/edit-users.css'
             
             <!-- User Edit Form -->
             <div class="form-section">
-                    <form method="POST" action="../AdminController/user_process.php">
+                    <form method="POST" action="../app/AdminControllers/user_process.php">
                         <input type="hidden" name="action" value="update">
                         <?php echo csrfInputField('admin_account_management'); ?>
                         <input type="hidden" name="user_id" value="<?php echo $user['id']; ?>">

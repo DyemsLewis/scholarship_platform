@@ -171,7 +171,7 @@ document.getElementById('editProfileForm')?.addEventListener('submit', function(
     // Add action to identify this as profile update
     formData.append('action', 'update_profile');
     
-    fetch('../Controller/user_profile_controller.php', {
+    fetch('../app/Controllers/user_profile_controller.php', {
         method: 'POST',
         body: formData
     })
@@ -273,7 +273,7 @@ document.getElementById('changePasswordForm')?.addEventListener('submit', functi
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
     submitButton.disabled = true;
     
-    fetch('../Controller/user_profile_controller.php', {
+    fetch('../app/Controllers/user_profile_controller.php', {
         method: 'POST',
         body: formData
     })

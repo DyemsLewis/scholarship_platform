@@ -1,10 +1,10 @@
 <?php
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Config/provider_scope.php';
-require_once '../Config/csrf.php';
-require_once '../Model/Notification.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Config/provider_scope.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
+require_once __DIR__ . '/../app/Models/Notification.php';
 
 requireRoles(['provider', 'admin', 'super_admin'], '../View/index.php', 'You do not have access to the admin dashboard.');
 
@@ -425,7 +425,7 @@ if ($canViewActivityLogs) {
                     <div class="admin-notifications-actions">
                         <span class="admin-notifications-badge"><?php echo (int) $dashboardUnreadNotifications; ?> unread</span>
                         <?php if (!empty($dashboardNotifications) && $dashboardUnreadNotifications > 0): ?>
-                        <form method="POST" action="../Controller/notification_controller.php">
+                        <form method="POST" action="../app/Controllers/notification_controller.php">
                             <input type="hidden" name="action" value="mark_all_read">
                             <?php echo csrfInputField('notification_center'); ?>
                             <input type="hidden" name="redirect" value="../AdminView/admin_dashboard.php">

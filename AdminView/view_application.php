@@ -1,12 +1,12 @@
 <?php
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Config/provider_scope.php';
-require_once '../Config/url_token.php';
-require_once '../Config/csrf.php';
-require_once '../Config/helpers.php';
-require_once '../Model/UserDocument.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Config/provider_scope.php';
+require_once __DIR__ . '/../app/Config/url_token.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
+require_once __DIR__ . '/../app/Config/helpers.php';
+require_once __DIR__ . '/../app/Models/UserDocument.php';
 
 requireRoles(['provider', 'admin', 'super_admin'], '../View/index.php', 'You do not have permission to view applications.');
 
@@ -352,8 +352,8 @@ $adminStyleVersion = @filemtime(__DIR__ . '/../public/css/admin_style.css') ?: t
 $reviewsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/reviews.css') ?: time();
 $viewApplicationStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/view-application.css') ?: time();
 $applicationActionParams = ['id' => (int) $application['application_id']];
-$approveUrl = buildEntityUrl('../AdminController/application_process.php', 'application', (int) $application['application_id'], 'approve', array_merge(['action' => 'approve'], $applicationActionParams));
-$rejectUrl = buildEntityUrl('../AdminController/application_process.php', 'application', (int) $application['application_id'], 'reject', array_merge(['action' => 'reject'], $applicationActionParams));
+$approveUrl = buildEntityUrl('../app/AdminControllers/application_process.php', 'application', (int) $application['application_id'], 'approve', array_merge(['action' => 'approve'], $applicationActionParams));
+$rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', 'application', (int) $application['application_id'], 'reject', array_merge(['action' => 'reject'], $applicationActionParams));
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -1124,7 +1124,7 @@ $rejectUrl = buildEntityUrl('../AdminController/application_process.php', 'appli
                 params.append('reason', reason);
             }
 
-            fetch('../AdminController/verify_document_process.php', {
+            fetch('../app/AdminControllers/verify_document_process.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',

@@ -1,9 +1,9 @@
 <?php
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Config/provider_scope.php';
-require_once '../Config/url_token.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Config/provider_scope.php';
+require_once __DIR__ . '/../app/Config/url_token.php';
 
 requireRoles(['provider', 'admin', 'super_admin'], '../View/index.php', 'You do not have permission to view applications.');
 

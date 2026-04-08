@@ -1,10 +1,10 @@
 <?php
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Config/csrf.php';
-require_once '../Config/helpers.php';
-require_once '../Model/GwaIssueReport.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
+require_once __DIR__ . '/../app/Config/helpers.php';
+require_once __DIR__ . '/../app/Models/GwaIssueReport.php';
 
 requireRoles(['admin', 'super_admin'], '../AdminView/reviews.php', 'Only administrators can review GWA reports.');
 if (!canAccessGwaIssueReports()) {
@@ -364,7 +364,7 @@ $reportedSuggestions = (int) ($stats['with_reported_gwa'] ?? 0);
                         </div>
                         <?php endif; ?>
 
-                        <form action="../AdminController/gwa_issue_process.php" method="POST" class="gwa-report-form">
+                        <form action="../app/AdminControllers/gwa_issue_process.php" method="POST" class="gwa-report-form">
                             <input type="hidden" name="report_id" value="<?php echo (int) $report['id']; ?>">
                             <?php echo csrfInputField('gwa_report_review'); ?>
                             <input type="hidden" name="return_status" value="<?php echo htmlspecialchars($statusFilter); ?>">

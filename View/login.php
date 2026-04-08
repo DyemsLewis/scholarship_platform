@@ -1,5 +1,5 @@
 <?php
-require_once '../Config/init.php';
+require_once __DIR__ . '/../app/Config/init.php';
 
 if ($isLoggedIn) {
     redirect($isProviderOrAdmin ? '../AdminView/admin_dashboard.php' : 'index.php');
@@ -175,7 +175,7 @@ if ($isLoggedIn) {
                     </div>
                     
                     <!-- Login Form -->
-                    <form id="loginForm" method="POST" action="../Controller/loginController.php">
+                    <form id="loginForm" method="POST" action="../app/Controllers/loginController.php">
                         <div class="form-group">
                             <label for="loginEmail"><i class="fas fa-envelope"></i> Email Address</label>
                             <input type="email" id="loginEmail" name="email" placeholder="Enter your email" required>

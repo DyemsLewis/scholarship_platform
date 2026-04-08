@@ -1,6 +1,6 @@
 <?php
 // header.php
-require_once '../Config/init.php';
+require_once __DIR__ . '/../../app/Config/init.php';
 
 $headerUserName = $userName;
 if ($isLoggedIn && ($userRole ?? 'guest') === 'student') {

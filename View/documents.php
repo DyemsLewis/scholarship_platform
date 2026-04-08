@@ -1,5 +1,5 @@
 <?php
-require_once '../Config/init.php';
+require_once __DIR__ . '/../app/Config/init.php';
 if (!$isLoggedIn) {
     $_SESSION['error'] = 'Please login to access document upload';
     header('Location: login.php');
@@ -8,7 +8,7 @@ if (!$isLoggedIn) {
 
 $userId = isset($user_id) ? $user_id : $_SESSION['user_id'];
 
-require_once '../Model/UserDocument.php';
+require_once __DIR__ . '/../app/Models/UserDocument.php';
 $documentModel = new UserDocument($pdo);
 $userDocuments = $documentModel->getUserDocuments($userId, true);
 $documentTypes = $documentModel->getDocumentTypes();

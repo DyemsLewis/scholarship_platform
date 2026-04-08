@@ -1,9 +1,9 @@
 <?php
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Config/csrf.php';
-require_once '../Model/UserIssueReport.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
+require_once __DIR__ . '/../app/Models/UserIssueReport.php';
 
 requireRoles(['admin', 'super_admin'], '../AdminView/reviews.php', 'Only administrators can review user problem reports.');
 if (!canAccessUserIssueReports()) {
@@ -254,7 +254,7 @@ $rejectedReports = (int) ($stats['rejected'] ?? 0);
                         </div>
                         <?php endif; ?>
 
-                        <form method="POST" action="../AdminController/user_issue_report_process.php" class="issue-report-form gwa-report-form">
+                        <form method="POST" action="../app/AdminControllers/user_issue_report_process.php" class="issue-report-form gwa-report-form">
                             <input type="hidden" name="report_id" value="<?php echo (int) $report['id']; ?>">
                             <?php echo csrfInputField('user_issue_review'); ?>
                             <input type="hidden" name="return_status" value="<?php echo htmlspecialchars($statusFilter); ?>">

@@ -1,10 +1,10 @@
 <?php 
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-    require_once '../Config/db_config.php';
-    require_once '../Config/access_control.php';
-    require_once '../Config/csrf.php';
-    require_once '../Config/url_token.php';
-    require_once '../Model/StaffAccountProfile.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+    require_once __DIR__ . '/../app/Config/db_config.php';
+    require_once __DIR__ . '/../app/Config/access_control.php';
+    require_once __DIR__ . '/../app/Config/csrf.php';
+    require_once __DIR__ . '/../app/Config/url_token.php';
+    require_once __DIR__ . '/../app/Models/StaffAccountProfile.php';
     
     requireRoles(['super_admin'], '../AdminView/admin_dashboard.php', 'Only super administrators can access account management.');
     $actorRole = getCurrentSessionRole();
@@ -540,7 +540,7 @@ if ($canManageStaffAccounts) {
                                         </span>
                                     </td>
                                     <td>
-                                        <form method="POST" action="../AdminController/user_process.php" class="account-inline-form">
+                                        <form method="POST" action="../app/AdminControllers/user_process.php" class="account-inline-form">
                                             <input type="hidden" name="action" value="update_status">
                                             <?php echo csrfInputField('admin_account_management'); ?>
                                             <input type="hidden" name="user_id" value="<?php echo $studentId; ?>">
@@ -563,7 +563,7 @@ if ($canManageStaffAccounts) {
                                                data-tooltip="Edit Account">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <form method="POST" action="../AdminController/user_process.php" class="account-inline-form account-delete-form" data-account-type="student account" data-account-name="<?php echo htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8'); ?>">
+                                            <form method="POST" action="../app/AdminControllers/user_process.php" class="account-inline-form account-delete-form" data-account-type="student account" data-account-name="<?php echo htmlspecialchars($displayName, ENT_QUOTES, 'UTF-8'); ?>">
                                                 <input type="hidden" name="action" value="delete">
                                                 <?php echo csrfInputField('admin_account_management'); ?>
                                                 <input type="hidden" name="user_id" value="<?php echo $studentId; ?>">
@@ -684,7 +684,7 @@ if ($canManageStaffAccounts) {
                                             <?php echo htmlspecialchars($statusOptions[(string) ($admin['status'] ?? '')] ?? ucwords(str_replace('_', ' ', (string) ($admin['status'] ?? 'inactive')))); ?>
                                         </span>
                                         <?php else: ?>
-                                        <form method="POST" action="../AdminController/user_process.php" class="account-inline-form">
+                                        <form method="POST" action="../app/AdminControllers/user_process.php" class="account-inline-form">
                                             <input type="hidden" name="action" value="update_status">
                                             <?php echo csrfInputField('admin_account_management'); ?>
                                             <input type="hidden" name="user_id" value="<?php echo $staffId; ?>">
@@ -709,7 +709,7 @@ if ($canManageStaffAccounts) {
                                                data-tooltip="Edit Account">
                                                 <i class="fas fa-edit"></i>
                                             </a>
-                                            <form method="POST" action="../AdminController/user_process.php" class="account-inline-form account-delete-form" data-account-type="admin account" data-account-name="<?php echo htmlspecialchars($staffDisplayName, ENT_QUOTES, 'UTF-8'); ?>">
+                                            <form method="POST" action="../app/AdminControllers/user_process.php" class="account-inline-form account-delete-form" data-account-type="admin account" data-account-name="<?php echo htmlspecialchars($staffDisplayName, ENT_QUOTES, 'UTF-8'); ?>">
                                                 <input type="hidden" name="action" value="delete">
                                                 <?php echo csrfInputField('admin_account_management'); ?>
                                                 <input type="hidden" name="user_id" value="<?php echo $staffId; ?>">
@@ -854,7 +854,7 @@ if ($canManageStaffAccounts) {
                                                 <i class="fas fa-edit"></i>
                                             </a>
                                             <?php if($providerId != $_SESSION['user_id']): ?>
-                                            <form method="POST" action="../AdminController/user_process.php" class="account-inline-form account-delete-form" data-account-type="provider account" data-account-name="<?php echo htmlspecialchars($organization, ENT_QUOTES, 'UTF-8'); ?>">
+                                            <form method="POST" action="../app/AdminControllers/user_process.php" class="account-inline-form account-delete-form" data-account-type="provider account" data-account-name="<?php echo htmlspecialchars($organization, ENT_QUOTES, 'UTF-8'); ?>">
                                                 <input type="hidden" name="action" value="delete">
                                                 <?php echo csrfInputField('admin_account_management'); ?>
                                                 <input type="hidden" name="user_id" value="<?php echo $providerId; ?>">

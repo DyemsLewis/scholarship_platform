@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../Config/csrf.php';
+require_once __DIR__ . '/../../app/Config/csrf.php';
 $showStudentWidgets = isset($_SESSION['user_id']) && strtolower(trim((string) ($_SESSION['user_role'] ?? ''))) === 'student';
 $userIssueOld = ($showStudentWidgets && isset($_SESSION['user_issue_old']) && is_array($_SESSION['user_issue_old']))
     ? $_SESSION['user_issue_old']
@@ -47,7 +47,7 @@ if (!function_exists('formatStudentWidgetNotificationTimestamp')) {
 
 if ($showStudentWidgets) {
     try {
-        require_once __DIR__ . '/../../Model/Notification.php';
+        require_once __DIR__ . '/../../app/Models/Notification.php';
         $notificationModel = new Notification($pdo);
         $userNotifications = $notificationModel->getRecentForUser((int) $_SESSION['user_id'], 5);
         $unreadNotificationCount = $notificationModel->countUnreadForUser((int) $_SESSION['user_id']);
@@ -120,7 +120,7 @@ if ($showStudentWidgets) {
             <div class="notification-center-dialog-actions">
                 <span class="notification-center-badge"><?php echo (int) $unreadNotificationCount; ?> unread</span>
                 <?php if (!empty($userNotifications) && $unreadNotificationCount > 0): ?>
-                <form method="POST" action="../Controller/notification_controller.php" class="notification-center-mark-form">
+                <form method="POST" action="../app/Controllers/notification_controller.php" class="notification-center-mark-form">
                     <input type="hidden" name="action" value="mark_all_read">
                     <?php echo csrfInputField('notification_center'); ?>
                     <input type="hidden" name="redirect" value="" class="notification-center-redirect">
@@ -188,7 +188,7 @@ if ($showStudentWidgets) {
             <button type="button" class="report-issue-close" id="reportIssueClose" aria-label="Close report issue dialog">&times;</button>
         </div>
 
-        <form method="POST" action="../Controller/report_user_issue.php" class="report-issue-form" id="reportIssueForm" novalidate>
+        <form method="POST" action="../app/Controllers/report_user_issue.php" class="report-issue-form" id="reportIssueForm" novalidate>
             <?php echo csrfInputField('user_issue_report'); ?>
             <input type="hidden" name="reported_url" id="reportIssueReportedUrl" value="">
             <input type="hidden" name="redirect_url" id="reportIssueRedirectUrl" value="">

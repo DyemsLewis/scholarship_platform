@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../Config/access_control.php';
+require_once __DIR__ . '/../../app/Config/access_control.php';
 $currentRole = getCurrentSessionRole();
 $canManageUsers = canAccessStaffAccounts();
 $canManageScholarships = canAccessStaffScholarships();

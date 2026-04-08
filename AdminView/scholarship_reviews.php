@@ -1,8 +1,8 @@
 <?php
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Config/url_token.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Config/url_token.php';
 
 requireRoles(['admin', 'super_admin'], '../AdminView/reviews.php', 'Only administrators can review scholarship submissions.');
 if (!canAccessScholarshipApprovals()) {
@@ -321,7 +321,7 @@ if ($workflowReady) {
                                 </a>
 
                                 <?php if ($reviewStatus !== 'approved'): ?>
-                                <form method="POST" action="../AdminController/scholarship_process.php" class="inline-review-form">
+                                <form method="POST" action="../app/AdminControllers/scholarship_process.php" class="inline-review-form">
                                     <input type="hidden" name="action" value="approve_review">
                                     <input type="hidden" name="id" value="<?php echo $scholarshipId; ?>">
                                     <input type="hidden" name="entity_token" value="<?php echo htmlspecialchars($reviewToken); ?>">
@@ -334,7 +334,7 @@ if ($workflowReady) {
                                 <?php endif; ?>
 
                                 <?php if ($reviewStatus !== 'rejected'): ?>
-                                <form method="POST" action="../AdminController/scholarship_process.php" class="inline-review-form">
+                                <form method="POST" action="../app/AdminControllers/scholarship_process.php" class="inline-review-form">
                                     <input type="hidden" name="action" value="reject_review">
                                     <input type="hidden" name="id" value="<?php echo $scholarshipId; ?>">
                                     <input type="hidden" name="entity_token" value="<?php echo htmlspecialchars($reviewToken); ?>">

@@ -1,9 +1,9 @@
 <?php
-require_once '../Config/init.php';
-require_once '../Config/db_config.php';
-require_once '../Config/url_token.php';
-require_once '../Controller/scholarshipResultController.php';
-require_once '../Model/UserDocument.php';
+require_once __DIR__ . '/../app/Config/init.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/url_token.php';
+require_once __DIR__ . '/../app/Controllers/scholarshipResultController.php';
+require_once __DIR__ . '/../app/Models/UserDocument.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -909,7 +909,7 @@ require_once '../Model/UserDocument.php';
         });
     </script>
     <?php endif; ?>
-    <?php include '../public/js/location_init_location.php'; ?>
+    <?php include __DIR__ . '/../public/js/location_init_location.php'; ?>
 </body>
 </html>
 

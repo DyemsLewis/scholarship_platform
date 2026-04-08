@@ -1,11 +1,11 @@
 <?php
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Config/csrf.php';
-require_once '../Config/url_token.php';
-require_once '../Config/helpers.php';
-require_once '../Model/StaffAccountProfile.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
+require_once __DIR__ . '/../app/Config/url_token.php';
+require_once __DIR__ . '/../app/Config/helpers.php';
+require_once __DIR__ . '/../app/Models/StaffAccountProfile.php';
 
 requireRoles(['admin', 'super_admin'], '../AdminView/admin_dashboard.php', 'Only administrators can review provider legitimacy.');
 if (!canAccessProviderApprovals()) {
@@ -274,7 +274,7 @@ $isVerified = (int) ($providerProfile['is_verified'] ?? 0) === 1;
 $profileSource = (string) ($providerProfile['profile_source'] ?? '');
 $currentStatus = strtolower((string) ($providerUser['status'] ?? 'inactive'));
 $providerStatusToken = buildEntityUrlToken('user', $providerId, 'update_status');
-$providerStatusActionUrl = '../AdminController/user_process.php';
+$providerStatusActionUrl = '../app/AdminControllers/user_process.php';
 $reviewsCurrentView = 'providers';
 $canManageAccounts = canAccessStaffAccounts();
 $reviewStats = [

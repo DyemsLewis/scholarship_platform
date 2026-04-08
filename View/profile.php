@@ -1,12 +1,12 @@
 <?php
 // profile.php
-require_once '../Config/init.php';
-require_once '../Config/url_token.php';
-require_once '../Config/csrf.php';
-require_once '../Controller/scholarshipResultController.php';
-require_once '../Model/User.php';
-require_once '../Model/StudentData.php';
-require_once '../Model/Application.php';
+require_once __DIR__ . '/../app/Config/init.php';
+require_once __DIR__ . '/../app/Config/url_token.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
+require_once __DIR__ . '/../app/Controllers/scholarshipResultController.php';
+require_once __DIR__ . '/../app/Models/User.php';
+require_once __DIR__ . '/../app/Models/StudentData.php';
+require_once __DIR__ . '/../app/Models/Application.php';
 
 function profileFormatTimelineDate(?string $value, string $fallback = 'Not yet available'): string
 {
@@ -300,7 +300,7 @@ $applicationStats = ['total' => 0, 'pending' => 0, 'approved' => 0, 'rejected' =
 $applicationTimeline = [];
 if ($isLoggedIn) {
     try {
-        require_once '../Model/UserDocument.php';
+        require_once __DIR__ . '/../app/Models/UserDocument.php';
         $docModel = new UserDocument($pdo);
         $docs = $docModel->getUserDocuments($_SESSION['user_id']);
         $verified = 0;
@@ -327,7 +327,7 @@ if ($isLoggedIn) {
         ];
 
         if (!isset($docModel)) {
-            require_once '../Model/UserDocument.php';
+            require_once __DIR__ . '/../app/Models/UserDocument.php';
             $docModel = new UserDocument($pdo);
         }
 
@@ -463,7 +463,7 @@ if ($isLoggedIn) {
                             ? number_format((float) $applicationItem['probability_score'], 1) . '%'
                             : 'Not calculated';
                         $acceptUrl = buildEntityUrl(
-                            '../Controller/application_response.php',
+                            '../app/Controllers/application_response.php',
                             'application',
                             (int) ($applicationItem['id'] ?? 0),
                             'accept',

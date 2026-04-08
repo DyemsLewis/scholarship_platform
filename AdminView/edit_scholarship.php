@@ -1,13 +1,13 @@
 <?php
 // edit_scholarship.php
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Config/provider_scope.php';
-require_once '../Config/url_token.php';
-require_once '../Model/Scholarship.php';
-require_once '../Model/ScholarshipData.php';
-require_once '../Model/ScholarshipLocation.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Config/provider_scope.php';
+require_once __DIR__ . '/../app/Config/url_token.php';
+require_once __DIR__ . '/../app/Models/Scholarship.php';
+require_once __DIR__ . '/../app/Models/ScholarshipData.php';
+require_once __DIR__ . '/../app/Models/ScholarshipLocation.php';
 
 requireRoles(['provider', 'admin', 'super_admin'], '../View/index.php', 'You do not have permission to edit scholarships.');
 
@@ -744,7 +744,7 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
             <?php endif; ?>
 
             <!-- Main Form -->
-            <form id="editScholarshipForm" method="POST" action="../AdminController/scholarship_process.php" enctype="multipart/form-data">
+            <form id="editScholarshipForm" method="POST" action="../app/AdminControllers/scholarship_process.php" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="update">
                 <input type="hidden" name="id" value="<?php echo $scholarship['id']; ?>">
                 <input type="hidden" name="entity_token" value="<?php echo htmlspecialchars(buildEntityUrlToken('scholarship', (int) $scholarship['id'], 'update')); ?>">
@@ -1153,13 +1153,13 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
                 </div>
             </form>
             <?php if ($adminReviewStateVisible): ?>
-            <form id="approveScholarshipReviewForm" method="POST" action="../AdminController/scholarship_process.php" style="display: none;">
+            <form id="approveScholarshipReviewForm" method="POST" action="../app/AdminControllers/scholarship_process.php" style="display: none;">
                 <input type="hidden" name="action" value="approve_review">
                 <input type="hidden" name="id" value="<?php echo $scholarship_id; ?>">
                 <input type="hidden" name="entity_token" value="<?php echo htmlspecialchars($reviewActionToken); ?>">
                 <input type="hidden" name="redirect_target" value="edit">
             </form>
-            <form id="rejectScholarshipReviewForm" method="POST" action="../AdminController/scholarship_process.php" style="display: none;">
+            <form id="rejectScholarshipReviewForm" method="POST" action="../app/AdminControllers/scholarship_process.php" style="display: none;">
                 <input type="hidden" name="action" value="reject_review">
                 <input type="hidden" name="id" value="<?php echo $scholarship_id; ?>">
                 <input type="hidden" name="entity_token" value="<?php echo htmlspecialchars($reviewActionToken); ?>">

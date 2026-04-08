@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-require_once __DIR__ . '/../Config/db_config.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');

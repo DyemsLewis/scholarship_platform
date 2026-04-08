@@ -162,7 +162,7 @@ class ScholarshipWizard {
 
             try {
                 const payload = new FormData(this.form);
-                const response = await fetch('../Controller/submit_application.php', {
+                const response = await fetch('../app/Controllers/submit_application.php', {
                     method: 'POST',
                     body: payload,
                     headers: {

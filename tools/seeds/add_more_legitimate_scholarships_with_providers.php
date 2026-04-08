@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../Config/db_config.php';
+require_once __DIR__ . '/../../app/Config/db_config.php';
 
 $now = date('Y-m-d H:i:s');
 $defaultProviderPassword = 'ProviderDemo@123';

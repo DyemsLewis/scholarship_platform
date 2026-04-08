@@ -27,7 +27,7 @@ function openScholarshipModal(scholarshipId) {
     modal.scrollTop = 0;
     
     // Fetch scholarship details
-    fetch('../Controller/get_scholarship_details.php?id=' + scholarshipId)
+    fetch('../app/Controllers/get_scholarship_details.php?id=' + scholarshipId)
         .then(response => {
             if (!response.ok) {
                 throw new Error('Network response was not ok');

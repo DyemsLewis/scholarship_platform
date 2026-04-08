@@ -1,6 +1,6 @@
 <?php
-require_once '../Config/init.php';
-require_once '../Config/password_reset.php';
+require_once __DIR__ . '/../app/Config/init.php';
+require_once __DIR__ . '/../app/Config/password_reset.php';
 
 $passwordResetDbReady = passwordResetColumnsReady($pdo);
 $oldInput = $_SESSION['forgot_password_old'] ?? [];
@@ -327,7 +327,7 @@ $hasActiveCode = ($passwordResetDbReady && $prefillEmail !== '') ? hasActivePass
 
                     <div class="form-section">
                         <h3><i class="fas fa-unlock-alt"></i> Create New Password</h3>
-                        <form method="POST" action="../Controller/reset_password.php" id="resetPasswordForm">
+                        <form method="POST" action="../app/Controllers/reset_password.php" id="resetPasswordForm">
                             <div class="forgot-password-grid">
                                 <div class="form-group">
                                     <label for="resetEmail">Email Address</label>
@@ -470,7 +470,7 @@ $hasActiveCode = ($passwordResetDbReady && $prefillEmail !== '') ? hasActivePass
                 sendButton.disabled = true;
                 sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
 
-                fetch('../Controller/send_password_reset_code.php', {
+                fetch('../app/Controllers/send_password_reset_code.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'

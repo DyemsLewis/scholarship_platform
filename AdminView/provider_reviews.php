@@ -1,9 +1,9 @@
 <?php
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Config/url_token.php';
-require_once '../Model/StaffAccountProfile.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Config/url_token.php';
+require_once __DIR__ . '/../app/Models/StaffAccountProfile.php';
 
 requireRoles(['admin', 'super_admin'], '../AdminView/reviews.php', 'Only administrators can review provider accounts.');
 if (!canAccessProviderApprovals()) {

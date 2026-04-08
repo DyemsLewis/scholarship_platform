@@ -25,7 +25,7 @@ exit();
                 </div>
                 
                 <?php 
-                require_once __DIR__ . '/../Config/session_bootstrap.php';
+                require_once __DIR__ . '/../app/Config/session_bootstrap.php';
                 if (isset($_SESSION['error'])): 
                 ?>
                 <div class="alert alert-error">
@@ -35,7 +35,7 @@ exit();
                 <?php endif; ?>
                 
                 <!-- Login Form -->
-                <form method="POST" action="../AdminController/admin_login_process.php">
+                <form method="POST" action="../app/AdminControllers/admin_login_process.php">
                     <div class="form-group">
                         <label for="username">Username or Email</label>
                         <div class="input-wrapper">

@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../Config/session_bootstrap.php';
+require_once __DIR__ . '/../../app/Config/session_bootstrap.php';
 echo "<h2>Session Location Test</h2>";
 echo "<pre>";
 print_r($_SESSION);

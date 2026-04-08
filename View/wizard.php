@@ -1,8 +1,8 @@
 <?php
-require_once '../Config/init.php';
-require_once '../Config/url_token.php';
-require_once '../Model/UserDocument.php';
-require_once '../Controller/scholarshipResultController.php';
+require_once __DIR__ . '/../app/Config/init.php';
+require_once __DIR__ . '/../app/Config/url_token.php';
+require_once __DIR__ . '/../app/Models/UserDocument.php';
+require_once __DIR__ . '/../app/Controllers/scholarshipResultController.php';
 
 if (!function_exists('tableHasColumn')) {
     function tableHasColumn(PDO $pdo, string $tableName, string $columnName): bool
@@ -505,7 +505,7 @@ $scholarshipAddress = implode(', ', $addressParts);
                         </div>
                     </div>
 
-                    <form id="applicationForm" class="wizard-form" method="POST" action="../Controller/submit_application.php" data-can-submit="<?php echo $canSubmit ? '1' : '0'; ?>" data-block-reason="<?php echo htmlspecialchars($blockReason, ENT_QUOTES); ?>">
+                    <form id="applicationForm" class="wizard-form" method="POST" action="../app/Controllers/submit_application.php" data-can-submit="<?php echo $canSubmit ? '1' : '0'; ?>" data-block-reason="<?php echo htmlspecialchars($blockReason, ENT_QUOTES); ?>">
                         <div class="wizard-step-panel is-active form-card-modern" data-step-panel="1">
                             <div class="card-header">
                                 <h3><i class="fas fa-user-check"></i> Eligibility Check</h3>

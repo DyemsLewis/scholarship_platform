@@ -1,10 +1,10 @@
 <?php
-require_once __DIR__ . '/../Config/session_bootstrap.php';
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Config/admin_account_options.php';
-require_once '../Config/password_policy.php';
-require_once '../Model/StaffAccountProfile.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Config/admin_account_options.php';
+require_once __DIR__ . '/../app/Config/password_policy.php';
+require_once __DIR__ . '/../app/Models/StaffAccountProfile.php';
 
 requireRoles(['provider', 'admin', 'super_admin'], '../View/index.php', 'You do not have access to this profile page.');
 

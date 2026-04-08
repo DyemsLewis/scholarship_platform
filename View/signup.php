@@ -1,9 +1,9 @@
 <?php
-require_once '../Config/session_bootstrap.php';
-require_once '../Config/init.php';
-require_once '../Config/db_config.php';
-require_once '../Config/csrf.php';
-require_once '../Config/signup_verification.php';
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
+require_once __DIR__ . '/../app/Config/init.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
+require_once __DIR__ . '/../app/Config/signup_verification.php';
 
 if ($isLoggedIn) {
     redirect($isProviderOrAdmin ? '../AdminView/admin_dashboard.php' : 'index.php');
@@ -91,7 +91,7 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
                     <?php endif; ?>
                     
                     <!-- Signup Form -->
-                    <form id="signupForm" method="POST" action="../Controller/registerController.php" enctype="multipart/form-data" novalidate>
+                    <form id="signupForm" method="POST" action="../app/Controllers/registerController.php" enctype="multipart/form-data" novalidate>
                         <?php echo csrfInputField('student_signup'); ?>
                         <!-- Personal Information Section -->
                         <div class="form-section">
@@ -1443,7 +1443,7 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
         sendVerificationCodeBtn.disabled = true;
 
         try {
-            const response = await fetch('../Controller/send_signup_verification.php', {
+            const response = await fetch('../app/Controllers/send_signup_verification.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
@@ -1528,7 +1528,7 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
         verifyEmailCodeBtn.disabled = true;
 
         try {
-            const response = await fetch('../Controller/verify_signup_code.php', {
+            const response = await fetch('../app/Controllers/verify_signup_code.php', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'

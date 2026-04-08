@@ -1,9 +1,9 @@
 <?php
 session_start();
-require_once '../Config/db_config.php';
-require_once '../Config/access_control.php';
-require_once '../Config/provider_scope.php';
-require_once '../Model/GwaIssueReport.php';
+require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/access_control.php';
+require_once __DIR__ . '/../app/Config/provider_scope.php';
+require_once __DIR__ . '/../app/Models/GwaIssueReport.php';
 
 requireRoles(['provider', 'admin', 'super_admin'], '../View/index.php', 'You do not have permission to access reviews.');
 

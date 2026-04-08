@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../Config/db_config.php';
+require_once __DIR__ . '/../../app/Config/db_config.php';
 
 $projectRoot = dirname(__DIR__, 2);
 $publicUploadsDir = $projectRoot . '/public/uploads';

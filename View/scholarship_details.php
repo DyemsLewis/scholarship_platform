@@ -1,9 +1,9 @@
 <?php
-require_once '../Config/init.php';
-require_once '../Config/url_token.php';
-require_once '../Controller/scholarshipResultController.php';
-require_once '../Model/Scholarship.php';
-require_once '../Model/UserDocument.php';
+require_once __DIR__ . '/../app/Config/init.php';
+require_once __DIR__ . '/../app/Config/url_token.php';
+require_once __DIR__ . '/../app/Controllers/scholarshipResultController.php';
+require_once __DIR__ . '/../app/Models/Scholarship.php';
+require_once __DIR__ . '/../app/Models/UserDocument.php';
 
 $scholarshipId = isset($_GET['id']) ? (int) $_GET['id'] : (int) ($_GET['scholarship_id'] ?? 0);
 if ($scholarshipId <= 0) {

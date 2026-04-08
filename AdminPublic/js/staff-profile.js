@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('action', 'update_profile');
 
             try {
-                const response = await fetch('../AdminController/staff_profile_controller.php', {
+                const response = await fetch('../app/AdminControllers/staff_profile_controller.php', {
                     method: 'POST',
                     body: formData
                 });
@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                const response = await fetch('../AdminController/staff_profile_controller.php', {
+                const response = await fetch('../app/AdminControllers/staff_profile_controller.php', {
                     method: 'POST',
                     body: new FormData(changePasswordForm)
                 });

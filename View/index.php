@@ -1,5 +1,5 @@
 <?php
-require_once '../Config/init.php';
+require_once __DIR__ . '/../app/Config/init.php';
 
 if ($isProviderOrAdmin) {
     redirect('../AdminView/admin_dashboard.php');
@@ -23,8 +23,8 @@ if ($isProviderOrAdmin) {
 <body>
     <?php 
     include 'layout/header.php';
-    require_once '../Config/db_config.php';
-    require_once '../Model/Scholarship.php';
+    require_once __DIR__ . '/../app/Config/db_config.php';
+    require_once __DIR__ . '/../app/Models/Scholarship.php';
 
     $scholarshipModel = new Scholarship($pdo);
     $scholarships = $scholarshipModel->getActiveScholarships();
