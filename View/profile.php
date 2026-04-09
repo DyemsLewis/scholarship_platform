@@ -249,6 +249,7 @@ if ($isLoggedIn) {
                 $_SESSION['user_citizenship'] = $studentData['citizenship'] ?? $_SESSION['user_citizenship'] ?? '';
                 $_SESSION['user_household_income_bracket'] = $studentData['household_income_bracket'] ?? $_SESSION['user_household_income_bracket'] ?? '';
                 $_SESSION['user_special_category'] = $studentData['special_category'] ?? $_SESSION['user_special_category'] ?? '';
+                $_SESSION['user_profile_image_path'] = $studentData['profile_image_path'] ?? $_SESSION['user_profile_image_path'] ?? '';
             }
         }
     } catch (Exception $e) {
@@ -288,11 +289,13 @@ $userMobileNumber = $_SESSION['user_mobile_number'] ?? '';
 $userCitizenship = $_SESSION['user_citizenship'] ?? '';
 $userHouseholdIncomeBracket = $_SESSION['user_household_income_bracket'] ?? '';
 $userSpecialCategory = $_SESSION['user_special_category'] ?? '';
+$userProfileImagePath = $_SESSION['user_profile_image_path'] ?? '';
 $userLatitude = $_SESSION['user_latitude'] ?? null;
 $userLongitude = $_SESSION['user_longitude'] ?? null;
 $userLocationName = $_SESSION['user_location_name'] ?? '';
 $userCreatedAt = $_SESSION['user_created_at'] ?? null;
 $userEmail = $_SESSION['user_email'] ?? '';
+$userProfileImageUrl = $userProfileImagePath !== '' ? resolveStoredFileUrl($userProfileImagePath, '../') : null;
 
 // Get document stats
 $documentStats = ['verified' => 0, 'pending' => 0, 'total' => 0];
@@ -365,7 +368,7 @@ if ($isLoggedIn) {
         <div class="container">
             <div class="profile-page-header app-page-hero">
                 <div class="profile-header-copy app-page-hero-copy">
-                    <h2><i class="fas fa-user-gear"></i> System Profile</h2>
+                    <h2><i class="fas fa-user-gear"></i> Profile</h2>
                     <p>View, update, and manage your student profile information in one place.</p>
                 </div>
             </div>

@@ -158,6 +158,101 @@ class UserProfileController {
         return false;
     }
 
+    private function deleteStoredProfileImage(?string $storedPath): void {
+        $normalizedPath = ltrim(str_replace('\\', '/', trim((string) $storedPath)), '/');
+        if ($normalizedPath === '' || strpos($normalizedPath, '..') !== false) {
+            return;
+        }
+
+        if (strpos($normalizedPath, 'public/uploads/profile-images/') !== 0) {
+            return;
+        }
+
+        $absolutePath = dirname(__DIR__, 2) . '/' . $normalizedPath;
+        if (is_file($absolutePath)) {
+            @unlink($absolutePath);
+        }
+    }
+
+    private function processProfileImageUpload(int $userId, ?array $file, ?string $existingPath): array {
+        if (!$file || !isset($file['error']) || (int) $file['error'] === UPLOAD_ERR_NO_FILE) {
+            return [
+                'success' => true,
+                'changed' => false,
+                'path' => $existingPath
+            ];
+        }
+
+        if ((int) $file['error'] !== UPLOAD_ERR_OK) {
+            return [
+                'success' => false,
+                'message' => 'Profile picture upload failed. Please try again.'
+            ];
+        }
+
+        $tmpName = (string) ($file['tmp_name'] ?? '');
+        if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+            return [
+                'success' => false,
+                'message' => 'Invalid profile picture upload.'
+            ];
+        }
+
+        $maxSizeBytes = 3 * 1024 * 1024;
+        $fileSize = (int) ($file['size'] ?? 0);
+        if ($fileSize <= 0 || $fileSize > $maxSizeBytes) {
+            return [
+                'success' => false,
+                'message' => 'Profile picture must be 3MB or smaller.'
+            ];
+        }
+
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mimeType = strtolower((string) $finfo->file($tmpName));
+        $allowedTypes = [
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/webp' => 'webp'
+        ];
+
+        if (!isset($allowedTypes[$mimeType])) {
+            return [
+                'success' => false,
+                'message' => 'Profile picture must be a JPG, PNG, or WEBP image.'
+            ];
+        }
+
+        $uploadDirectory = dirname(__DIR__, 2) . '/public/uploads/profile-images';
+        if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0775, true) && !is_dir($uploadDirectory)) {
+            return [
+                'success' => false,
+                'message' => 'Unable to prepare the profile picture upload folder.'
+            ];
+        }
+
+        try {
+            $fileName = 'profile_' . $userId . '_' . bin2hex(random_bytes(8)) . '.' . $allowedTypes[$mimeType];
+        } catch (Throwable $e) {
+            $fileName = 'profile_' . $userId . '_' . uniqid('', true) . '.' . $allowedTypes[$mimeType];
+        }
+
+        $absolutePath = $uploadDirectory . '/' . $fileName;
+        if (!move_uploaded_file($tmpName, $absolutePath)) {
+            return [
+                'success' => false,
+                'message' => 'Unable to save the profile picture.'
+            ];
+        }
+
+        $storedPath = 'public/uploads/profile-images/' . $fileName;
+
+        return [
+            'success' => true,
+            'changed' => true,
+            'path' => $storedPath
+        ];
+    }
+
     private function geocodeAddress(string $address): ?array {
         $query = http_build_query([
             'q' => $address,
@@ -211,6 +306,7 @@ class UserProfileController {
         try {
             $existingData = $this->studentDataModel->getByUserId($userId);
             $existingLocation = $this->locationModel->getByStudentId($userId);
+            $existingProfileImagePath = trim((string) ($existingData['profile_image_path'] ?? ''));
 
             $houseNo = $this->normalizeNullable($data['house_no'] ?? null);
             $street = $this->normalizeNullable($data['street'] ?? null);
@@ -281,6 +377,20 @@ class UserProfileController {
                 'address' => $address
             ];
 
+            $profileImageUpload = $this->processProfileImageUpload(
+                $userId,
+                $_FILES['profile_image'] ?? null,
+                $existingProfileImagePath
+            );
+            if (!$profileImageUpload['success']) {
+                $result['message'] = $profileImageUpload['message'];
+                return $result;
+            }
+            $profileImageChanged = (bool) ($profileImageUpload['changed'] ?? false);
+            if ($profileImageChanged) {
+                $studentData['profile_image_path'] = $profileImageUpload['path'] ?? null;
+            }
+
             $latitude = $this->parseCoordinate($data['latitude'] ?? null);
             $longitude = $this->parseCoordinate($data['longitude'] ?? null);
             $locationName = $this->normalizeNullable($data['location_name'] ?? null);
@@ -329,8 +439,15 @@ class UserProfileController {
             if ($studentDataChanged) {
                 $studentUpdate = $this->studentDataModel->saveStudentData($userId, $studentData);
                 if (!$studentUpdate) {
+                    if ($profileImageChanged) {
+                        $this->deleteStoredProfileImage($profileImageUpload['path'] ?? null);
+                    }
                     $result['message'] = 'Failed to update profile information';
                     return $result;
+                }
+
+                if ($profileImageChanged && $existingProfileImagePath !== '' && $existingProfileImagePath !== ($profileImageUpload['path'] ?? '')) {
+                    $this->deleteStoredProfileImage($existingProfileImagePath);
                 }
             }
 
@@ -362,6 +479,9 @@ class UserProfileController {
             $_SESSION['user_citizenship'] = $studentData['citizenship'] ?? '';
             $_SESSION['user_household_income_bracket'] = $studentData['household_income_bracket'] ?? '';
             $_SESSION['user_special_category'] = $studentData['special_category'] ?? '';
+            $_SESSION['user_profile_image_path'] = $profileImageChanged
+                ? ($profileImageUpload['path'] ?? '')
+                : ($existingProfileImagePath !== '' ? $existingProfileImagePath : ($_SESSION['user_profile_image_path'] ?? ''));
             $_SESSION['user_house_no'] = $houseNo ?? '';
             $_SESSION['user_street'] = $street ?? '';
             $_SESSION['user_barangay'] = $barangay ?? '';

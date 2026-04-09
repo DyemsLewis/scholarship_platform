@@ -9,7 +9,8 @@ require_once __DIR__ . '/../Models/ActivityLog.php';
 
 requireRoles(['provider', 'admin', 'super_admin'], '../View/index.php', 'You do not have permission to manage scholarships.');
 
-$upload_dir = '../public/uploads/';
+$upload_dir = dirname(__DIR__, 2) . '/public/uploads/';
+$legacy_upload_dir = dirname(__DIR__) . '/public/uploads/';
 if (!is_dir($upload_dir)) {
     mkdir($upload_dir, 0777, true);
 }
@@ -257,17 +258,25 @@ function uploadImage(array $file) {
 }
 
 function deleteImage(?string $filename): bool {
-    global $upload_dir;
+    global $upload_dir, $legacy_upload_dir;
     $name = trim((string) $filename);
     if ($name === '') {
         return false;
     }
 
-    $filePath = $upload_dir . $name;
-    if (is_file($filePath)) {
-        return unlink($filePath);
+    $candidatePaths = [
+        rtrim($upload_dir, '/\\') . DIRECTORY_SEPARATOR . $name,
+        rtrim($legacy_upload_dir, '/\\') . DIRECTORY_SEPARATOR . $name,
+    ];
+
+    $deleted = false;
+    foreach ($candidatePaths as $filePath) {
+        if (is_file($filePath) && @unlink($filePath)) {
+            $deleted = true;
+        }
     }
-    return false;
+
+    return $deleted;
 }
 
 function parseCoordinates(string $latitudeRaw, string $longitudeRaw, array &$errors): array {

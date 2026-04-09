@@ -374,8 +374,19 @@ if (!function_exists('resolveStoredFileUrl')) {
         }
 
         $normalizedPath = preg_replace('#/+#', '/', str_replace('\\', '/', $rawPath));
-        $projectRoot = str_replace('\\', '/', dirname(__DIR__));
+        $projectRoot = str_replace('\\', '/', dirname(__DIR__, 2));
+        $legacyAppRoot = $projectRoot . '/app';
         $candidates = [];
+        $locationRoots = [
+            [
+                'disk_root' => $projectRoot,
+                'url_prefix' => '',
+            ],
+            [
+                'disk_root' => $legacyAppRoot,
+                'url_prefix' => 'app/',
+            ],
+        ];
 
         $pushCandidate = static function (string $candidate) use (&$candidates): void {
             $cleaned = ltrim(preg_replace('#/+#', '/', str_replace('\\', '/', trim($candidate))), '/');
@@ -391,11 +402,18 @@ if (!function_exists('resolveStoredFileUrl')) {
         $isAbsolutePath = $isAbsoluteWindowsPath || $isAbsoluteUnixPath;
 
         if ($isAbsolutePath) {
-            if (
-                stripos($normalizedPath, $projectRoot . '/') === 0
-                || strcasecmp($normalizedPath, $projectRoot) === 0
-            ) {
-                $pushCandidate(substr($normalizedPath, strlen($projectRoot)));
+            foreach ($locationRoots as $locationRoot) {
+                $diskRoot = rtrim((string) ($locationRoot['disk_root'] ?? ''), '/');
+                if ($diskRoot === '') {
+                    continue;
+                }
+
+                if (
+                    stripos($normalizedPath, $diskRoot . '/') === 0
+                    || strcasecmp($normalizedPath, $diskRoot) === 0
+                ) {
+                    $pushCandidate(substr($normalizedPath, strlen($diskRoot)));
+                }
             }
         } else {
             $pushCandidate($normalizedPath);
@@ -444,9 +462,17 @@ if (!function_exists('resolveStoredFileUrl')) {
         }
 
         foreach ($candidates as $candidate) {
-            $absolutePath = $projectRoot . '/' . $candidate;
-            if (is_file($absolutePath)) {
-                return $candidate;
+            foreach ($locationRoots as $locationRoot) {
+                $diskRoot = rtrim((string) ($locationRoot['disk_root'] ?? ''), '/');
+                $urlPrefix = trim(str_replace('\\', '/', (string) ($locationRoot['url_prefix'] ?? '')), '/');
+                $absolutePath = $diskRoot . '/' . $candidate;
+                if (is_file($absolutePath)) {
+                    $resolvedPath = $urlPrefix !== ''
+                        ? ($urlPrefix . '/' . ltrim($candidate, '/'))
+                        : $candidate;
+
+                    return ltrim(preg_replace('#/+#', '/', str_replace('\\', '/', $resolvedPath)), '/');
+                }
             }
         }
 

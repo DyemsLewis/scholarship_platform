@@ -3,10 +3,16 @@
 require_once __DIR__ . '/../../app/Config/init.php';
 
 $headerUserName = $userName;
+$headerUserProfileImagePath = '';
+$headerUserProfileImageUrl = null;
 if ($isLoggedIn && ($userRole ?? 'guest') === 'student') {
     $sessionUsername = trim((string) ($_SESSION['user_username'] ?? ''));
     if ($sessionUsername !== '') {
         $headerUserName = $sessionUsername;
+    }
+    $headerUserProfileImagePath = trim((string) ($_SESSION['user_profile_image_path'] ?? ''));
+    if ($headerUserProfileImagePath !== '') {
+        $headerUserProfileImageUrl = resolveStoredFileUrl($headerUserProfileImagePath, '../');
     }
 }
 ?>
@@ -138,7 +144,11 @@ if ($isLoggedIn && ($userRole ?? 'guest') === 'student') {
                         <div class="user-profile">
                             <div class="user-profile-meta">
                                 <div class="user-avatar" id="userAvatar">
-                                    <?php echo getUserInitials($headerUserName); ?>
+                                    <?php if ($headerUserProfileImageUrl): ?>
+                                        <img src="<?php echo htmlspecialchars($headerUserProfileImageUrl); ?>" alt="<?php echo htmlspecialchars($headerUserName); ?> profile picture">
+                                    <?php else: ?>
+                                        <?php echo getUserInitials($headerUserName); ?>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="user-profile-copy">
                                     <span class="user-profile-label">Signed in as</span>

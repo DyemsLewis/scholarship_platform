@@ -75,7 +75,8 @@ class StudentData {
             'citizenship' => fn() => $this->normalizeString($resolve('citizenship', null)),
             'household_income_bracket' => fn() => $this->normalizeString($resolve('household_income_bracket', null)),
             'special_category' => fn() => $this->normalizeString($resolve('special_category', null)),
-            'parent_background' => fn() => $this->normalizeString($resolve('parent_background', null))
+            'parent_background' => fn() => $this->normalizeString($resolve('parent_background', null)),
+            'profile_image_path' => fn() => $this->normalizeString($resolve('profile_image_path', null))
         ];
 
         foreach ($columnMap as $column => $resolver) {

@@ -348,6 +348,38 @@ if ($studentAccepted) {
 }
 $canApproveApplication = $applicationStatus === 'pending' && ($requirementsTotalCount === 0 || $requirementsVerifiedCount >= $requirementsTotalCount);
 $approvalBlockMessage = 'Approval is unavailable while required documents are pending, missing, or rejected.';
+$applicantInitials = '';
+foreach (preg_split('/\s+/', trim($fullName)) ?: [] as $namePiece) {
+    if ($namePiece === '') {
+        continue;
+    }
+    $applicantInitials .= strtoupper(substr($namePiece, 0, 1));
+    if (strlen($applicantInitials) >= 2) {
+        break;
+    }
+}
+if ($applicantInitials === '') {
+    $applicantInitials = 'AP';
+}
+$applicationScoreDisplay = $application['probability_score'] !== null
+    ? number_format((float) $application['probability_score'], 1) . '%'
+    : 'Not calculated';
+$accountStatusLabel = ucfirst((string) ($application['user_status'] ?? 'inactive'));
+$requirementsSnapshotLabel = ((int) ($requirementsSummary['uploaded'] ?? 0)) . ' uploaded / ' . $requirementsVerifiedCount . ' verified';
+$reviewHeaderDescription = 'Review the applicant profile, supporting documents, and decision status for ' . $application['scholarship_name'] . '.';
+$reviewHeaderChips = [
+    ['icon' => 'fa-circle-info', 'label' => 'Status', 'value' => ucfirst($applicationStatus)],
+    ['icon' => 'fa-list-check', 'label' => 'Requirements', 'value' => $reviewReadinessLabel],
+    ['icon' => 'fa-reply', 'label' => 'Student Response', 'value' => $studentResponseLabel],
+    ['icon' => 'fa-percent', 'label' => 'Score', 'value' => $applicationScoreDisplay],
+];
+$reviewSpotlightTags = [
+    ['icon' => 'fa-user-graduate', 'label' => $applicantProgramLabel],
+    ['icon' => 'fa-school', 'label' => $schoolLabel],
+    ['icon' => 'fa-book-open', 'label' => $courseLabel],
+    ['icon' => 'fa-layer-group', 'label' => formatYearLevelLabel($application['year_level'] ?? '')],
+    ['icon' => 'fa-user-check', 'label' => formatEnrollmentStatusLabel($application['enrollment_status'] ?? '')],
+];
 $adminStyleVersion = @filemtime(__DIR__ . '/../public/css/admin_style.css') ?: time();
 $reviewsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/reviews.css') ?: time();
 $viewApplicationStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/view-application.css') ?: time();
@@ -388,160 +420,173 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
 
             <?php $reviewsCurrentView = 'applications'; include 'layouts/reviews_nav.php'; ?>
 
-            <div class="review-page-toolbar">
-                <a href="manage_applications.php" class="review-page-back">
-                    <i class="fas fa-arrow-left"></i>
-                    <span>Back to Applications</span>
-                </a>
-                <div class="review-page-jump-links" aria-label="Application review sections">
-                    <a href="#applicantProfile" class="review-jump-link">Applicant</a>
-                    <a href="#requiredDocuments" class="review-jump-link">Requirements</a>
-                    <a href="#decisionSummary" class="review-jump-link">Decision</a>
-                </div>
-            </div>
+            <section class="app-review-shell state-<?php echo htmlspecialchars($decisionReadinessTone); ?>">
+                <div class="app-review-shell-inner">
+                    <div class="app-review-shell-brand">
+                        <div class="app-review-shell-kicker-group">
+                            <span class="app-review-brand-pill">
+                                <i class="fas fa-clipboard-check"></i>
+                                Review Workspace
+                            </span>
+                            <span class="app-review-shell-status state-<?php echo htmlspecialchars($decisionReadinessTone); ?>">
+                                <i class="fas <?php echo htmlspecialchars($decisionReadinessTone === 'ready' ? 'fa-circle-check' : 'fa-triangle-exclamation'); ?>"></i>
+                                <?php echo htmlspecialchars($decisionReadinessLabel); ?>
+                            </span>
+                        </div>
 
-            <div class="review-top-grid">
-                <section class="review-spotlight-card">
-                    <div class="review-spotlight-header">
-                        <span class="review-spotlight-kicker"><i class="fas fa-file-signature"></i> Application Review</span>
-                        <span class="review-spotlight-program"><?php echo htmlspecialchars($application['scholarship_name']); ?></span>
+                        <div class="app-review-avatar-stage">
+                            <span class="app-review-avatar-mark"><?php echo htmlspecialchars($applicantInitials); ?></span>
+                        </div>
                     </div>
-                    <div class="review-spotlight-main">
-                        <div class="review-spotlight-copy">
-                            <h1><?php echo htmlspecialchars($fullName); ?></h1>
-                            <p>Applied to <strong><?php echo htmlspecialchars($application['scholarship_name']); ?></strong> under <strong><?php echo htmlspecialchars($scholarshipProvider); ?></strong>.</p>
-                            <div class="review-spotlight-tags">
-                                <span class="review-spotlight-tag"><i class="fas fa-user-graduate"></i><?php echo htmlspecialchars($applicantProgramLabel); ?></span>
-                                <span class="review-spotlight-tag"><i class="fas fa-school"></i><?php echo htmlspecialchars($schoolLabel); ?></span>
-                                <span class="review-spotlight-tag"><i class="fas fa-book-open"></i><?php echo htmlspecialchars($courseLabel); ?></span>
-                                <span class="review-spotlight-tag"><i class="fas fa-layer-group"></i><?php echo htmlspecialchars(formatYearLevelLabel($application['year_level'] ?? '')); ?></span>
-                                <span class="review-spotlight-tag"><i class="fas fa-user-check"></i><?php echo htmlspecialchars(formatEnrollmentStatusLabel($application['enrollment_status'] ?? '')); ?></span>
+
+                    <div class="app-review-shell-content">
+                        <div class="app-review-shell-head">
+                            <div class="app-review-shell-title-wrap">
+                                <h1><?php echo htmlspecialchars($fullName); ?></h1>
+                                <p><?php echo htmlspecialchars($application['scholarship_name']); ?> under <?php echo htmlspecialchars($scholarshipProvider); ?>.</p>
+                            </div>
+                            <a href="manage_applications.php" class="app-review-header-back">
+                                <i class="fas fa-arrow-left"></i>
+                                <span>Back to Applications</span>
+                            </a>
+                        </div>
+
+                        <div class="app-review-provider-summary">
+                            <div class="app-review-provider-line">
+                                <span class="app-review-provider-label">Applicant Type</span>
+                                <strong class="app-review-provider-inline-name"><?php echo htmlspecialchars($applicantProgramLabel); ?></strong>
+                            </div>
+                            <p class="app-review-provider-inline-note">Use the same review flow every application needs: profile, documents, and final decision.</p>
+                        </div>
+
+                        <div class="app-review-summary-strip">
+                            <article class="app-review-summary-tile">
+                                <span>Status</span>
+                                <strong><?php echo htmlspecialchars(ucfirst($applicationStatus)); ?></strong>
+                            </article>
+                            <article class="app-review-summary-tile">
+                                <span>Score</span>
+                                <strong><?php echo htmlspecialchars($applicationScoreDisplay); ?></strong>
+                            </article>
+                            <article class="app-review-summary-tile">
+                                <span>Requirements</span>
+                                <strong><?php echo htmlspecialchars($reviewReadinessLabel); ?></strong>
+                            </article>
+                            <article class="app-review-summary-tile">
+                                <span>Student Response</span>
+                                <strong><?php echo htmlspecialchars($studentResponseLabel); ?></strong>
+                            </article>
+                        </div>
+
+                        <div class="app-review-next-step-banner is-<?php echo htmlspecialchars($decisionReadinessTone === 'ready' ? 'success' : 'warning'); ?>">
+                            <i class="fas <?php echo htmlspecialchars($decisionReadinessTone === 'ready' ? 'fa-circle-check' : 'fa-hourglass-half'); ?>"></i>
+                            <span><?php echo htmlspecialchars($decisionReadinessNote); ?></span>
+                        </div>
+
+                        <nav class="app-review-stepper" aria-label="Review sections">
+                            <button type="button" class="app-review-step-pill is-active" data-review-target="decision" aria-pressed="true"><span>1</span> Decision</button>
+                            <button type="button" class="app-review-step-pill" data-review-target="profile" aria-pressed="false"><span>2</span> Applicant Profile</button>
+                            <button type="button" class="app-review-step-pill" data-review-target="documents" aria-pressed="false"><span>3</span> Required Documents</button>
+                            <button type="button" class="app-review-step-pill" data-review-target="support" aria-pressed="false"><span>4</span> Review Support</button>
+                        </nav>
+                    </div>
+                </div>
+            </section>
+
+            <div class="app-review-stage-panels">
+                <section class="app-review-stage-panel is-active" data-review-panel="decision" id="decisionSummary">
+                    <div class="review-panel app-review-panel app-review-stage-surface">
+                        <div class="review-panel-header">
+                            <div>
+                                <h2>Decision Summary</h2>
+                                <p>Start here before moving through the rest of the review.</p>
                             </div>
                         </div>
-                    </div>
-                    <div class="review-spotlight-metrics">
-                        <div class="review-spotlight-metric">
-                            <span class="review-spotlight-label">Submitted</span>
-                            <strong><?php echo htmlspecialchars(appDate($application['applied_at'] ?? null)); ?></strong>
-                        </div>
-                        <div class="review-spotlight-metric">
-                            <span class="review-spotlight-label">Last Updated</span>
-                            <strong><?php echo htmlspecialchars(appDate($lastUpdatedValue)); ?></strong>
-                        </div>
-                        <div class="review-spotlight-metric">
-                            <span class="review-spotlight-label">Current GWA</span>
-                            <strong><?php echo is_numeric($application['gwa'] ?? null) ? htmlspecialchars(number_format((float) $application['gwa'], 2)) : 'Not set'; ?></strong>
-                        </div>
-                        <div class="review-spotlight-metric">
-                            <span class="review-spotlight-label">Documents on File</span>
-                            <strong><?php echo number_format($documentStats['total']); ?></strong>
+                        <div class="app-review-stage-body">
+                            <section class="app-review-decision-banner tone-<?php echo htmlspecialchars($decisionReadinessTone); ?>">
+                                <div class="app-review-decision-banner-main">
+                                    <span class="app-review-header-kicker">Decision Summary</span>
+                                    <h2><?php echo htmlspecialchars($decisionReadinessLabel); ?></h2>
+                                    <p><?php echo htmlspecialchars($decisionReadinessNote); ?></p>
+                                    <?php if ($applicationStatus === 'approved'): ?>
+                                        <div class="review-note ready"><strong>Student Response:</strong> <?php echo htmlspecialchars($studentResponseNote); ?></div>
+                                    <?php endif; ?>
+                                    <?php if ($applicationStatus === 'rejected' && $applicationRejectionReason !== ''): ?>
+                                        <div class="review-note rejection"><strong>Rejection reason:</strong> <?php echo nl2br(htmlspecialchars($applicationRejectionReason)); ?></div>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="app-review-decision-banner-side">
+                                    <div class="app-review-progress-card">
+                                        <div class="app-review-progress-top">
+                                            <span>Requirement progress</span>
+                                            <strong><?php echo $requirementsCompletionPercent; ?>%</strong>
+                                        </div>
+                                        <div class="app-review-progress-bar" aria-hidden="true">
+                                            <span style="width: <?php echo $requirementsCompletionPercent; ?>%;"></span>
+                                        </div>
+                                        <small><?php echo htmlspecialchars($requirementsRemainingLabel); ?></small>
+                                    </div>
+
+                                    <div class="app-review-mini-grid">
+                                        <div class="app-review-mini-card">
+                                            <span>Verified</span>
+                                            <strong><?php echo $requirementsVerifiedCount; ?>/<?php echo $requirementsTotalCount; ?></strong>
+                                        </div>
+                                        <div class="app-review-mini-card">
+                                            <span>Pending</span>
+                                            <strong><?php echo $requirementsPendingCount; ?></strong>
+                                        </div>
+                                        <div class="app-review-mini-card">
+                                            <span>Applicant Account</span>
+                                            <strong><?php echo htmlspecialchars($accountStatusLabel); ?></strong>
+                                        </div>
+                                        <div class="app-review-mini-card">
+                                            <span>Current GWA</span>
+                                            <strong><?php echo htmlspecialchars($currentGwaLabel); ?></strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <?php if ($applicationStatus === 'pending'): ?>
+                                    <div class="app-review-decision-actions">
+                                        <?php if ($canApproveApplication): ?>
+                                            <button
+                                                type="button"
+                                                class="btn btn-success application-decision-trigger"
+                                                data-action="approve"
+                                                data-action-url="<?php echo htmlspecialchars($approveUrl); ?>"
+                                                data-applicant-name="<?php echo htmlspecialchars($fullName); ?>"
+                                                data-scholarship-name="<?php echo htmlspecialchars((string) $application['scholarship_name']); ?>"
+                                            >
+                                                <i class="fas fa-check"></i> Approve Application
+                                            </button>
+                                        <?php else: ?>
+                                            <button type="button" class="btn btn-success btn-disabled" disabled title="<?php echo htmlspecialchars($approvalBlockMessage); ?>">
+                                                <i class="fas fa-lock"></i> Approve Application
+                                            </button>
+                                        <?php endif; ?>
+                                        <button
+                                            type="button"
+                                            class="btn btn-danger application-decision-trigger"
+                                            data-action="reject"
+                                            data-action-url="<?php echo htmlspecialchars($rejectUrl); ?>"
+                                            data-applicant-name="<?php echo htmlspecialchars($fullName); ?>"
+                                            data-scholarship-name="<?php echo htmlspecialchars((string) $application['scholarship_name']); ?>"
+                                        >
+                                            <i class="fas fa-times"></i> Reject Application
+                                        </button>
+                                    </div>
+                                    <?php if (!$canApproveApplication): ?>
+                                        <div class="review-note warning"><?php echo htmlspecialchars($approvalBlockMessage); ?></div>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </section>
                         </div>
                     </div>
                 </section>
 
-                <aside class="review-decision-desk tone-<?php echo htmlspecialchars($decisionReadinessTone); ?>" id="decisionSummary">
-                    <div class="review-decision-desk-header">
-                        <span class="review-decision-desk-label">Decision Desk</span>
-                        <span class="hero-status-pill"><i class="fas <?php echo htmlspecialchars($statusIconMap[$applicationStatus] ?? 'fa-circle-info'); ?>"></i> <?php echo htmlspecialchars(ucfirst($applicationStatus)); ?></span>
-                    </div>
-                    <h2><?php echo htmlspecialchars($decisionReadinessLabel); ?></h2>
-                    <p><?php echo htmlspecialchars($decisionReadinessNote); ?></p>
-
-                    <div class="review-decision-progress">
-                        <div class="review-decision-progress-top">
-                            <span>Requirement progress</span>
-                            <strong><?php echo $requirementsCompletionPercent; ?>%</strong>
-                        </div>
-                        <div class="review-decision-progress-bar" aria-hidden="true">
-                            <span style="width: <?php echo $requirementsCompletionPercent; ?>%;"></span>
-                        </div>
-                        <span class="review-decision-progress-note"><?php echo htmlspecialchars($requirementsRemainingLabel); ?></span>
-                    </div>
-
-                    <div class="review-decision-stats">
-                        <div class="review-decision-stat">
-                            <span>Verified</span>
-                            <strong><?php echo $requirementsVerifiedCount; ?>/<?php echo $requirementsTotalCount; ?></strong>
-                        </div>
-                        <div class="review-decision-stat">
-                            <span>Pending</span>
-                            <strong><?php echo $requirementsPendingCount; ?></strong>
-                        </div>
-                        <div class="review-decision-stat">
-                            <span>Score</span>
-                            <strong><?php echo $application['probability_score'] !== null ? htmlspecialchars(number_format((float) $application['probability_score'], 1) . '%') : 'N/A'; ?></strong>
-                        </div>
-                    </div>
-
-                    <?php if ($applicationStatus === 'approved'): ?>
-                        <div class="review-note ready"><strong>Student Response:</strong> <?php echo htmlspecialchars($studentResponseNote); ?></div>
-                    <?php endif; ?>
-
-                    <?php if ($applicationStatus === 'pending'): ?>
-                        <div class="review-decision-actions">
-                            <?php if ($canApproveApplication): ?>
-                                <button
-                                    type="button"
-                                    class="btn btn-success application-decision-trigger"
-                                    data-action="approve"
-                                    data-action-url="<?php echo htmlspecialchars($approveUrl); ?>"
-                                    data-applicant-name="<?php echo htmlspecialchars($fullName); ?>"
-                                    data-scholarship-name="<?php echo htmlspecialchars((string) $application['scholarship_name']); ?>"
-                                >
-                                    <i class="fas fa-check"></i> Approve Application
-                                </button>
-                            <?php else: ?>
-                                <button type="button" class="btn btn-success btn-disabled" disabled title="<?php echo htmlspecialchars($approvalBlockMessage); ?>">
-                                    <i class="fas fa-lock"></i> Approve Application
-                                </button>
-                            <?php endif; ?>
-                            <button
-                                type="button"
-                                class="btn btn-danger application-decision-trigger"
-                                data-action="reject"
-                                data-action-url="<?php echo htmlspecialchars($rejectUrl); ?>"
-                                data-applicant-name="<?php echo htmlspecialchars($fullName); ?>"
-                                data-scholarship-name="<?php echo htmlspecialchars((string) $application['scholarship_name']); ?>"
-                            >
-                                <i class="fas fa-times"></i> Reject Application
-                            </button>
-                        </div>
-                        <?php if (!$canApproveApplication): ?>
-                            <div class="review-note warning"><?php echo htmlspecialchars($approvalBlockMessage); ?></div>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                    <?php if ($applicationStatus === 'rejected' && $applicationRejectionReason !== ''): ?>
-                        <div class="review-note rejection"><strong>Rejection reason:</strong> <?php echo nl2br(htmlspecialchars($applicationRejectionReason)); ?></div>
-                    <?php endif; ?>
-                </aside>
-            </div>
-
-            <div class="review-snapshot-grid">
-                <article class="review-snapshot-card tone-academic">
-                    <span class="review-snapshot-label">Academic Profile</span>
-                    <strong><?php echo htmlspecialchars($courseLabel); ?></strong>
-                    <p><?php echo htmlspecialchars($schoolLabel); ?></p>
-                </article>
-                <article class="review-snapshot-card tone-documents">
-                    <span class="review-snapshot-label">Requirements</span>
-                    <strong><?php echo htmlspecialchars($reviewReadinessLabel); ?></strong>
-                    <p><?php echo htmlspecialchars($requirementsRemainingLabel); ?></p>
-                </article>
-                <article class="review-snapshot-card tone-activity">
-                    <span class="review-snapshot-label">Document Activity</span>
-                    <strong><?php echo number_format($documentStats['verified']); ?> verified</strong>
-                    <p><?php echo number_format($documentStats['pending']); ?> pending review</p>
-                </article>
-                <article class="review-snapshot-card tone-status">
-                    <span class="review-snapshot-label">Applicant Account</span>
-                    <strong><?php echo htmlspecialchars(ucfirst((string) ($application['user_status'] ?? 'inactive'))); ?></strong>
-                    <p><?php echo htmlspecialchars(appDate($lastUpdatedValue)); ?></p>
-                </article>
-            </div>
-
-            <div class="review-layout">
-                <div class="review-main">
-                    <div class="review-panel review-panel-profile" id="applicantProfile">
+                <section class="app-review-stage-panel" data-review-panel="profile" id="applicantProfile">
+                    <div class="review-panel review-panel-profile app-review-panel">
                         <div class="review-panel-header">
                             <div>
                                 <h2>Applicant Profile</h2>
@@ -625,8 +670,10 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                             </section>
                         </div>
                     </div>
+                </section>
 
-                    <div class="review-panel" id="requiredDocuments">
+                <section class="app-review-stage-panel" data-review-panel="documents" id="requiredDocuments">
+                    <div class="review-panel app-review-panel">
                         <div class="review-panel-header">
                             <div><h2>Required Documents</h2><p>Verification status for scholarship requirements</p></div>
                             <span class="status-pill info"><?php echo $requirementsVerifiedCount; ?>/<?php echo $requirementsTotalCount; ?> verified</span>
@@ -729,11 +776,11 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                             </div>
                         <?php endif; ?>
                     </div>
+                </section>
 
-                </div>
-
-                <aside class="review-sidebar">
-                    <div class="review-panel review-panel-timeline">
+                <section class="app-review-stage-panel" data-review-panel="support" id="reviewSupport">
+                    <div class="app-review-support-grid">
+                    <div class="review-panel review-panel-timeline app-review-panel">
                         <div class="review-panel-header"><div><h3>Review Timeline</h3><p>Current progress across the application review process</p></div></div>
                         <div class="review-timeline">
                             <div class="review-timeline-item complete">
@@ -760,7 +807,7 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                         </div>
                     </div>
 
-                    <div class="review-panel review-panel-summary">
+                    <div class="review-panel review-panel-summary app-review-panel">
                         <div class="review-panel-header"><div><h3>Verification Snapshot</h3><p>Current standing of the application and supporting records</p></div></div>
                         <div class="sidebar-stack">
                             <div class="meta-item"><span class="label">Current Status</span><span class="value"><span class="status-pill <?php echo htmlspecialchars($applicationStatus); ?>"><i class="fas <?php echo htmlspecialchars($statusIconMap[$applicationStatus] ?? 'fa-circle-info'); ?>"></i> <?php echo htmlspecialchars(ucfirst($applicationStatus)); ?></span></span></div>
@@ -772,7 +819,7 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                         </div>
                     </div>
 
-                    <div class="review-panel review-panel-program">
+                    <div class="review-panel review-panel-program app-review-panel">
                         <div class="review-panel-header"><div><h3>Scholarship Information</h3><p>Program details attached to this application</p></div></div>
                         <div class="meta-list">
                             <div class="meta-item"><span class="label">Scholarship</span><span class="value"><?php echo htmlspecialchars($application['scholarship_name']); ?></span></div>
@@ -782,7 +829,8 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                             <div class="meta-item"><span class="label">Program Notes</span><span class="value"><?php echo nl2br(htmlspecialchars(appValue($application['scholarship_description'] ?? '', 'No scholarship description available.'))); ?></span></div>
                         </div>
                     </div>
-                </aside>
+                    </div>
+                </section>
             </div>
         </div>
     </section>
@@ -853,9 +901,43 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
         const filePreviewZoomIn = document.getElementById('filePreviewZoomIn');
         const filePreviewZoomReset = document.getElementById('filePreviewZoomReset');
         const filePreviewZoomLevel = document.getElementById('filePreviewZoomLevel');
+        const reviewStepButtons = Array.from(document.querySelectorAll('[data-review-target]'));
+        const reviewStagePanels = Array.from(document.querySelectorAll('[data-review-panel]'));
         let filePreviewType = 'document';
         let filePreviewBaseUrl = '';
         let filePreviewZoom = 1;
+
+        function setActiveReviewStage(target) {
+            if (!target) {
+                return;
+            }
+
+            reviewStepButtons.forEach((button) => {
+                const isActive = button.dataset.reviewTarget === target;
+                button.classList.toggle('is-active', isActive);
+                button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+            });
+
+            reviewStagePanels.forEach((panel) => {
+                const isActive = panel.dataset.reviewPanel === target;
+                panel.classList.toggle('is-active', isActive);
+            });
+        }
+
+        reviewStepButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                setActiveReviewStage(button.dataset.reviewTarget || 'decision');
+            });
+        });
+
+        const reviewStageFromHashMap = {
+            '#decisionSummary': 'decision',
+            '#applicantProfile': 'profile',
+            '#requiredDocuments': 'documents',
+            '#reviewSupport': 'support'
+        };
+        const initialReviewStage = reviewStageFromHashMap[window.location.hash] || 'decision';
+        setActiveReviewStage(initialReviewStage);
 
         document.querySelectorAll('.application-decision-trigger').forEach((button) => {
             button.addEventListener('click', async () => {

@@ -110,6 +110,95 @@ function isValidProfileMiddleInitial(value) {
     return value === '' || /^[A-Za-z]$/.test(value);
 }
 
+const profileImageInput = document.getElementById('editProfileImage');
+const profileAvatarPreview = document.getElementById('profileAvatarPreview');
+const profileAvatarPreviewImage = document.getElementById('profileAvatarPreviewImage');
+const profileAvatarPreviewFallback = document.getElementById('profileAvatarPreviewFallback');
+const profileAvatarStatus = document.getElementById('editProfileImageStatus');
+
+function resetProfileAvatarPreview() {
+    if (!profileAvatarPreview) {
+        return;
+    }
+
+    const initials = profileAvatarPreview.dataset.initials || 'U';
+    const originalSrc = profileAvatarPreviewImage ? (profileAvatarPreviewImage.dataset.originalSrc || '').trim() : '';
+    if (originalSrc !== '' && profileAvatarPreviewImage) {
+        profileAvatarPreviewImage.src = originalSrc;
+        profileAvatarPreviewImage.hidden = false;
+        if (profileAvatarPreviewFallback) {
+            profileAvatarPreviewFallback.hidden = true;
+        }
+        return;
+    }
+
+    if (profileAvatarPreviewImage) {
+        profileAvatarPreviewImage.hidden = true;
+        profileAvatarPreviewImage.removeAttribute('src');
+    }
+    if (profileAvatarPreviewFallback) {
+        profileAvatarPreviewFallback.hidden = false;
+        profileAvatarPreviewFallback.textContent = initials;
+    }
+}
+
+function setProfileAvatarPreview(file) {
+    if (!file || !profileAvatarPreviewImage) {
+        resetProfileAvatarPreview();
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+        profileAvatarPreviewImage.src = reader.result;
+        profileAvatarPreviewImage.hidden = false;
+        if (profileAvatarPreviewFallback) {
+            profileAvatarPreviewFallback.hidden = true;
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+profileImageInput?.addEventListener('change', function () {
+    const file = this.files && this.files[0] ? this.files[0] : null;
+    if (!file) {
+        if (profileAvatarStatus) {
+            profileAvatarStatus.textContent = 'No new photo selected.';
+        }
+        return;
+    }
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const maxSizeBytes = 3 * 1024 * 1024;
+
+    if (!allowedTypes.includes(file.type)) {
+        this.value = '';
+        resetProfileAvatarPreview();
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Image',
+            text: 'Please choose a JPG, PNG, or WEBP image.'
+        });
+        return;
+    }
+
+    if (file.size > maxSizeBytes) {
+        this.value = '';
+        resetProfileAvatarPreview();
+        Swal.fire({
+            icon: 'error',
+            title: 'Image Too Large',
+            text: 'Profile pictures must be 3MB or smaller.'
+        });
+        return;
+    }
+
+    setProfileAvatarPreview(file);
+    if (profileAvatarStatus) {
+        profileAvatarStatus.textContent = `${file.name} is ready to upload.`;
+    }
+});
+
 // Handle Edit Profile Form Submission
 document.getElementById('editProfileForm')?.addEventListener('submit', function(e) {
     e.preventDefault();
@@ -164,6 +253,28 @@ document.getElementById('editProfileForm')?.addEventListener('submit', function(
             text: 'Middle initial must be a single letter.'
         }).then(() => middleInitialInput?.focus());
         return;
+    }
+
+    const imageFile = profileImageInput?.files && profileImageInput.files[0] ? profileImageInput.files[0] : null;
+    if (imageFile) {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        const maxSizeBytes = 3 * 1024 * 1024;
+        if (!allowedTypes.includes(imageFile.type)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Invalid Image',
+                text: 'Please choose a JPG, PNG, or WEBP image.'
+            });
+            return;
+        }
+        if (imageFile.size > maxSizeBytes) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Image Too Large',
+                text: 'Profile pictures must be 3MB or smaller.'
+            });
+            return;
+        }
     }
     
     const formData = new FormData(this);

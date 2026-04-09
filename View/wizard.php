@@ -123,7 +123,7 @@ if ($isLoggedIn && $scholarshipId > 0) {
             ? 'sd.assessment_details'
             : 'NULL AS assessment_details';
 
-        $stmt = $pdo->prepare("\n            SELECT\n                s.*,\n                sd.provider,\n                sd.benefits,\n                sd.address,\n                sd.city,\n                sd.province,\n                {$applicationOpenDateSelect},\n                sd.deadline,\n                {$applicationProcessLabelSelect},\n                {$assessmentRequirementSelect},\n                {$assessmentLinkSelect},\n                {$assessmentDetailsSelect},\n                {$postApplicationStepsSelect},\n                {$renewalConditionsSelect},\n                {$scholarshipRestrictionsSelect}\n            FROM scholarships s\n            LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id\n            WHERE s.id = ? AND s.status = 'active'\n            LIMIT 1\n        ");
+        $stmt = $pdo->prepare("\n            SELECT\n                s.*,\n                sd.image AS scholarship_image,\n                sd.provider,\n                sd.benefits,\n                sd.address,\n                sd.city,\n                sd.province,\n                {$applicationOpenDateSelect},\n                sd.deadline,\n                {$applicationProcessLabelSelect},\n                {$assessmentRequirementSelect},\n                {$assessmentLinkSelect},\n                {$assessmentDetailsSelect},\n                {$postApplicationStepsSelect},\n                {$renewalConditionsSelect},\n                {$scholarshipRestrictionsSelect}\n            FROM scholarships s\n            LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id\n            WHERE s.id = ? AND s.status = 'active'\n            LIMIT 1\n        ");
         $stmt->execute([$scholarshipId]);
         $scholarship = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     } catch (Throwable $e) {
@@ -325,7 +325,7 @@ $remoteExamMapUrl = $scholarshipId > 0
     : '';
 
 $wizardDefaultScholarshipImage = resolvePublicUploadUrl(null, '../');
-$wizardScholarshipImage = resolvePublicUploadUrl($scholarship['image'] ?? null, '../');
+$wizardScholarshipImage = resolvePublicUploadUrl($scholarship['scholarship_image'] ?? ($scholarship['image'] ?? null), '../');
 $wizardDescriptionPreview = trim(strip_tags((string) ($scholarship['description'] ?? '')));
 if ($wizardDescriptionPreview === '') {
     $wizardDescriptionPreview = 'Review your readiness, required documents, and final confirmation before you submit.';
@@ -523,6 +523,37 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
         'label' => (string) ($check['label'] ?? 'Policy check'),
         'detail' => (string) ($check['detail'] ?? '')
     ];
+}
+
+$wizardProfileTone = (($profileEvaluation['failed'] ?? 0) > 0)
+    ? 'blocked'
+    : ((($profileEvaluation['pending'] ?? 0) > 0) ? 'attention' : 'ok');
+$wizardProfileStatusLabel = $wizardProfileTone === 'blocked'
+    ? 'Not aligned yet'
+    : ($wizardProfileTone === 'attention' ? 'Needs updates' : 'Ready for review');
+$wizardProfileStatusIcon = $wizardProfileTone === 'blocked'
+    ? 'fa-user-xmark'
+    : ($wizardProfileTone === 'attention' ? 'fa-user-gear' : 'fa-user-check');
+$wizardProfileSummary = trim((string) ($profileEvaluation['label'] ?? ''));
+if ($wizardProfileSummary === '') {
+    $wizardProfileSummary = $wizardProfileTone === 'blocked'
+        ? 'Your current profile does not match this scholarship yet.'
+        : ($wizardProfileTone === 'attention'
+            ? 'A few profile details still need attention before you continue.'
+            : 'Your current student profile is ready for this scholarship check.');
+}
+$wizardProfileInitials = '';
+foreach (preg_split('/\s+/', trim((string) $applicantDisplayName)) ?: [] as $namePart) {
+    if ($namePart === '') {
+        continue;
+    }
+    $wizardProfileInitials .= strtoupper(substr($namePart, 0, 1));
+    if (strlen($wizardProfileInitials) >= 2) {
+        break;
+    }
+}
+if ($wizardProfileInitials === '') {
+    $wizardProfileInitials = 'ST';
 }
 ?>
 <!DOCTYPE html>
@@ -755,19 +786,64 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
                             <div class="wizard-panel-grid">
                                 <div class="wizard-section-card">
                                     <h4>Your information</h4>
-                                    <dl class="wizard-detail-list">
-                                        <div><dt>Name</dt><dd><?php echo htmlspecialchars((string) $applicantDisplayName); ?></dd></div>
-                                        <div><dt>Email</dt><dd><?php echo htmlspecialchars((string) $userEmail); ?></dd></div>
-                                        <div><dt>Applicant Type</dt><dd><?php echo htmlspecialchars(formatApplicantTypeLabel($userApplicantType ?: '')); ?></dd></div>
-                                        <div><dt>School</dt><dd><?php echo htmlspecialchars((string) ($userSchool ?: 'Not set')); ?></dd></div>
-                                        <div><dt>Course</dt><dd><?php echo htmlspecialchars((string) ($userCourse ?: 'Not set')); ?></dd></div>
-                                        <div><dt>Admission Status</dt><dd><?php echo htmlspecialchars(formatAdmissionStatusLabel($userAdmissionStatus ?: '')); ?></dd></div>
-                                        <div><dt>Year Level</dt><dd><?php echo htmlspecialchars(formatYearLevelLabel($userYearLevel ?: '')); ?></dd></div>
-                                        <?php if ($showShsDetails): ?>
-                                            <div><dt>SHS Strand</dt><dd><?php echo htmlspecialchars((string) ($userShsStrand ?: 'Not set')); ?></dd></div>
-                                        <?php endif; ?>
-                                        <div><dt>GWA</dt><dd><?php echo $profileHasGwa ? htmlspecialchars(number_format((float) $userGWA, 2)) : 'Not uploaded'; ?></dd></div>
-                                    </dl>
+                                    <div class="wizard-profile-summary wizard-profile-summary-<?php echo htmlspecialchars($wizardProfileTone); ?>">
+                                        <div class="wizard-profile-head">
+                                            <div class="wizard-profile-identity">
+                                                <div class="wizard-profile-avatar"><?php echo htmlspecialchars($wizardProfileInitials); ?></div>
+                                                <div class="wizard-profile-identity-copy">
+                                                    <strong><?php echo htmlspecialchars((string) $applicantDisplayName); ?></strong>
+                                                    <span><?php echo htmlspecialchars((string) $userEmail); ?></span>
+                                                </div>
+                                            </div>
+                                            <span class="wizard-profile-state is-<?php echo htmlspecialchars($wizardProfileTone); ?>">
+                                                <i class="fas <?php echo htmlspecialchars($wizardProfileStatusIcon); ?>"></i>
+                                                <?php echo htmlspecialchars($wizardProfileStatusLabel); ?>
+                                            </span>
+                                        </div>
+
+                                        <p class="wizard-profile-summary-text"><?php echo htmlspecialchars($wizardProfileSummary); ?></p>
+
+                                        <div class="wizard-profile-meta-grid">
+                                            <div class="wizard-profile-meta-item">
+                                                <span>Applicant Type</span>
+                                                <strong><?php echo htmlspecialchars(formatApplicantTypeLabel($userApplicantType ?: '')); ?></strong>
+                                            </div>
+                                            <div class="wizard-profile-meta-item">
+                                                <span>Admission Status</span>
+                                                <strong><?php echo htmlspecialchars(formatAdmissionStatusLabel($userAdmissionStatus ?: '')); ?></strong>
+                                            </div>
+                                            <div class="wizard-profile-meta-item">
+                                                <span>Year Level</span>
+                                                <strong><?php echo htmlspecialchars(formatYearLevelLabel($userYearLevel ?: '')); ?></strong>
+                                            </div>
+                                            <div class="wizard-profile-meta-item">
+                                                <span>GWA</span>
+                                                <strong><?php echo $profileHasGwa ? htmlspecialchars(number_format((float) $userGWA, 2)) : 'Not uploaded'; ?></strong>
+                                            </div>
+                                            <div class="wizard-profile-meta-item wizard-profile-meta-item-wide">
+                                                <span>School</span>
+                                                <strong><?php echo htmlspecialchars((string) ($userSchool ?: 'Not set')); ?></strong>
+                                            </div>
+                                            <div class="wizard-profile-meta-item wizard-profile-meta-item-wide">
+                                                <span>Course</span>
+                                                <strong><?php echo htmlspecialchars((string) ($userCourse ?: 'Not set')); ?></strong>
+                                            </div>
+                                            <?php if ($showShsDetails): ?>
+                                                <div class="wizard-profile-meta-item wizard-profile-meta-item-wide">
+                                                    <span>SHS Strand</span>
+                                                    <strong><?php echo htmlspecialchars((string) ($userShsStrand ?: 'Not set')); ?></strong>
+                                                </div>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <div class="wizard-profile-footer">
+                                            <span class="wizard-profile-footer-note">Need to update your information first?</span>
+                                            <a href="profile.php" class="wizard-inline-action wizard-inline-action-card wizard-profile-footer-link">
+                                                <i class="fas fa-user-pen"></i>
+                                                Open Profile
+                                            </a>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div class="wizard-section-card">
@@ -786,14 +862,6 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
-                            </div>
-
-                            <div class="wizard-inline-tools wizard-inline-tools-profile">
-                                <span class="wizard-inline-tools-label">Need to update your profile?</span>
-                                <a href="profile.php" class="wizard-inline-action wizard-inline-action-card">
-                                    <i class="fas fa-user-pen"></i>
-                                    Open Profile
-                                </a>
                             </div>
 
                             <?php if (!empty($wizardProfileRuleCards)): ?>

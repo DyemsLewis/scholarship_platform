@@ -18,6 +18,7 @@ $profileGenderMeta = $profileGenderMap[$profileGenderKey] ?? null;
 $isIncomingApplicant = ($userApplicantType ?? '') === 'incoming_freshman';
 $isCurrentlyEnrolled = in_array((string) ($userEnrollmentStatus ?? ''), ['currently_enrolled', 'regular', 'irregular'], true);
 $showShsDetails = !$isCurrentlyEnrolled;
+$profileAvatarUrl = !empty($userProfileImageUrl) ? $userProfileImageUrl : null;
 ?>
 <style>
     .profile-overview-hero {
@@ -87,6 +88,87 @@ $showShsDetails = !$isCurrentlyEnrolled;
         flex-wrap: wrap;
     }
 
+    .profile-avatar-circle {
+        width: 70px;
+        height: 70px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        border: 3px solid rgba(255,255,255,0.3);
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+
+    .profile-avatar-circle img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .profile-avatar-upload {
+        display: grid;
+        gap: 10px;
+        margin-bottom: 14px;
+        padding: 12px;
+        border-radius: 10px;
+        background: #f8fafc;
+        border: 1px solid #dbe4ee;
+    }
+
+    .profile-avatar-upload-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .profile-avatar-upload-copy {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .profile-avatar-upload-copy strong {
+        display: block;
+        color: var(--dark);
+        font-size: 0.9rem;
+        margin-bottom: 4px;
+    }
+
+    .profile-avatar-upload-copy p {
+        margin: 0;
+        color: var(--gray);
+        font-size: 0.75rem;
+        line-height: 1.5;
+    }
+
+    .profile-avatar-preview {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: #ffffff;
+        border: 2px solid #dbe7fb;
+        box-shadow: 0 8px 18px rgba(44, 90, 160, 0.12);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary);
+        font-size: 1.3rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+
+    .profile-avatar-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
     .profile-info-grid > div,
     .profile-name-grid > div,
     .profile-two-col-grid > div,
@@ -153,10 +235,14 @@ $showShsDetails = !$isCurrentlyEnrolled;
         <!-- Profile Header with Avatar -->
         <div class="profile-overview-hero">
             <!-- Avatar -->
-            <div style="width: 70px; height: 70px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 3px solid rgba(255,255,255,0.3);">
-                <span style="font-size: 1.8rem; color: var(--primary); font-weight: bold;">
-                    <?php echo getUserInitials($userDisplayName); ?>
-                </span>
+            <div class="profile-avatar-circle">
+                <?php if ($profileAvatarUrl): ?>
+                    <img src="<?php echo htmlspecialchars($profileAvatarUrl); ?>" alt="<?php echo htmlspecialchars($userDisplayName); ?> profile picture">
+                <?php else: ?>
+                    <span style="font-size: 1.8rem; color: var(--primary); font-weight: bold;">
+                        <?php echo getUserInitials($userDisplayName); ?>
+                    </span>
+                <?php endif; ?>
             </div>
             
             <!-- Basic Info -->
@@ -514,12 +600,32 @@ $showShsDetails = !$isCurrentlyEnrolled;
     <div id="profileEditContent" style="display: none;">
         <h3 style="margin-bottom: 15px; color: var(--primary); font-size: 1.2rem;">Edit Profile</h3>
         
-        <form id="editProfileForm">
+        <form id="editProfileForm" enctype="multipart/form-data">
             <!-- Username display (read-only) -->
             <div style="margin-bottom: 12px;">
                 <label for="editUsername" style="font-size: 0.8rem;">Username</label>
                 <input type="text" id="editUsername" value="<?php echo htmlspecialchars($userDisplayName); ?>" disabled style="width: 100%; padding: 8px; font-size: 0.9rem; background: #f5f5f5;">
                 <small style="font-size: 0.7rem;">Username cannot be changed</small>
+            </div>
+
+            <div class="profile-avatar-upload">
+                <div class="profile-avatar-upload-row">
+                <div class="profile-avatar-preview" id="profileAvatarPreview" data-initials="<?php echo htmlspecialchars(getUserInitials($userDisplayName)); ?>">
+                    <span id="profileAvatarPreviewFallback" <?php echo $profileAvatarUrl ? 'hidden' : ''; ?>><?php echo htmlspecialchars(getUserInitials($userDisplayName)); ?></span>
+                    <img src="<?php echo $profileAvatarUrl ? htmlspecialchars($profileAvatarUrl) : ''; ?>" data-original-src="<?php echo $profileAvatarUrl ? htmlspecialchars($profileAvatarUrl) : ''; ?>" alt="<?php echo htmlspecialchars($userDisplayName); ?> profile picture" id="profileAvatarPreviewImage" <?php echo $profileAvatarUrl ? '' : 'hidden'; ?>>
+                </div>
+                    <div class="profile-avatar-upload-copy">
+                        <strong>Profile Picture</strong>
+                        <p>Upload a clear square photo. JPG, PNG, or WEBP up to 3MB.</p>
+                    </div>
+                </div>
+                <div>
+                    <label for="editProfileImage" style="font-size: 0.8rem;">Choose image</label>
+                    <input type="file" id="editProfileImage" name="profile_image" accept="image/jpeg,image/png,image/webp" style="width: 100%; padding: 8px; font-size: 0.9rem;">
+                    <small id="editProfileImageStatus" style="font-size: 0.7rem; display: block; margin-top: 6px; color: var(--gray);">
+                        <?php echo $profileAvatarUrl ? 'Current photo is saved. Upload a new one to replace it.' : 'No photo uploaded yet.'; ?>
+                    </small>
+                </div>
             </div>
             
             <!-- Name Fields -->

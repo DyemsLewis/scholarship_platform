@@ -1092,7 +1092,7 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
                                 <div class="image-upload-container">
                                     <?php if(!empty($currentImageValue)): ?>
                                     <div class="current-image-preview">
-                                        <img src="../public/uploads/<?php echo htmlspecialchars($currentImageValue); ?>" 
+                                        <img src="<?php echo htmlspecialchars(resolvePublicUploadUrl($currentImageValue ?: null, '../')); ?>" 
                                              alt="Provider image">
                                         <div class="image-info">
                                             <p><strong>Current Image:</strong></p>
@@ -1107,7 +1107,7 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
                                     </div>
                                     <?php else: ?>
                                     <div class="current-image-preview">
-                                        <img src="../public/uploads/scholarship-default.jpg" alt="No image">
+                                        <img src="<?php echo htmlspecialchars(resolvePublicUploadUrl(null, '../')); ?>" alt="No image">
                                         <div class="image-info">
                                             <p><strong>No image uploaded yet</strong></p>
                                             <p><i class="fas fa-info-circle"></i> Upload a provider logo or image</p>

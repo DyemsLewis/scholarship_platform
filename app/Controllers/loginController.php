@@ -90,7 +90,8 @@ $optionalStudentDataColumns = [
     'mobile_number',
     'citizenship',
     'household_income_bracket',
-    'special_category'
+    'special_category',
+    'profile_image_path'
 ];
 foreach ($optionalStudentDataColumns as $column) {
     if (tableHasColumn($pdo, 'student_data', $column)) {
@@ -231,6 +232,7 @@ $_SESSION['user_mobile_number'] = $user['mobile_number'] ?? '';
 $_SESSION['user_citizenship'] = $user['citizenship'] ?? '';
 $_SESSION['user_household_income_bracket'] = $user['household_income_bracket'] ?? '';
 $_SESSION['user_special_category'] = $user['special_category'] ?? '';
+$_SESSION['user_profile_image_path'] = $user['profile_image_path'] ?? '';
 
 $_SESSION['user_latitude'] = $user['latitude'] ?? null;
 $_SESSION['user_longitude'] = $user['longitude'] ?? null;

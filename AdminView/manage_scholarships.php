@@ -360,10 +360,10 @@ $manageScholarshipsUrl = normalizeAppUrl('AdminView/manage_scholarships.php');
                                     <td class="scholarship-list-primary">
                                         <div class="scholarship-cell">
                                             <?php if (!empty($scholarship['image'])): ?>
-                                            <img src="../public/uploads/<?php echo htmlspecialchars($scholarship['image']); ?>"
+                                            <img src="<?php echo htmlspecialchars(resolvePublicUploadUrl($scholarship['image'] ?? null, '../')); ?>"
                                                  alt="<?php echo htmlspecialchars($scholarship['name']); ?>"
                                                  class="scholarship-image"
-                                                 onerror="this.src='../public/uploads/scholarship-default.jpg'">
+                                                 onerror="this.src='<?php echo htmlspecialchars(resolvePublicUploadUrl(null, '../')); ?>'">
                                             <?php else: ?>
                                             <div class="scholarship-image scholarship-image-placeholder">
                                                 <i class="fas fa-graduation-cap"></i>

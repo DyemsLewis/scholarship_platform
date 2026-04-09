@@ -62,6 +62,7 @@ $userCitizenship = '';
 $userHouseholdIncomeBracket = '';
 $userSpecialCategory = '';
 $userLocationName = '';
+$userProfileImagePath = '';
 $userCreatedAt = null;
 
 if (isset($_SESSION['user_id'])) {
@@ -109,6 +110,7 @@ if (isset($_SESSION['user_id'])) {
     $userCitizenship = $_SESSION['user_citizenship'] ?? '';
     $userHouseholdIncomeBracket = $_SESSION['user_household_income_bracket'] ?? '';
     $userSpecialCategory = $_SESSION['user_special_category'] ?? '';
+    $userProfileImagePath = $_SESSION['user_profile_image_path'] ?? '';
     // Location data - from student_location table
     $userLatitude = $_SESSION['user_latitude'] ?? null;
     $userLongitude = $_SESSION['user_longitude'] ?? null;
@@ -155,6 +157,7 @@ if (isset($_SESSION['user_id'])) {
                     'citizenship' => 'user_citizenship',
                     'household_income_bracket' => 'user_household_income_bracket',
                     'special_category' => 'user_special_category',
+                    'profile_image_path' => 'user_profile_image_path',
                 ];
 
                 foreach ($sessionFieldMap as $dataKey => $sessionKey) {
@@ -203,6 +206,7 @@ if (isset($_SESSION['user_id'])) {
             $userCitizenship = $_SESSION['user_citizenship'] ?? '';
             $userHouseholdIncomeBracket = $_SESSION['user_household_income_bracket'] ?? '';
             $userSpecialCategory = $_SESSION['user_special_category'] ?? '';
+            $userProfileImagePath = $_SESSION['user_profile_image_path'] ?? '';
             $userLatitude = $_SESSION['user_latitude'] ?? null;
             $userLongitude = $_SESSION['user_longitude'] ?? null;
             $userLocationName = $_SESSION['user_location_name'] ?? '';

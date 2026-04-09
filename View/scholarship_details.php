@@ -1264,6 +1264,11 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
 <section class="dashboard scholarship-detail-page user-page-shell">
     <div class="container scholarship-detail-shell">
         <div class="scholarship-detail-pagebar">
+            <div class="scholarship-detail-pagebar-copy">
+                <span class="scholarship-detail-pagebar-kicker">Scholarships</span>
+                <h2>Scholarship Details</h2>
+                <p>Review the scholarship, your current status, and the next step before you apply.</p>
+            </div>
             <a href="scholarships.php" class="scholarship-detail-backlink">
                 <i class="fas fa-arrow-left"></i>
                 Back to Scholarships
