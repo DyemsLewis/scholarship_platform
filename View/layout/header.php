@@ -4,7 +4,7 @@ require_once __DIR__ . '/../../app/Config/init.php';
 
 $headerUserName = $userName;
 $headerUserProfileImagePath = '';
-$headerUserProfileImageUrl = null;
+$headerUserProfileImageUrl = getDefaultProfileImageUrl('../');
 if ($isLoggedIn && ($userRole ?? 'guest') === 'student') {
     $sessionUsername = trim((string) ($_SESSION['user_username'] ?? ''));
     if ($sessionUsername !== '') {
@@ -12,7 +12,10 @@ if ($isLoggedIn && ($userRole ?? 'guest') === 'student') {
     }
     $headerUserProfileImagePath = trim((string) ($_SESSION['user_profile_image_path'] ?? ''));
     if ($headerUserProfileImagePath !== '') {
-        $headerUserProfileImageUrl = resolveStoredFileUrl($headerUserProfileImagePath, '../');
+        $resolvedHeaderUserProfileImageUrl = resolveStoredFileUrl($headerUserProfileImagePath, '../');
+        if ($resolvedHeaderUserProfileImageUrl) {
+            $headerUserProfileImageUrl = $resolvedHeaderUserProfileImageUrl;
+        }
     }
 }
 ?>
@@ -144,11 +147,7 @@ if ($isLoggedIn && ($userRole ?? 'guest') === 'student') {
                         <div class="user-profile">
                             <div class="user-profile-meta">
                                 <div class="user-avatar" id="userAvatar">
-                                    <?php if ($headerUserProfileImageUrl): ?>
-                                        <img src="<?php echo htmlspecialchars($headerUserProfileImageUrl); ?>" alt="<?php echo htmlspecialchars($headerUserName); ?> profile picture">
-                                    <?php else: ?>
-                                        <?php echo getUserInitials($headerUserName); ?>
-                                    <?php endif; ?>
+                                    <img src="<?php echo htmlspecialchars($headerUserProfileImageUrl); ?>" alt="<?php echo htmlspecialchars($headerUserName); ?> profile picture">
                                 </div>
                                 <div class="user-profile-copy">
                                     <span class="user-profile-label">Signed in as</span>

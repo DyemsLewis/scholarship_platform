@@ -110,6 +110,11 @@ function isValidProfileMiddleInitial(value) {
     return value === '' || /^[A-Za-z]$/.test(value);
 }
 
+const middleInitialInput = document.getElementById('editMiddleInitial');
+middleInitialInput?.addEventListener('input', function () {
+    this.value = this.value.replace(/[^A-Za-z]/g, '').slice(0, 1).toUpperCase();
+});
+
 const profileImageInput = document.getElementById('editProfileImage');
 const profileAvatarPreview = document.getElementById('profileAvatarPreview');
 const profileAvatarPreviewImage = document.getElementById('profileAvatarPreviewImage');

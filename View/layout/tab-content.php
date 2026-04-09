@@ -18,7 +18,9 @@ $profileGenderMeta = $profileGenderMap[$profileGenderKey] ?? null;
 $isIncomingApplicant = ($userApplicantType ?? '') === 'incoming_freshman';
 $isCurrentlyEnrolled = in_array((string) ($userEnrollmentStatus ?? ''), ['currently_enrolled', 'regular', 'irregular'], true);
 $showShsDetails = !$isCurrentlyEnrolled;
-$profileAvatarUrl = !empty($userProfileImageUrl) ? $userProfileImageUrl : null;
+$uploadedProfileAvatarUrl = !empty($userProfileImageUrl) ? $userProfileImageUrl : null;
+$profileAvatarUrl = $uploadedProfileAvatarUrl ?: getDefaultProfileImageUrl('../');
+$editMiddleInitialValue = strtoupper(substr(str_replace('.', '', trim((string) ($userMiddleInitial ?? ''))), 0, 1));
 ?>
 <style>
     .profile-overview-hero {
@@ -236,13 +238,7 @@ $profileAvatarUrl = !empty($userProfileImageUrl) ? $userProfileImageUrl : null;
         <div class="profile-overview-hero">
             <!-- Avatar -->
             <div class="profile-avatar-circle">
-                <?php if ($profileAvatarUrl): ?>
-                    <img src="<?php echo htmlspecialchars($profileAvatarUrl); ?>" alt="<?php echo htmlspecialchars($userDisplayName); ?> profile picture">
-                <?php else: ?>
-                    <span style="font-size: 1.8rem; color: var(--primary); font-weight: bold;">
-                        <?php echo getUserInitials($userDisplayName); ?>
-                    </span>
-                <?php endif; ?>
+                <img src="<?php echo htmlspecialchars($profileAvatarUrl); ?>" alt="<?php echo htmlspecialchars($userDisplayName); ?> profile picture">
             </div>
             
             <!-- Basic Info -->
@@ -611,8 +607,8 @@ $profileAvatarUrl = !empty($userProfileImageUrl) ? $userProfileImageUrl : null;
             <div class="profile-avatar-upload">
                 <div class="profile-avatar-upload-row">
                 <div class="profile-avatar-preview" id="profileAvatarPreview" data-initials="<?php echo htmlspecialchars(getUserInitials($userDisplayName)); ?>">
-                    <span id="profileAvatarPreviewFallback" <?php echo $profileAvatarUrl ? 'hidden' : ''; ?>><?php echo htmlspecialchars(getUserInitials($userDisplayName)); ?></span>
-                    <img src="<?php echo $profileAvatarUrl ? htmlspecialchars($profileAvatarUrl) : ''; ?>" data-original-src="<?php echo $profileAvatarUrl ? htmlspecialchars($profileAvatarUrl) : ''; ?>" alt="<?php echo htmlspecialchars($userDisplayName); ?> profile picture" id="profileAvatarPreviewImage" <?php echo $profileAvatarUrl ? '' : 'hidden'; ?>>
+                    <span id="profileAvatarPreviewFallback" hidden><?php echo htmlspecialchars(getUserInitials($userDisplayName)); ?></span>
+                    <img src="<?php echo htmlspecialchars($profileAvatarUrl); ?>" data-original-src="<?php echo htmlspecialchars($profileAvatarUrl); ?>" alt="<?php echo htmlspecialchars($userDisplayName); ?> profile picture" id="profileAvatarPreviewImage">
                 </div>
                     <div class="profile-avatar-upload-copy">
                         <strong>Profile Picture</strong>
@@ -623,7 +619,7 @@ $profileAvatarUrl = !empty($userProfileImageUrl) ? $userProfileImageUrl : null;
                     <label for="editProfileImage" style="font-size: 0.8rem;">Choose image</label>
                     <input type="file" id="editProfileImage" name="profile_image" accept="image/jpeg,image/png,image/webp" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                     <small id="editProfileImageStatus" style="font-size: 0.7rem; display: block; margin-top: 6px; color: var(--gray);">
-                        <?php echo $profileAvatarUrl ? 'Current photo is saved. Upload a new one to replace it.' : 'No photo uploaded yet.'; ?>
+                        <?php echo $uploadedProfileAvatarUrl ? 'Current photo is saved. Upload a new one to replace it.' : 'Using the default avatar. Upload a photo to replace it.'; ?>
                     </small>
                 </div>
             </div>
@@ -640,8 +636,8 @@ $profileAvatarUrl = !empty($userProfileImageUrl) ? $userProfileImageUrl : null;
                 <div>
                     <label for="editMiddleInitial" style="font-size: 0.8rem;">MI</label>
                     <input type="text" id="editMiddleInitial" name="middleinitial" 
-                            value="<?php echo htmlspecialchars($userMiddleInitial); ?>" 
-                            maxlength="2" style="width: 100%; padding: 8px; font-size: 0.9rem;">
+                           value="<?php echo htmlspecialchars($editMiddleInitialValue); ?>" 
+                           maxlength="1" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                 </div>
                 
                 <div>

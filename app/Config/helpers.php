@@ -522,6 +522,16 @@ if (!function_exists('resolvePublicUploadUrl')) {
     }
 }
 
+if (!function_exists('getDefaultProfileImageUrl')) {
+    function getDefaultProfileImageUrl(string $prefix = '../'): string {
+        return resolvePublicUploadUrl(
+            'public/uploads/profile-images/default-avatar.jpg',
+            $prefix,
+            'public/uploads/profile-images/default-avatar.jpg'
+        );
+    }
+}
+
 if (!function_exists('storedFilePreviewType')) {
     function storedFilePreviewType(?string $storedPath, ?string $fileName = null, ?string $mimeType = null): string {
         $candidate = trim((string) ($fileName ?? ''));
