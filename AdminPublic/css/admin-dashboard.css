@@ -400,7 +400,13 @@
 
 .priority-cta {
     margin-top: auto;
-    align-self: flex-start;
+    align-self: stretch;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 14px;
 }
 
 .snapshot-grid {

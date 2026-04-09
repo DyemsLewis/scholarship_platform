@@ -278,7 +278,7 @@ body.scholarship-detail-modal-open {
 
 .scholarship-fact-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
 }
 
@@ -602,53 +602,6 @@ body.scholarship-detail-modal-open {
 
 .scholarship-info-item.compact p {
     margin-top: 4px;
-}
-
-.scholarship-detail-more,
-.scholarship-detail-side-more {
-    overflow: hidden;
-}
-
-.scholarship-detail-more summary,
-.scholarship-detail-side-more summary {
-    list-style: none;
-    cursor: pointer;
-    font-size: 0.83rem;
-    font-weight: 700;
-    color: #10233f;
-}
-
-.scholarship-detail-more summary::-webkit-details-marker,
-.scholarship-detail-side-more summary::-webkit-details-marker {
-    display: none;
-}
-
-.scholarship-detail-more summary::after,
-.scholarship-detail-side-more summary::after {
-    content: '\f078';
-    font-family: 'Font Awesome 6 Free';
-    font-weight: 900;
-    float: right;
-    color: #64748b;
-}
-
-.scholarship-detail-more[open] summary::after,
-.scholarship-detail-side-more[open] summary::after {
-    content: '\f077';
-}
-
-.scholarship-detail-more-body,
-.scholarship-info-stack-top {
-    margin-top: 14px;
-}
-
-.scholarship-detail-more-body {
-    display: grid;
-    gap: 14px;
-}
-
-.scholarship-detail-subsection {
-    padding-top: 2px;
 }
 
 .scholarship-rules-modal {

@@ -913,46 +913,64 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
                         </div>
                         <div class="card-body">
                             <div class="wizard-review-grid-modern">
-                                <div class="wizard-review-card"><span>Applicant</span><strong><?php echo htmlspecialchars((string) $applicantDisplayName); ?></strong></div>
-                                <div class="wizard-review-card"><span>Scholarship</span><strong><?php echo htmlspecialchars((string) $scholarship['name']); ?></strong></div>
-                                <div class="wizard-review-card"><span>Profile</span><strong><?php echo htmlspecialchars((string) ($profileEvaluation['label'] ?? 'Open profile policy')); ?></strong></div>
-                                <div class="wizard-review-card"><span>Documents</span><strong><?php echo $documentsReady ? 'Ready (pending allowed)' : 'Not ready'; ?></strong></div>
-                                <div class="wizard-review-card"><span>Application Opens</span><strong><?php echo htmlspecialchars($applicationOpenDateLabel); ?></strong></div>
-                                <div class="wizard-review-card"><span>Deadline</span><strong><?php echo htmlspecialchars($deadlineLabel); ?></strong></div>
+                                <div class="wizard-review-card">
+                                    <span class="wizard-review-label">Applicant</span>
+                                    <strong class="wizard-review-value"><?php echo htmlspecialchars((string) $applicantDisplayName); ?></strong>
+                                </div>
+                                <div class="wizard-review-card">
+                                    <span class="wizard-review-label">Scholarship</span>
+                                    <strong class="wizard-review-value"><?php echo htmlspecialchars((string) $scholarship['name']); ?></strong>
+                                </div>
+                                <div class="wizard-review-card">
+                                    <span class="wizard-review-label">Profile</span>
+                                    <strong class="wizard-review-value"><?php echo htmlspecialchars((string) ($profileEvaluation['label'] ?? 'Open profile policy')); ?></strong>
+                                </div>
+                                <div class="wizard-review-card">
+                                    <span class="wizard-review-label">Documents</span>
+                                    <strong class="wizard-review-value"><?php echo $documentsReady ? 'Ready (pending allowed)' : 'Not ready'; ?></strong>
+                                </div>
+                                <div class="wizard-review-card">
+                                    <span class="wizard-review-label">Application Opens</span>
+                                    <strong class="wizard-review-value"><?php echo htmlspecialchars($applicationOpenDateLabel); ?></strong>
+                                </div>
+                                <div class="wizard-review-card">
+                                    <span class="wizard-review-label">Deadline</span>
+                                    <strong class="wizard-review-value"><?php echo htmlspecialchars($deadlineLabel); ?></strong>
+                                </div>
                             </div>
 
                             <div class="wizard-section-card wizard-section-card-wide wizard-submit-panel">
                                 <h4>After you submit</h4>
                                 <div class="wizard-submit-meta">
                                     <div>
-                                        <span>Process</span>
-                                        <strong><?php echo htmlspecialchars($applicationProcessLabel); ?></strong>
+                                        <span class="wizard-submit-label">Process</span>
+                                        <strong class="wizard-submit-value"><?php echo htmlspecialchars($applicationProcessLabel); ?></strong>
                                     </div>
                                     <?php if ($assessmentLabel !== 'None'): ?>
                                         <div>
-                                            <span>Assessment</span>
-                                            <strong><?php echo htmlspecialchars($assessmentLabel); ?></strong>
+                                            <span class="wizard-submit-label">Assessment</span>
+                                            <strong class="wizard-submit-value"><?php echo htmlspecialchars($assessmentLabel); ?></strong>
                                         </div>
                                     <?php endif; ?>
                                     <div>
-                                        <span>Next step</span>
-                                        <strong><?php echo htmlspecialchars($postApplicationSteps); ?></strong>
+                                        <span class="wizard-submit-label">Next step</span>
+                                        <strong class="wizard-submit-value"><?php echo htmlspecialchars($postApplicationSteps); ?></strong>
                                     </div>
                                     <?php if ($assessmentDetails !== ''): ?>
                                         <div>
-                                            <span>Assessment details</span>
-                                            <strong><?php echo htmlspecialchars($assessmentDetails); ?></strong>
+                                            <span class="wizard-submit-label">Assessment details</span>
+                                            <strong class="wizard-submit-value"><?php echo htmlspecialchars($assessmentDetails); ?></strong>
                                         </div>
                                     <?php endif; ?>
                                     <?php if ($assessmentType === 'remote_examination' && !empty($remoteExamLocations)): ?>
                                         <div>
-                                            <span>Exam sites</span>
-                                            <strong><a href="<?php echo htmlspecialchars($remoteExamMapUrl); ?>" class="wizard-inline-action">View all sites on map</a></strong>
+                                            <span class="wizard-submit-label">Exam sites</span>
+                                            <strong class="wizard-submit-value"><a href="<?php echo htmlspecialchars($remoteExamMapUrl); ?>" class="wizard-inline-action">View all sites on map</a></strong>
                                         </div>
                                     <?php elseif (!empty($scholarship['assessment_link'])): ?>
                                         <div>
-                                            <span>Assessment link</span>
-                                            <strong><a href="<?php echo htmlspecialchars((string) $scholarship['assessment_link']); ?>" class="wizard-inline-action" target="_blank" rel="noopener noreferrer">Open assessment page</a></strong>
+                                            <span class="wizard-submit-label">Assessment link</span>
+                                            <strong class="wizard-submit-value"><a href="<?php echo htmlspecialchars((string) $scholarship['assessment_link']); ?>" class="wizard-inline-action" target="_blank" rel="noopener noreferrer">Open assessment page</a></strong>
                                         </div>
                                     <?php endif; ?>
                                 </div>

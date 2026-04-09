@@ -1359,7 +1359,25 @@
 }
 
 .wizard-review-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    min-width: 0;
     padding: 14px;
+}
+
+.wizard-review-label,
+.wizard-submit-label {
+    display: block;
+}
+
+.wizard-review-value,
+.wizard-submit-value {
+    display: block;
+    min-width: 0;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
 }
 
 .wizard-submit-meta {

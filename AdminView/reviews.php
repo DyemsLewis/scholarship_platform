@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once __DIR__ . '/../app/Config/session_bootstrap.php';
 require_once __DIR__ . '/../app/Config/db_config.php';
 require_once __DIR__ . '/../app/Config/access_control.php';
 require_once __DIR__ . '/../app/Config/provider_scope.php';
@@ -189,7 +189,6 @@ foreach ($reviewQueueCards as $queueCard) {
 }
 $reviewQueueCount = count($reviewQueueCards);
 $clearedQueueCount = count(array_filter($reviewQueueCards, static fn(array $card): bool => (int) ($card['pending'] ?? 0) === 0));
-$reviewsWorkspaceLabel = $currentRole === 'provider' ? 'Provider review workspace' : 'Administrative review workspace';
 
 $reviewsCurrentView = 'overview';
 $reviewsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/reviews.css') ?: time();
@@ -214,25 +213,6 @@ $reviewsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/reviews.css') ?
                     <span class="reviews-overview-kicker">Review Center</span>
                     <h1><i class="fas fa-list-check"></i> Reviews</h1>
                     <p>Applications, documents, scholarship submissions, and provider approvals in one review workspace.</p>
-                    <div class="reviews-overview-pills">
-                        <span class="reviews-overview-pill"><i class="fas fa-hourglass-half"></i><?php echo number_format($totalPendingReviewItems); ?> pending</span>
-                        <span class="reviews-overview-pill"><i class="fas fa-layer-group"></i><?php echo number_format($reviewQueueCount); ?> review areas</span>
-                        <span class="reviews-overview-pill"><i class="fas fa-circle-check"></i><?php echo number_format($clearedQueueCount); ?> clear</span>
-                    </div>
-                </div>
-                <div class="reviews-overview-side">
-                    <div class="reviews-overview-side-card">
-                        <span>Workspace</span>
-                        <strong><?php echo htmlspecialchars($reviewsWorkspaceLabel); ?></strong>
-                    </div>
-                    <div class="reviews-overview-side-card">
-                        <span>Pending Items</span>
-                        <strong><?php echo number_format($totalPendingReviewItems); ?></strong>
-                    </div>
-                    <div class="reviews-overview-side-card">
-                        <span>Queues Clear</span>
-                        <strong><?php echo number_format($clearedQueueCount); ?></strong>
-                    </div>
                 </div>
             </div>
 

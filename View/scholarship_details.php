@@ -671,32 +671,21 @@ if (!empty($scholarship['location_name'])) {
     );
 }
 
-$timelineItems = [
+$applicationGuideItems = [
     [
-        'label' => 'Application opens',
-        'value' => $applicationOpenDateDisplay,
-        'detail' => $applicationNotYetOpen
-            ? 'Submissions start on ' . $applicationOpenDateDisplay . '.'
-            : 'You can already prepare and submit while the scholarship stays open.',
-    ],
-    [
-        'label' => 'Application deadline',
-        'value' => $deadlineDisplay,
-        'detail' => $deadlineClass === 'bad'
-            ? 'This scholarship is already closed.'
-            : ($deadlineClass === 'warn'
-                ? 'Apply as soon as possible because the deadline is close.'
-                : 'This is the current deadline shown by the provider.'),
-    ],
-    [
-        'label' => 'Application process',
+        'label' => 'Application flow',
         'value' => $applicationProcessLabelDisplay,
+        'detail' => 'You will go through the scholarship wizard to check your eligibility, required documents, and final review before submission.',
+    ],
+    [
+        'label' => 'Extra step',
+        'value' => $hasAssessment ? $assessmentModeLabel : 'Provider review only',
         'detail' => $hasAssessment
             ? $assessmentSummary
-            : 'The provider reviews your profile and uploaded requirements after submission.',
+            : 'No extra exam or assessment is listed. The provider reviews your submitted requirements after you apply.',
     ],
     [
-        'label' => 'After you apply',
+        'label' => 'After you submit',
         'value' => 'Provider review',
         'detail' => $postApplicationStepsText,
     ],
@@ -733,40 +722,6 @@ if ($visitSiteUrl === '' && !empty($scholarship['assessment_link'])) {
 if ($visitSiteUrl !== '' && !filter_var($visitSiteUrl, FILTER_VALIDATE_URL)) {
     $visitSiteUrl = '';
 }
-
-$providerWebsiteLabel = 'Not listed';
-$providerWebsiteDetail = 'No official website is linked in this scholarship posting.';
-if ($visitSiteUrl !== '') {
-    $providerWebsiteHost = parse_url($visitSiteUrl, PHP_URL_HOST);
-    $providerWebsiteLabel = $providerWebsiteHost ? (string) $providerWebsiteHost : 'Official website available';
-    $providerWebsiteDetail = 'You can open the provider site from the action buttons above.';
-}
-
-$renewalConditionsValue = $buildCompactScholarshipText($renewalConditionsText, 'Not specified');
-$scholarshipRestrictionsValue = $buildCompactScholarshipText($scholarshipRestrictionsText, 'Not specified');
-
-$providerInfoItems = [
-    [
-        'label' => 'Scholarship provider',
-        'value' => (string) ($scholarship['provider'] ?? 'Provider not specified'),
-        'detail' => 'Students usually check the provider to see if the scholarship is legitimate and familiar.',
-    ],
-    [
-        'label' => 'Official website',
-        'value' => $providerWebsiteLabel,
-        'detail' => $providerWebsiteDetail,
-    ],
-    [
-        'label' => 'Renewal conditions',
-        'value' => $renewalConditionsValue,
-        'detail' => $renewalConditionsText,
-    ],
-    [
-        'label' => 'Restrictions or obligations',
-        'value' => $scholarshipRestrictionsValue,
-        'detail' => $scholarshipRestrictionsText,
-    ],
-];
 
 if ($matchPercentage === null) {
     $badgeClass = 'estimated';
@@ -1292,29 +1247,6 @@ $attentionReasonItems = !empty($attentionReasons)
 $attentionReasonTone = !empty($attentionReasons) ? 'warning' : 'neutral';
 $attentionReasonTitle = !empty($attentionReasons) ? 'These are the blockers right now' : 'Nothing is blocking you right now';
 $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
-$hasRenewalConditions = trim((string) ($scholarship['renewal_conditions'] ?? '')) !== '';
-$hasRestrictions = trim((string) ($scholarship['scholarship_restrictions'] ?? '')) !== '';
-$importantNotes = [];
-if ($applicationNotYetOpen) {
-    $pushReason($importantNotes, 'Applications open on ' . $applicationOpenDateDisplay);
-} elseif (!empty($scholarship['deadline'])) {
-    $pushReason($importantNotes, 'Current deadline: ' . $deadlineDisplay);
-}
-if ($applicationProcessLabelDisplay !== '') {
-    $pushReason($importantNotes, 'Application process: ' . $applicationProcessLabelDisplay);
-}
-if ($hasAssessment) {
-    $pushReason($importantNotes, $assessmentHeadline);
-}
-if ($hasRenewalConditions) {
-    $pushReason($importantNotes, 'Renewal: ' . $renewalConditionsValue);
-}
-if ($hasRestrictions) {
-    $pushReason($importantNotes, 'Restriction: ' . $scholarshipRestrictionsValue);
-}
-if (empty($importantNotes) && $visitSiteUrl !== '') {
-    $pushReason($importantNotes, 'Official provider site is available for additional scholarship details.');
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -1404,10 +1336,6 @@ if (empty($importantNotes) && $visitSiteUrl !== '') {
                     <article class="scholarship-fact-card">
                         <span>Deadline</span>
                         <strong><?php echo htmlspecialchars($deadlineDisplay); ?></strong>
-                    </article>
-                    <article class="scholarship-fact-card">
-                        <span>Audience</span>
-                        <strong><?php echo htmlspecialchars($audienceLabel); ?></strong>
                     </article>
                     <article class="scholarship-fact-card">
                         <span>Application Opens</span>
@@ -1541,22 +1469,6 @@ if (empty($importantNotes) && $visitSiteUrl !== '') {
                     <?php endif; ?>
                 </section>
 
-                <details class="scholarship-detail-panel scholarship-detail-more">
-                    <summary>More scholarship details</summary>
-                    <div class="scholarship-detail-more-body">
-                        <section class="scholarship-detail-subsection">
-                            <h3>About this scholarship</h3>
-                            <p><?php echo nl2br(htmlspecialchars($descriptionFullText)); ?></p>
-                        </section>
-
-                        <?php if ($hasEligibilityNotes): ?>
-                            <section class="scholarship-detail-subsection">
-                                <h3>Provider eligibility notes</h3>
-                                <p><?php echo nl2br(htmlspecialchars($eligibilityNotesText)); ?></p>
-                            </section>
-                        <?php endif; ?>
-                    </div>
-                </details>
             </main>
 
             <aside class="scholarship-detail-side">
@@ -1592,57 +1504,22 @@ if (empty($importantNotes) && $visitSiteUrl !== '') {
                 <section class="scholarship-detail-panel">
                     <div class="scholarship-detail-panel-head">
                         <div>
-                            <span class="scholarship-detail-eyebrow">Timeline</span>
-                            <h2>Dates and process</h2>
+                            <span class="scholarship-detail-eyebrow">Process</span>
+                            <h2>How the application works</h2>
                         </div>
                     </div>
 
                     <div class="scholarship-info-stack">
-                        <?php foreach ($timelineItems as $timelineItem): ?>
+                        <?php foreach ($applicationGuideItems as $applicationGuideItem): ?>
                             <article class="scholarship-info-item">
-                                <span><?php echo htmlspecialchars((string) ($timelineItem['label'] ?? '')); ?></span>
-                                <strong><?php echo htmlspecialchars((string) ($timelineItem['value'] ?? '')); ?></strong>
-                                <p><?php echo htmlspecialchars((string) ($timelineItem['detail'] ?? '')); ?></p>
+                                <span><?php echo htmlspecialchars((string) ($applicationGuideItem['label'] ?? '')); ?></span>
+                                <strong><?php echo htmlspecialchars((string) ($applicationGuideItem['value'] ?? '')); ?></strong>
+                                <p><?php echo htmlspecialchars((string) ($applicationGuideItem['detail'] ?? '')); ?></p>
                             </article>
                         <?php endforeach; ?>
                     </div>
                 </section>
 
-                <section class="scholarship-detail-panel">
-                    <div class="scholarship-detail-panel-head">
-                        <div>
-                            <span class="scholarship-detail-eyebrow">Audience</span>
-                            <h2>Who this is for</h2>
-                        </div>
-                    </div>
-
-                    <div class="scholarship-info-stack">
-                        <?php foreach ($eligibilityRequirementItems as $eligibilityRequirementItem): ?>
-                            <article class="scholarship-info-item compact">
-                                <span><?php echo htmlspecialchars((string) ($eligibilityRequirementItem['label'] ?? '')); ?></span>
-                                <strong><?php echo htmlspecialchars((string) ($eligibilityRequirementItem['value'] ?? '')); ?></strong>
-                                <?php if (!empty($eligibilityRequirementItem['detail'])): ?>
-                                    <p><?php echo htmlspecialchars((string) $eligibilityRequirementItem['detail']); ?></p>
-                                <?php endif; ?>
-                            </article>
-                        <?php endforeach; ?>
-                    </div>
-                </section>
-
-                <details class="scholarship-detail-panel scholarship-detail-side-more">
-                    <summary>Provider and renewal</summary>
-                    <div class="scholarship-info-stack scholarship-info-stack-top">
-                        <?php foreach ($providerInfoItems as $providerInfoItem): ?>
-                            <article class="scholarship-info-item compact">
-                                <span><?php echo htmlspecialchars((string) ($providerInfoItem['label'] ?? '')); ?></span>
-                                <strong><?php echo htmlspecialchars((string) ($providerInfoItem['value'] ?? '')); ?></strong>
-                                <?php if (!empty($providerInfoItem['detail'])): ?>
-                                    <p><?php echo htmlspecialchars((string) $providerInfoItem['detail']); ?></p>
-                                <?php endif; ?>
-                            </article>
-                        <?php endforeach; ?>
-                    </div>
-                </details>
             </aside>
         </div>
 
