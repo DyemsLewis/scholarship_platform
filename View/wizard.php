@@ -432,13 +432,6 @@ $wizardSupportChips[] = [
 ];
 
 $wizardSignalChips = [];
-if ($documentsSummaryText !== '') {
-    $wizardSignalChips[] = [
-        'tone' => ($missingRequired + $rejectedRequired) > 0 ? 'warning' : 'info',
-        'icon' => 'fa-folder-open',
-        'label' => $documentsSummaryText
-    ];
-}
 if (($missingRequired + $rejectedRequired) > 0) {
     $wizardSignalChips[] = [
         'tone' => 'warning',
@@ -630,6 +623,26 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
                 </div>
             </div>
         <?php else: ?>
+            <div class="wizard-page-header wizard-page-header-selected app-page-hero">
+                <div class="wizard-page-header-copy app-page-hero-copy">
+                    <h1>
+                        <i class="fas fa-file-signature"></i>
+                        Application Wizard
+                        <span class="wizard-role-badge app-page-hero-badge">
+                            <i class="fas fa-graduation-cap"></i>
+                            Scholarship Selected
+                        </span>
+                    </h1>
+                    <p>Review your eligibility, documents, and final submission for <?php echo htmlspecialchars((string) $scholarship['name']); ?>.</p>
+                </div>
+                <div class="app-page-hero-side">
+                    <a href="scholarships.php" class="btn btn-white wizard-back-link app-page-hero-action">
+                        <i class="fas fa-arrow-left"></i>
+                        Back to Scholarships
+                    </a>
+                </div>
+            </div>
+
             <div class="wizard-selected-shell">
                 <div class="wizard-selected-card state-<?php echo htmlspecialchars($wizardCardState); ?>">
                     <div class="wizard-selected-card-inner">
@@ -653,20 +666,6 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
                                     onerror="this.src='<?php echo htmlspecialchars($wizardDefaultScholarshipImage); ?>'"
                                 >
                             </div>
-
-                            <div class="wizard-provider-name"><?php echo htmlspecialchars((string) ($scholarship['provider'] ?? 'Provider not specified')); ?></div>
-                            <p class="wizard-provider-note">We’ll guide you through the same three steps every scholarship uses: eligibility, documents, and final review.</p>
-
-                            <?php if (!empty($wizardSupportChips)): ?>
-                                <div class="wizard-support-chip-row">
-                                    <?php foreach ($wizardSupportChips as $supportChip): ?>
-                                        <span class="wizard-support-chip">
-                                            <i class="fas <?php echo htmlspecialchars((string) $supportChip['icon']); ?>"></i>
-                                            <?php echo htmlspecialchars((string) $supportChip['label']); ?>
-                                        </span>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
                         </div>
 
                         <div class="wizard-selected-content">
@@ -676,10 +675,26 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
                                     <p class="wizard-selected-description"><?php echo htmlspecialchars($wizardDescriptionPreview); ?></p>
                                 </div>
 
-                                <a href="scholarships.php" class="wizard-header-link">
-                                    <i class="fas fa-arrow-left"></i>
-                                    Back to Scholarships
-                                </a>
+
+                            </div>
+
+                            <div class="wizard-provider-summary">
+                                <div class="wizard-provider-line">
+                                    <span class="wizard-provider-label">Provider</span>
+                                    <strong class="wizard-provider-inline-name"><?php echo htmlspecialchars((string) ($scholarship['provider'] ?? 'Provider not specified')); ?></strong>
+                                </div>
+                                <p class="wizard-provider-inline-note">We'll guide you through the same three steps every scholarship uses: eligibility, documents, and final review.</p>
+
+                                <?php if (!empty($wizardSupportChips)): ?>
+                                    <div class="wizard-support-chip-row wizard-support-chip-row-inline">
+                                        <?php foreach ($wizardSupportChips as $supportChip): ?>
+                                            <span class="wizard-support-chip">
+                                                <i class="fas <?php echo htmlspecialchars((string) $supportChip['icon']); ?>"></i>
+                                                <?php echo htmlspecialchars((string) $supportChip['label']); ?>
+                                            </span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
 
                             <div class="wizard-selected-facts">
@@ -696,9 +711,9 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
                                     <strong><?php echo htmlspecialchars($audienceLabel); ?></strong>
                                 </div>
                                 <div class="wizard-selected-fact">
-                                    <span class="wizard-selected-fact-label">Documents</span>
-                                    <strong><?php echo htmlspecialchars($documentsSummaryText); ?></strong>
-                                    <small><?php echo htmlspecialchars($documentsHelperText); ?></small>
+                                    <span class="wizard-selected-fact-label">Application Opens</span>
+                                    <strong><?php echo htmlspecialchars($applicationOpenDateLabel); ?></strong>
+                                    <small><?php echo $applicationNotYetOpen ? 'Prepare early' : 'Open now'; ?></small>
                                 </div>
                             </div>
 
@@ -718,27 +733,6 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
                                 </div>
                             <?php endif; ?>
 
-                            <div class="wizard-selected-actions">
-                                <a href="documents.php" class="wizard-quick-link">
-                                    <i class="fas fa-file-upload"></i>
-                                    Manage Documents
-                                </a>
-                                <a href="profile.php" class="wizard-quick-link">
-                                    <i class="fas fa-user-pen"></i>
-                                    Open Profile
-                                </a>
-                                <?php if ($assessmentType === 'remote_examination' && !empty($remoteExamLocations)): ?>
-                                    <a href="<?php echo htmlspecialchars($remoteExamMapUrl); ?>" class="wizard-quick-link">
-                                        <i class="fas fa-map-location-dot"></i>
-                                        View Exam Map
-                                    </a>
-                                <?php elseif (!empty($scholarship['assessment_link'])): ?>
-                                    <a href="<?php echo htmlspecialchars((string) $scholarship['assessment_link']); ?>" class="wizard-quick-link" target="_blank" rel="noopener noreferrer">
-                                        <i class="fas fa-up-right-from-square"></i>
-                                        Open Assessment Link
-                                    </a>
-                                <?php endif; ?>
-                            </div>
 
                             <div class="wizard-stepper wizard-stepper-card" role="tablist" aria-label="Application steps">
                                 <button type="button" class="wizard-step-pill is-active" data-step-target="1"><span>1</span> Eligibility</button>
@@ -794,6 +788,14 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
                                 </div>
                             </div>
 
+                            <div class="wizard-inline-tools wizard-inline-tools-profile">
+                                <span class="wizard-inline-tools-label">Need to update your profile?</span>
+                                <a href="profile.php" class="wizard-inline-action wizard-inline-action-card">
+                                    <i class="fas fa-user-pen"></i>
+                                    Open Profile
+                                </a>
+                            </div>
+
                             <?php if (!empty($wizardProfileRuleCards)): ?>
                                 <div class="wizard-section-card wizard-section-card-wide">
                                     <h4>Audience rules</h4>
@@ -808,8 +810,7 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
                                 </div>
                             <?php endif; ?>
 
-                            <div class="wizard-navigation">
-                                <a href="scholarships.php" class="btn btn-outline"><i class="fas fa-arrow-left"></i> Back to Scholarships</a>
+                            <div class="wizard-navigation wizard-navigation-forward">
                                 <button type="button" class="btn btn-primary" data-next-step="2">Continue to Documents <i class="fas fa-arrow-right"></i></button>
                             </div>
                         </div>
@@ -840,6 +841,14 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
                                     <span>Need Action</span>
                                     <strong><?php echo $missingRequired + $rejectedRequired; ?></strong>
                                 </div>
+                            </div>
+
+                            <div class="wizard-inline-tools wizard-inline-tools-docs">
+                                <span class="wizard-inline-tools-label">Need to upload or replace a file?</span>
+                                <a href="documents.php" class="wizard-inline-action wizard-inline-action-card">
+                                    <i class="fas fa-file-upload"></i>
+                                    Manage Documents
+                                </a>
                             </div>
 
                             <?php if ($totalRequired === 0): ?>
@@ -939,6 +948,11 @@ foreach (($profileEvaluation['checks'] ?? []) as $check) {
                                         <div>
                                             <span>Exam sites</span>
                                             <strong><a href="<?php echo htmlspecialchars($remoteExamMapUrl); ?>" class="wizard-inline-action">View all sites on map</a></strong>
+                                        </div>
+                                    <?php elseif (!empty($scholarship['assessment_link'])): ?>
+                                        <div>
+                                            <span>Assessment link</span>
+                                            <strong><a href="<?php echo htmlspecialchars((string) $scholarship['assessment_link']); ?>" class="wizard-inline-action" target="_blank" rel="noopener noreferrer">Open assessment page</a></strong>
                                         </div>
                                     <?php endif; ?>
                                 </div>

@@ -70,6 +70,10 @@
     margin-bottom: 24px;
 }
 
+.wizard-page-header-selected {
+    margin-bottom: 20px;
+}
+
 .wizard-empty-shell {
     display: grid;
     grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
@@ -439,8 +443,8 @@
 
 .pill-badge.success,
 .document-row.verified .pill-badge {
-    background: #dcfce7;
-    color: #166534;
+    background: #eff6ff;
+    color: #1d4ed8;
 }
 
 .pill-badge.warning,
@@ -510,7 +514,7 @@
 }
 
 .document-row.verified {
-    border-left: 4px solid #16a34a;
+    border-left: 4px solid #2563eb;
 }
 
 .document-row.pending {
@@ -574,6 +578,10 @@
     justify-content: space-between;
     gap: 12px;
     flex-wrap: wrap;
+}
+
+.wizard-navigation-forward {
+    justify-content: flex-end;
 }
 
 .summary-avatar {
@@ -661,7 +669,7 @@
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.2);
 }
 
-.wizard-toast.success { background: #16a34a; }
+.wizard-toast.success { background: #2563eb; }
 .wizard-toast.warning { background: #d97706; }
 .wizard-toast.error { background: #dc2626; }
 .wizard-toast.info { background: #2563eb; }
@@ -750,10 +758,10 @@
 }
 
 .wizard-selected-card.state-ready {
-    --wizard-accent: #16a34a;
-    --wizard-soft: #ecfdf5;
-    --wizard-soft-border: #bbf7d0;
-    --wizard-soft-text: #166534;
+    --wizard-accent: #2563eb;
+    --wizard-soft: #eff6ff;
+    --wizard-soft-border: #bfdbfe;
+    --wizard-soft-text: #1d4ed8;
 }
 
 .wizard-selected-card.state-docs {
@@ -999,9 +1007,9 @@
 }
 
 .wizard-next-step-banner.is-success {
-    background: #ecfdf5;
-    border-color: #bbf7d0;
-    color: #166534;
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
 }
 
 .wizard-next-step-banner.is-warning {
@@ -1142,6 +1150,44 @@
     font-size: 0.96rem;
 }
 
+.wizard-inline-tools {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fbfdff;
+}
+
+.wizard-inline-tools-label {
+    color: #64748b;
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.wizard-inline-action-card {
+    padding: 8px 11px;
+    border: 1px solid #dbe5f5;
+    border-radius: 10px;
+    background: #ffffff;
+    font-size: 0.8rem;
+}
+
+@media (max-width: 760px) {
+    .wizard-inline-tools {
+        align-items: stretch;
+    }
+
+    .wizard-inline-action-card {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
 .wizard-detail-list {
     margin: 0;
     display: grid;
@@ -1181,8 +1227,8 @@
 
 .wizard-check-item.is-ok,
 .wizard-rule-card.is-ok {
-    background: #ecfdf5;
-    border-color: #bbf7d0;
+    background: #eff6ff;
+    border-color: #bfdbfe;
 }
 
 .wizard-check-item.is-attention,
@@ -1274,7 +1320,7 @@
 }
 
 .wizard-doc-item-modern.is-verified {
-    border-left: 4px solid #16a34a;
+    border-left: 4px solid #2563eb;
 }
 
 .wizard-doc-item-modern.is-pending {
@@ -1381,5 +1427,509 @@
 
     .wizard-doc-side {
         align-items: flex-start;
+    }
+}
+
+/* Compact sizing pass */
+.wizard-selected-card {
+    border-radius: 18px;
+}
+
+.wizard-selected-card-inner {
+    grid-template-columns: 220px minmax(0, 1fr);
+}
+
+.wizard-selected-brand {
+    padding: 16px 15px;
+    gap: 10px;
+}
+
+.wizard-brand-pill,
+.wizard-selected-status,
+.wizard-support-chip,
+.wizard-signal-chip {
+    font-size: 0.69rem;
+}
+
+.wizard-brand-pill,
+.wizard-selected-status,
+.wizard-support-chip,
+.wizard-signal-chip {
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.wizard-brand-pill,
+.wizard-selected-status {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+.wizard-support-chip,
+.wizard-signal-chip {
+    padding-left: 9px;
+    padding-right: 9px;
+}
+
+.wizard-logo-stage {
+    min-height: 132px;
+    padding: 14px;
+    border-radius: 16px;
+}
+
+.wizard-logo-image {
+    max-width: 112px;
+    height: 82px;
+}
+
+.wizard-provider-name {
+    font-size: 0.9rem;
+}
+
+.wizard-provider-note {
+    font-size: 0.78rem;
+}
+
+.wizard-selected-content {
+    padding: 18px 19px 19px;
+    gap: 12px;
+}
+
+.wizard-selected-header {
+    gap: 14px;
+    padding-bottom: 10px;
+}
+
+.wizard-selected-title {
+    font-size: 1.2rem;
+}
+
+.wizard-selected-description {
+    font-size: 0.84rem;
+    line-height: 1.5;
+}
+
+.wizard-header-link {
+    padding: 9px 12px;
+    border-radius: 10px;
+}
+
+.wizard-selected-facts {
+    gap: 8px;
+}
+
+.wizard-selected-fact,
+.wizard-review-card,
+.wizard-doc-stat {
+    border-radius: 12px;
+}
+
+.wizard-selected-fact {
+    padding: 10px 11px;
+}
+
+.wizard-selected-fact-label,
+.wizard-review-card span,
+.wizard-doc-stat span,
+.wizard-submit-meta span,
+.wizard-detail-list dt {
+    font-size: 0.69rem;
+}
+
+.wizard-selected-fact strong,
+.wizard-review-card strong,
+.wizard-doc-stat strong,
+.wizard-submit-meta strong,
+.wizard-detail-list dd {
+    font-size: 0.88rem;
+}
+
+.wizard-selected-fact small {
+    font-size: 0.72rem;
+}
+
+.wizard-next-step-banner {
+    gap: 9px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 0.84rem;
+}
+
+.wizard-quick-link {
+    padding: 8px 11px;
+    border-radius: 10px;
+}
+
+.wizard-stepper {
+    gap: 7px;
+}
+
+.wizard-step-pill {
+    padding: 10px 12px;
+    border-radius: 12px;
+    font-size: 0.88rem;
+}
+
+.wizard-step-pill span {
+    width: 24px;
+    height: 24px;
+}
+
+.wizard-step-surface {
+    border-radius: 18px;
+}
+
+.wizard-step-header {
+    padding: 15px 17px;
+}
+
+.wizard-step-header p {
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.wizard-panel-grid,
+.wizard-review-grid-modern {
+    gap: 12px;
+}
+
+.wizard-section-card {
+    border-radius: 14px;
+    padding: 15px;
+}
+
+.wizard-section-card-wide,
+.wizard-submit-panel {
+    margin-top: 14px;
+}
+
+.wizard-section-card h4 {
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+}
+
+.wizard-detail-list {
+    gap: 10px 14px;
+}
+
+.wizard-check-list,
+.wizard-doc-list-modern,
+.wizard-rule-grid {
+    gap: 10px;
+}
+
+.wizard-check-item {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+    padding: 10px;
+    border-radius: 12px;
+}
+
+.wizard-check-icon,
+.wizard-doc-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+}
+
+.wizard-check-copy strong,
+.wizard-doc-copy strong {
+    font-size: 0.84rem;
+}
+
+.wizard-check-copy p,
+.wizard-doc-copy p,
+.wizard-rule-card p {
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+.wizard-rule-card {
+    padding: 12px;
+    border-radius: 12px;
+}
+
+.wizard-rule-card strong {
+    font-size: 0.84rem;
+}
+
+.wizard-doc-summary {
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.wizard-doc-stat {
+    padding: 11px 12px;
+}
+
+.wizard-doc-item-modern {
+    gap: 12px;
+    padding: 12px;
+    border-radius: 14px;
+}
+
+.wizard-doc-main {
+    gap: 10px;
+}
+
+.wizard-doc-side {
+    gap: 6px;
+}
+
+.wizard-review-grid-modern {
+    margin-bottom: 14px;
+}
+
+.wizard-review-card {
+    padding: 12px;
+}
+
+.wizard-submit-meta {
+    gap: 10px;
+}
+
+.wizard-submit-meta div {
+    padding: 10px;
+    border-radius: 10px;
+}
+
+@media (max-width: 760px) {
+    .wizard-selected-card {
+        border-radius: 16px;
+    }
+
+    .wizard-selected-content {
+        padding: 16px;
+    }
+}
+
+/* Clean design refinement */
+.dashboard.wizard-page {
+    padding: 32px 0 54px !important;
+}
+
+.form-card-modern,
+.wizard-selected-card,
+.wizard-step-surface {
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+}
+
+.form-card-modern {
+    border-radius: 16px;
+}
+
+.card-header {
+    background: #fbfdff;
+    padding: 18px 20px;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.wizard-empty-state,
+.wizard-empty-preview,
+.wizard-empty-step {
+    background: #ffffff;
+}
+
+.wizard-empty-state {
+    background-image: none;
+}
+
+.wizard-empty-illustration {
+    background: #eff6ff;
+    color: #1d4ed8;
+    box-shadow: none;
+}
+
+.wizard-empty-tag {
+    background: #f8fbff;
+    border: 1px solid #dbeafe;
+    color: #1d4ed8;
+}
+
+.wizard-selected-card {
+    border-color: #e2e8f0;
+}
+
+.wizard-selected-brand {
+    background: #f8fbff;
+    border-right-color: #edf2f7;
+}
+
+.wizard-logo-stage {
+    background: #ffffff;
+    box-shadow: none;
+}
+
+.wizard-brand-pill,
+.wizard-selected-status,
+.wizard-support-chip,
+.wizard-signal-chip,
+.wizard-header-link,
+.wizard-quick-link {
+    box-shadow: none;
+}
+
+.wizard-support-chip,
+.wizard-signal-chip,
+.wizard-header-link,
+.wizard-quick-link {
+    background: #ffffff;
+}
+
+.wizard-next-step-banner,
+.wizard-section-card,
+.wizard-review-card,
+.wizard-doc-stat,
+.wizard-doc-item-modern,
+.wizard-submit-meta div {
+    box-shadow: none;
+}
+
+.wizard-section-card,
+.wizard-review-card,
+.wizard-doc-item-modern,
+.wizard-submit-meta div {
+    background: #ffffff;
+}
+
+.wizard-check-item.is-ok,
+.wizard-check-item.is-info,
+.wizard-rule-card.is-ok,
+.wizard-rule-card.is-info {
+    background: #f8fbff;
+    border-color: #dbeafe;
+}
+
+.wizard-doc-item-modern.is-verified,
+.wizard-doc-item-modern.is-pending,
+.wizard-doc-item-modern.is-missing,
+.wizard-doc-item-modern.is-rejected {
+    background: #ffffff;
+}
+
+.wizard-doc-stat {
+    background: #ffffff;
+}
+
+.wizard-doc-stat.is-warning {
+    background: #fffaf3;
+}
+
+.wizard-step-header,
+.wizard-next-step-banner,
+.wizard-selected-fact,
+.wizard-review-card,
+.wizard-doc-stat {
+    border-radius: 12px;
+}
+
+.wizard-selected-actions,
+.wizard-support-chip-row,
+.wizard-signal-chip-row {
+    gap: 7px;
+}
+
+/* Tighten top-card spacing before the stepper */
+.wizard-selected-content {
+    gap: 10px;
+    padding-bottom: 16px;
+}
+
+.wizard-selected-header {
+    padding-bottom: 10px;
+}
+
+.wizard-selected-facts {
+    gap: 8px;
+}
+
+.wizard-next-step-banner {
+    padding: 10px 12px;
+}
+
+.wizard-signal-chip-row {
+    margin-top: -2px;
+}
+
+.wizard-selected-actions {
+    padding-top: 0;
+    margin-top: -2px;
+}
+
+.wizard-quick-link {
+    padding: 8px 11px;
+}
+
+.wizard-stepper-card {
+    margin-top: -2px;
+}
+
+@media (max-width: 760px) {
+    .wizard-selected-content {
+        padding-bottom: 14px;
+    }
+}
+
+.wizard-selected-card-inner {
+    grid-template-columns: 190px minmax(0, 1fr);
+}
+
+.wizard-provider-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fbfdff;
+}
+
+.wizard-provider-line {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.wizard-provider-label {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.wizard-provider-inline-name {
+    color: #1f365c;
+    font-size: 0.88rem;
+    font-weight: 700;
+    line-height: 1.4;
+}
+
+.wizard-provider-inline-note {
+    margin: 0;
+    color: #526277;
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+.wizard-support-chip-row-inline {
+    margin-top: 2px;
+}
+
+.wizard-selected-brand {
+    padding-bottom: 14px;
+}
+
+.wizard-logo-stage {
+    min-height: 128px;
+}
+
+@media (max-width: 1100px) {
+    .wizard-selected-card-inner {
+        grid-template-columns: 1fr;
     }
 }

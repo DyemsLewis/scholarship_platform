@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once __DIR__ . '/../app/Config/init.php';
 require_once __DIR__ . '/../app/Config/url_token.php';
 require_once __DIR__ . '/../app/Controllers/scholarshipResultController.php';
@@ -1109,9 +1109,6 @@ if (empty($importantNotes) && $visitSiteUrl !== '') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Scholarship Details - <?php echo htmlspecialchars($scholarship['name']); ?></title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/style.css')); ?>">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/scholarship-details.css')); ?>">
@@ -1120,299 +1117,349 @@ if (empty($importantNotes) && $visitSiteUrl !== '') {
 <?php include 'layout/header.php'; ?>
 
 <section class="dashboard scholarship-detail-page user-page-shell">
-    <div class="container scholarship-detail-container">
-        <div class="scholarship-detail-backbar">
+    <div class="container scholarship-detail-shell">
+        <div class="scholarship-detail-pagebar">
             <a href="scholarships.php" class="scholarship-detail-backlink">
                 <i class="fas fa-arrow-left"></i>
-                Back to Scholarship Board
+                Back to Scholarships
             </a>
+            <span class="scholarship-detail-pagebar-tag">Student View</span>
         </div>
 
-        <article class="detail-hero-card state-<?php echo htmlspecialchars($detailCardStatusClass); ?>">
-            <div class="detail-hero-card-inner">
-                <aside class="detail-sponsor-panel">
-                    <div class="detail-media-kicker">
-                        <span class="detail-media-pill">
-                            <i class="fas fa-circle-info"></i>
-                            Scholarship Details
+        <article class="scholarship-hero-card state-<?php echo htmlspecialchars($detailCardStatusClass); ?>">
+            <div class="scholarship-hero-media">
+                <div class="scholarship-hero-image-wrap">
+                    <img
+                        src="<?php echo htmlspecialchars($scholarshipImage); ?>"
+                        alt="<?php echo htmlspecialchars((string) $scholarship['name']); ?>"
+                        class="scholarship-hero-image"
+                        onerror="this.src='<?php echo htmlspecialchars($defaultScholarshipImage); ?>'"
+                    >
+                </div>
+
+                <div class="scholarship-provider-block">
+                    <span>Provider</span>
+                    <strong><?php echo htmlspecialchars((string) ($scholarship['provider'] ?? 'Provider not specified')); ?></strong>
+                    <?php if (!empty($scholarship['location_name'])): ?>
+                        <small><?php echo htmlspecialchars((string) $scholarship['location_name']); ?></small>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <div class="scholarship-hero-content">
+                <div class="scholarship-hero-top">
+                    <div class="scholarship-hero-badges">
+                        <span class="scholarship-status-badge state-<?php echo htmlspecialchars($detailCardStatusClass); ?>">
+                            <i class="fas <?php echo htmlspecialchars($detailStatusIcon); ?>"></i>
+                            <?php echo htmlspecialchars($detailCardStatusLabel); ?>
                         </span>
-                        <span class="detail-match-pill <?php echo htmlspecialchars($badgeClass); ?>">
+                        <span class="scholarship-match-badge <?php echo htmlspecialchars($badgeClass); ?>">
                             <?php echo htmlspecialchars($matchBadgeText); ?>
                         </span>
                     </div>
 
-                    <div class="detail-logo-stage">
-                        <img src="<?php echo htmlspecialchars($scholarshipImage); ?>"
-                             alt="<?php echo htmlspecialchars((string) $scholarship['name']); ?>"
-                             class="detail-media-image"
-                             onerror="this.src='<?php echo htmlspecialchars($defaultScholarshipImage); ?>'">
-                    </div>
-
-                    <div class="detail-sponsor-copy">
-                        <div class="detail-provider-name"><?php echo htmlspecialchars($scholarship['provider'] ?? 'Provider not specified'); ?></div>
-                        <div class="detail-sponsor-caption"><?php echo !empty($scholarship['location_name']) ? htmlspecialchars((string) $scholarship['location_name']) : 'Scholarship partner institution'; ?></div>
-                    </div>
-
-                    <div class="detail-support-chip-row">
-                        <span class="detail-support-chip">
-                            <i class="fas fa-circle-check"></i>
-                            <?php echo htmlspecialchars($requirementsBadgeText); ?>
-                        </span>
-                        <span class="detail-support-chip">
-                            <i class="fas fa-user-group"></i>
-                            <?php echo htmlspecialchars($audienceLabel); ?>
-                        </span>
-                    </div>
-                </aside>
-
-                <div class="detail-hero-body">
-                    <div class="detail-hero-topline">
-                        <span class="detail-status-pill <?php echo htmlspecialchars($detailCardStatusClass); ?>">
-                            <i class="fas <?php echo htmlspecialchars($detailStatusIcon); ?>"></i>
-                            <?php echo htmlspecialchars($detailCardStatusLabel); ?>
-                        </span>
-                    </div>
-
-                    <div class="detail-hero-heading">
-                        <h1 class="detail-page-title"><?php echo htmlspecialchars((string) $scholarship['name']); ?></h1>
-                        <p class="detail-page-summary"><?php echo htmlspecialchars($descriptionPreview); ?></p>
-                    </div>
-
-                    <div class="detail-fact-grid">
-                        <article class="detail-fact-card">
-                            <span>Minimum GWA</span>
-                            <strong><?php echo htmlspecialchars($requiredGwaLabel); ?></strong>
-                        </article>
-                        <article class="detail-fact-card">
-                            <span>Deadline</span>
-                            <strong><?php echo htmlspecialchars($deadlineDisplay); ?></strong>
-                        </article>
-                        <article class="detail-fact-card">
-                            <span>Audience</span>
-                            <strong><?php echo htmlspecialchars($audienceLabel); ?></strong>
-                        </article>
-                        <article class="detail-fact-card">
-                            <span>Documents</span>
-                            <strong><?php echo htmlspecialchars($requirementsSummary); ?></strong>
-                        </article>
-                    </div>
-
-                    <div class="detail-next-strip is-<?php echo htmlspecialchars($nextStepTone); ?>">
-                        <i class="fas <?php echo htmlspecialchars($nextStepIcon); ?>"></i>
-                        <div class="detail-next-strip-copy">
-                            <strong><?php echo htmlspecialchars($eligibilityStatusTitle); ?></strong>
-                            <p><?php echo htmlspecialchars($eligibilityStatusSummary); ?></p>
-                        </div>
-                    </div>
-
-                    <div class="detail-action-row">
-                        <?php if ($primaryActionType === 'button'): ?>
-                            <button class="<?php echo htmlspecialchars($primaryActionClass); ?>" type="button" disabled>
-                                <i class="fas <?php echo htmlspecialchars($primaryActionIcon); ?>"></i>
-                                <?php echo htmlspecialchars($primaryActionLabel); ?>
-                            </button>
-                        <?php else: ?>
-                            <a href="<?php echo htmlspecialchars($primaryActionHref); ?>" class="<?php echo htmlspecialchars($primaryActionClass); ?>">
-                                <i class="fas <?php echo htmlspecialchars($primaryActionIcon); ?>"></i>
-                                <?php echo htmlspecialchars($primaryActionLabel); ?>
-                            </a>
-                        <?php endif; ?>
-
-                        <button type="button" class="detail-info-trigger" id="detailRulesOpen" aria-haspopup="dialog" aria-controls="detailRulesModal">
-                            <i class="fas fa-circle-info"></i>
-                            Rules Guide
-                        </button>
-
-                        <?php if ($visitSiteUrl !== ''): ?>
-                            <a href="<?php echo htmlspecialchars($visitSiteUrl); ?>" class="btn-outline-modern" target="_blank" rel="noopener noreferrer">
-                                <i class="fas fa-up-right-from-square"></i>
-                                Visit Site
-                            </a>
-                        <?php endif; ?>
-
-                        <?php if ($remoteExamMapUrl !== ''): ?>
-                            <a href="<?php echo htmlspecialchars($remoteExamMapUrl); ?>" class="btn-outline-modern">
-                                <i class="fas fa-map-location-dot"></i>
-                                View Exam Map
-                            </a>
-                        <?php endif; ?>
-                    </div>
-                </div>
-            </div>
-        </article>
-
-        <div class="detail-essential-layout">
-            <section class="detail-block detail-block-decision">
-                <div class="detail-block-head">
-                    <div>
-                        <span class="detail-eyebrow">Apply Check</span>
-                        <h2>Can you apply right now?</h2>
-                    </div>
+                    <button type="button" class="scholarship-rules-trigger" id="detailRulesOpen" aria-haspopup="dialog" aria-controls="detailRulesModal">
+                        <i class="fas fa-circle-info"></i>
+                        Rules Guide
+                    </button>
                 </div>
 
-                <div class="detail-decision-banner is-<?php echo htmlspecialchars($nextStepTone); ?>">
+                <div class="scholarship-hero-copy">
+                    <h1><?php echo htmlspecialchars((string) $scholarship['name']); ?></h1>
+                    <p><?php echo htmlspecialchars($descriptionPreview); ?></p>
+                </div>
+
+                <div class="scholarship-provider-inline">
+                    <span>Application Process</span>
+                    <strong><?php echo htmlspecialchars($applicationProcessLabelDisplay); ?></strong>
+                    <?php if ($hasAssessment): ?>
+                        <em><?php echo htmlspecialchars($assessmentHeadline); ?></em>
+                    <?php endif; ?>
+                </div>
+
+                <div class="scholarship-fact-grid">
+                    <article class="scholarship-fact-card">
+                        <span>Minimum GWA</span>
+                        <strong><?php echo htmlspecialchars($requiredGwaLabel); ?></strong>
+                    </article>
+                    <article class="scholarship-fact-card">
+                        <span>Deadline</span>
+                        <strong><?php echo htmlspecialchars($deadlineDisplay); ?></strong>
+                    </article>
+                    <article class="scholarship-fact-card">
+                        <span>Audience</span>
+                        <strong><?php echo htmlspecialchars($audienceLabel); ?></strong>
+                    </article>
+                    <article class="scholarship-fact-card">
+                        <span>Application Opens</span>
+                        <strong><?php echo htmlspecialchars($applicationOpenDateDisplay); ?></strong>
+                    </article>
+                </div>
+
+                <div class="scholarship-action-note tone-<?php echo htmlspecialchars($nextStepTone); ?>">
                     <strong><?php echo htmlspecialchars($eligibilityStatusTitle); ?></strong>
                     <p><?php echo htmlspecialchars($eligibilityStatusSummary); ?></p>
                 </div>
 
-                <div class="detail-check-grid">
-                    <?php foreach ($statusChecklistItems as $statusChecklistItem): ?>
-                        <article class="detail-check-card is-<?php echo htmlspecialchars((string) ($statusChecklistItem['class'] ?? 'info')); ?>">
-                            <div class="detail-check-icon">
-                                <i class="fas <?php echo htmlspecialchars((string) ($statusChecklistItem['icon'] ?? 'fa-circle-info')); ?>"></i>
-                            </div>
-                            <div class="detail-check-copy">
-                                <span><?php echo htmlspecialchars((string) ($statusChecklistItem['label'] ?? 'Check')); ?></span>
-                                <strong><?php echo htmlspecialchars((string) ($statusChecklistItem['value'] ?? '')); ?></strong>
-                            </div>
-                        </article>
-                    <?php endforeach; ?>
+                <div class="scholarship-action-row">
+                    <?php if ($primaryActionType === 'button'): ?>
+                        <button class="scholarship-btn scholarship-btn-disabled" type="button" disabled>
+                            <i class="fas <?php echo htmlspecialchars($primaryActionIcon); ?>"></i>
+                            <?php echo htmlspecialchars($primaryActionLabel); ?>
+                        </button>
+                    <?php else: ?>
+                        <a href="<?php echo htmlspecialchars($primaryActionHref); ?>" class="scholarship-btn scholarship-btn-primary">
+                            <i class="fas <?php echo htmlspecialchars($primaryActionIcon); ?>"></i>
+                            <?php echo htmlspecialchars($primaryActionLabel); ?>
+                        </a>
+                    <?php endif; ?>
+
+                    <?php if ($visitSiteUrl !== ''): ?>
+                        <a href="<?php echo htmlspecialchars($visitSiteUrl); ?>" class="scholarship-btn scholarship-btn-secondary" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-up-right-from-square"></i>
+                            Visit Site
+                        </a>
+                    <?php endif; ?>
+
+                    <?php if ($remoteExamMapUrl !== ''): ?>
+                        <a href="<?php echo htmlspecialchars($remoteExamMapUrl); ?>" class="scholarship-btn scholarship-btn-secondary">
+                            <i class="fas fa-map-location-dot"></i>
+                            View Exam Map
+                        </a>
+                    <?php endif; ?>
                 </div>
+            </div>
+        </article>
 
-                <div class="detail-mini-grid">
-                    <section class="detail-mini-panel">
-                        <span class="detail-eyebrow">Why You Can Continue</span>
-                        <ul class="detail-compact-list is-positive">
-                            <?php foreach ($positiveReasonItems as $positiveReasonItem): ?>
-                                <li><?php echo htmlspecialchars($positiveReasonItem); ?></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </section>
-
-                    <section class="detail-mini-panel">
-                        <span class="detail-eyebrow">What Is Missing</span>
-                        <ul class="detail-compact-list is-<?php echo htmlspecialchars($attentionReasonListClass); ?>">
-                            <?php foreach ($attentionReasonItems as $attentionReasonItem): ?>
-                                <li><?php echo htmlspecialchars($attentionReasonItem); ?></li>
-                            <?php endforeach; ?>
-                        </ul>
-                    </section>
-                </div>
-            </section>
-
-            <section class="detail-block">
-                <div class="detail-block-head">
-                    <div>
-                        <span class="detail-eyebrow">Benefits</span>
-                        <h2>What you get</h2>
+        <div class="scholarship-detail-grid">
+            <main class="scholarship-detail-main">
+                <section class="scholarship-detail-panel">
+                    <div class="scholarship-detail-panel-head">
+                        <div>
+                            <span class="scholarship-detail-eyebrow">Eligibility</span>
+                            <h2>Can you apply now?</h2>
+                        </div>
                     </div>
-                </div>
-                <div class="detail-copy-surface detail-copy-surface-accent">
-                    <p><?php echo nl2br(htmlspecialchars($benefitsDisplayText)); ?></p>
-                </div>
-            </section>
 
-            <section class="detail-block">
-                <div class="detail-block-head">
-                    <div>
-                        <span class="detail-eyebrow">Important</span>
-                        <h2>Before you apply</h2>
+                    <div class="scholarship-eligibility-banner tone-<?php echo htmlspecialchars($nextStepTone); ?>">
+                        <strong><?php echo htmlspecialchars($eligibilityStatusTitle); ?></strong>
+                        <p><?php echo htmlspecialchars($eligibilityStatusSummary); ?></p>
                     </div>
-                </div>
-                <div class="detail-info-stack">
-                    <?php foreach ($importantNotes as $importantNote): ?>
-                        <article class="detail-info-item">
-                            <strong><?php echo htmlspecialchars($importantNote); ?></strong>
-                        </article>
-                    <?php endforeach; ?>
-                </div>
-            </section>
 
-            <section class="detail-block detail-block-documents">
-                <div class="detail-block-head detail-block-head-inline">
-                    <div>
-                        <span class="detail-eyebrow">Documents</span>
-                        <h2>Documents you need</h2>
-                    </div>
-                    <span class="detail-summary-pill">
-                        <i class="fas fa-file-circle-check"></i>
-                        <?php echo htmlspecialchars($requirementsSummary); ?>
-                    </span>
-                </div>
-
-                <?php if (empty($requiredDocuments)): ?>
-                    <div class="detail-empty-state">No required documents were configured for this scholarship yet.</div>
-                <?php else: ?>
-                    <div class="detail-doc-list">
-                        <?php foreach ($requiredDocuments as $doc): ?>
-                            <?php
-                            $docName = $doc['name'] ?? $doc['document_type'];
-                            $docStatus = 'missing';
-                            $statusLabel = $isLoggedIn ? 'Missing' : 'Login to track';
-                            if ($isLoggedIn) {
-                                foreach (($documentSummary['requirements'] ?? []) as $req) {
-                                    if (($req['type'] ?? '') === ($doc['document_type'] ?? '')) {
-                                        $rawStatus = strtolower((string) ($req['status'] ?? 'missing'));
-                                        $statusLabel = ucfirst($rawStatus);
-                                        if (in_array($rawStatus, ['verified', 'pending', 'missing', 'rejected'], true)) {
-                                            $docStatus = $rawStatus;
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-                            ?>
-                            <a class="detail-doc-item <?php echo htmlspecialchars($docStatus); ?>" href="documents.php#doc-card-<?php echo htmlspecialchars((string) $doc['document_type']); ?>">
-                                <div class="detail-doc-icon">
-                                    <i class="fas <?php echo $docStatus === 'verified' ? 'fa-check-circle' : ($docStatus === 'pending' ? 'fa-clock' : ($docStatus === 'rejected' ? 'fa-triangle-exclamation' : 'fa-file-circle-plus')); ?>"></i>
+                    <div class="scholarship-check-grid">
+                        <?php foreach ($statusChecklistItems as $statusChecklistItem): ?>
+                            <article class="scholarship-check-item state-<?php echo htmlspecialchars((string) ($statusChecklistItem['class'] ?? 'info')); ?>">
+                                <div class="scholarship-check-icon">
+                                    <i class="fas <?php echo htmlspecialchars((string) ($statusChecklistItem['icon'] ?? 'fa-circle-info')); ?>"></i>
                                 </div>
-                                <div class="detail-doc-copy">
-                                    <strong><?php echo htmlspecialchars((string) $docName); ?></strong>
+                                <div class="scholarship-check-copy">
+                                    <span><?php echo htmlspecialchars((string) ($statusChecklistItem['label'] ?? 'Check')); ?></span>
+                                    <strong><?php echo htmlspecialchars((string) ($statusChecklistItem['value'] ?? '')); ?></strong>
+                                    <p><?php echo htmlspecialchars((string) ($statusChecklistItem['detail'] ?? '')); ?></p>
                                 </div>
-                                <em><?php echo htmlspecialchars($statusLabel); ?></em>
-                            </a>
+                            </article>
                         <?php endforeach; ?>
                     </div>
-                <?php endif; ?>
-            </section>
+                </section>
+
+                <section class="scholarship-detail-panel">
+                    <div class="scholarship-detail-panel-head">
+                        <div>
+                            <span class="scholarship-detail-eyebrow">Benefits</span>
+                            <h2>What you get</h2>
+                        </div>
+                    </div>
+
+                    <div class="scholarship-text-block">
+                        <p><?php echo nl2br(htmlspecialchars($benefitsDisplayText)); ?></p>
+                    </div>
+                </section>
+
+                <section class="scholarship-detail-panel">
+                    <div class="scholarship-detail-panel-head scholarship-detail-panel-head-inline">
+                        <div>
+                            <span class="scholarship-detail-eyebrow">Documents</span>
+                            <h2>What to prepare</h2>
+                        </div>
+                        <span class="scholarship-summary-badge"><?php echo htmlspecialchars($requirementsSummary); ?></span>
+                    </div>
+
+                    <?php if (empty($requiredDocuments)): ?>
+                        <div class="scholarship-empty-note">No required documents are listed for this scholarship right now.</div>
+                    <?php else: ?>
+                        <div class="scholarship-doc-list">
+                            <?php foreach ($requiredDocuments as $doc): ?>
+                                <?php
+                                $docName = $doc['name'] ?? $doc['document_type'];
+                                $docStatus = 'missing';
+                                $statusLabel = $isLoggedIn ? 'Missing' : 'Login to track';
+                                $docDetail = trim((string) ($doc['description'] ?? ''));
+                                if ($isLoggedIn) {
+                                    foreach (($documentSummary['requirements'] ?? []) as $req) {
+                                        if (($req['type'] ?? '') === ($doc['document_type'] ?? '')) {
+                                            $rawStatus = strtolower((string) ($req['status'] ?? 'missing'));
+                                            $statusLabel = ucfirst($rawStatus);
+                                            if (in_array($rawStatus, ['verified', 'pending', 'missing', 'rejected'], true)) {
+                                                $docStatus = $rawStatus;
+                                            }
+                                            break;
+                                        }
+                                    }
+                                }
+                                if ($docDetail === '') {
+                                    $docDetail = 'Check or manage this file in your documents page.';
+                                }
+                                ?>
+                                <a class="scholarship-doc-item state-<?php echo htmlspecialchars($docStatus); ?>" href="documents.php#doc-card-<?php echo htmlspecialchars((string) $doc['document_type']); ?>">
+                                    <div class="scholarship-doc-main">
+                                        <strong><?php echo htmlspecialchars((string) $docName); ?></strong>
+                                        <p><?php echo htmlspecialchars($docDetail); ?></p>
+                                    </div>
+                                    <span class="scholarship-doc-status"><?php echo htmlspecialchars($statusLabel); ?></span>
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </section>
+
+                <details class="scholarship-detail-panel scholarship-detail-more">
+                    <summary>More scholarship details</summary>
+                    <div class="scholarship-detail-more-body">
+                        <section class="scholarship-detail-subsection">
+                            <h3>About this scholarship</h3>
+                            <p><?php echo nl2br(htmlspecialchars($descriptionFullText)); ?></p>
+                        </section>
+
+                        <?php if ($hasEligibilityNotes): ?>
+                            <section class="scholarship-detail-subsection">
+                                <h3>Provider eligibility notes</h3>
+                                <p><?php echo nl2br(htmlspecialchars($eligibilityNotesText)); ?></p>
+                            </section>
+                        <?php endif; ?>
+                    </div>
+                </details>
+            </main>
+
+            <aside class="scholarship-detail-side">
+                <section class="scholarship-detail-panel">
+                    <div class="scholarship-detail-panel-head">
+                        <div>
+                            <span class="scholarship-detail-eyebrow">Your Result</span>
+                            <h2>Why it fits and what needs attention</h2>
+                        </div>
+                    </div>
+
+                    <div class="scholarship-reason-stack">
+                        <div class="scholarship-reason-block">
+                            <h3>Why it fits</h3>
+                            <ul class="scholarship-bullet-list tone-positive">
+                                <?php foreach ($positiveReasonItems as $positiveReasonItem): ?>
+                                    <li><?php echo htmlspecialchars($positiveReasonItem); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+
+                        <div class="scholarship-reason-block scholarship-reason-block-warning">
+                            <h3>What needs attention</h3>
+                            <ul class="scholarship-bullet-list tone-warning">
+                                <?php foreach ($attentionReasonItems as $attentionReasonItem): ?>
+                                    <li><?php echo htmlspecialchars($attentionReasonItem); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="scholarship-detail-panel">
+                    <div class="scholarship-detail-panel-head">
+                        <div>
+                            <span class="scholarship-detail-eyebrow">Timeline</span>
+                            <h2>Dates and process</h2>
+                        </div>
+                    </div>
+
+                    <div class="scholarship-info-stack">
+                        <?php foreach ($timelineItems as $timelineItem): ?>
+                            <article class="scholarship-info-item">
+                                <span><?php echo htmlspecialchars((string) ($timelineItem['label'] ?? '')); ?></span>
+                                <strong><?php echo htmlspecialchars((string) ($timelineItem['value'] ?? '')); ?></strong>
+                                <p><?php echo htmlspecialchars((string) ($timelineItem['detail'] ?? '')); ?></p>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+
+                <section class="scholarship-detail-panel">
+                    <div class="scholarship-detail-panel-head">
+                        <div>
+                            <span class="scholarship-detail-eyebrow">Audience</span>
+                            <h2>Who this is for</h2>
+                        </div>
+                    </div>
+
+                    <div class="scholarship-info-stack">
+                        <?php foreach ($eligibilityRequirementItems as $eligibilityRequirementItem): ?>
+                            <article class="scholarship-info-item compact">
+                                <span><?php echo htmlspecialchars((string) ($eligibilityRequirementItem['label'] ?? '')); ?></span>
+                                <strong><?php echo htmlspecialchars((string) ($eligibilityRequirementItem['value'] ?? '')); ?></strong>
+                                <?php if (!empty($eligibilityRequirementItem['detail'])): ?>
+                                    <p><?php echo htmlspecialchars((string) $eligibilityRequirementItem['detail']); ?></p>
+                                <?php endif; ?>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </section>
+
+                <details class="scholarship-detail-panel scholarship-detail-side-more">
+                    <summary>Provider and renewal</summary>
+                    <div class="scholarship-info-stack scholarship-info-stack-top">
+                        <?php foreach ($providerInfoItems as $providerInfoItem): ?>
+                            <article class="scholarship-info-item compact">
+                                <span><?php echo htmlspecialchars((string) ($providerInfoItem['label'] ?? '')); ?></span>
+                                <strong><?php echo htmlspecialchars((string) ($providerInfoItem['value'] ?? '')); ?></strong>
+                                <?php if (!empty($providerInfoItem['detail'])): ?>
+                                    <p><?php echo htmlspecialchars((string) $providerInfoItem['detail']); ?></p>
+                                <?php endif; ?>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                </details>
+            </aside>
         </div>
 
-        <div class="detail-info-modal" id="detailRulesModal" hidden>
-            <div class="detail-info-backdrop" data-close-detail-rules></div>
-            <div class="detail-info-dialog" role="dialog" aria-modal="true" aria-labelledby="detailRulesTitle">
-                <div class="detail-info-dialog-header">
+        <div class="scholarship-rules-modal" id="detailRulesModal" hidden>
+            <div class="scholarship-rules-backdrop" data-close-detail-rules></div>
+            <div class="scholarship-rules-dialog" role="dialog" aria-modal="true" aria-labelledby="detailRulesTitle">
+                <div class="scholarship-rules-header">
                     <div>
-                        <span class="detail-eyebrow">System guide</span>
+                        <span class="scholarship-detail-eyebrow">Rules Guide</span>
                         <h2 id="detailRulesTitle">How the system decides if you can apply</h2>
                     </div>
-                    <button type="button" class="detail-info-close" data-close-detail-rules aria-label="Close information panel">
+                    <button type="button" class="scholarship-rules-close" data-close-detail-rules aria-label="Close rules guide">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
 
-                <p class="detail-info-copy">This explains the system checks only. Final approval still depends on the provider review process.</p>
+                <p class="scholarship-rules-copy"><?php echo htmlspecialchars($rulesInfoNote); ?></p>
 
-                <div class="detail-info-current">
-                    <span class="detail-status-pill <?php echo htmlspecialchars($detailCardStatusClass); ?>">
-                        <i class="fas <?php echo htmlspecialchars($detailStatusIcon); ?>"></i>
-                        <?php echo htmlspecialchars($detailCardStatusLabel); ?>
-                    </span>
-                    <p><?php echo htmlspecialchars($eligibilityStatusSummary); ?></p>
-                </div>
-
-                <div class="detail-info-rule-grid">
-                    <section class="detail-info-rule-card is-positive">
+                <div class="scholarship-rules-grid">
+                    <section class="scholarship-rules-card">
                         <h3>You can apply when</h3>
-                        <ul class="detail-compact-list is-positive">
+                        <ul class="scholarship-bullet-list tone-positive">
                             <?php foreach ($canApplyRuleItems as $canApplyRuleItem): ?>
                                 <li><?php echo htmlspecialchars($canApplyRuleItem); ?></li>
                             <?php endforeach; ?>
                         </ul>
                     </section>
 
-                    <section class="detail-info-rule-card is-warning">
+                    <section class="scholarship-rules-card scholarship-rules-card-warning">
                         <h3>You cannot apply yet when</h3>
-                        <ul class="detail-compact-list is-warning">
+                        <ul class="scholarship-bullet-list tone-warning">
                             <?php foreach ($cantApplyRuleItems as $cantApplyRuleItem): ?>
                                 <li><?php echo htmlspecialchars($cantApplyRuleItem); ?></li>
                             <?php endforeach; ?>
                         </ul>
                     </section>
-                </div>
-
-                <div class="detail-note-inline detail-note-inline-tight">
-                    <span>Important note</span>
-                    <p><?php echo htmlspecialchars($rulesInfoNote); ?></p>
                 </div>
             </div>
         </div>
@@ -1433,12 +1480,12 @@ if (empty($importantNotes) && $visitSiteUrl !== '') {
 
     function openModal() {
         modal.hidden = false;
-        document.body.classList.add('detail-modal-open');
+        document.body.classList.add('scholarship-detail-modal-open');
     }
 
     function closeModal() {
         modal.hidden = true;
-        document.body.classList.remove('detail-modal-open');
+        document.body.classList.remove('scholarship-detail-modal-open');
     }
 
     openButton.addEventListener('click', openModal);
