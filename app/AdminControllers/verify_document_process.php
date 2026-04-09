@@ -4,7 +4,9 @@ require_once __DIR__ . '/../Config/session_bootstrap.php';
 require_once __DIR__ . '/../Config/db_config.php';
 require_once __DIR__ . '/../Config/csrf.php';
 require_once __DIR__ . '/../Config/provider_scope.php';
+require_once __DIR__ . '/../Config/helpers.php';
 require_once __DIR__ . '/../Models/UserDocument.php';
+require_once __DIR__ . '/../Models/StudentData.php';
 require_once __DIR__ . '/../Config/access_control.php';
 require_once __DIR__ . '/../Models/ActivityLog.php';
 require_once __DIR__ . '/../Models/Notification.php';
@@ -38,6 +40,49 @@ function normalizeReviewedGwa($value): ?string
     }
 
     return number_format($numericValue, 2, '.', '');
+}
+
+function getSupportingVerificationConfig(?string $documentType): ?array
+{
+    $configs = [
+        'citizenship_proof' => [
+            'field' => 'citizenship',
+            'field_label' => 'citizenship / residency',
+            'options' => [
+                'filipino' => 'Filipino',
+                'dual_citizen' => 'Dual Citizen',
+                'permanent_resident' => 'Permanent Resident',
+                'other' => 'Other / Additional Residency Proof'
+            ]
+        ],
+        'income_proof' => [
+            'field' => 'household_income_bracket',
+            'field_label' => 'household income bracket',
+            'options' => [
+                'below_10000' => 'Below PHP 10,000 / month',
+                '10000_20000' => 'PHP 10,000 - 20,000 / month',
+                '20001_40000' => 'PHP 20,001 - 40,000 / month',
+                '40001_80000' => 'PHP 40,001 - 80,000 / month',
+                'above_80000' => 'Above PHP 80,000 / month',
+                'prefer_not_to_say' => 'Prefer not to say'
+            ]
+        ],
+        'special_category_proof' => [
+            'field' => 'special_category',
+            'field_label' => 'scholarship category',
+            'options' => [
+                'pwd' => 'Person with Disability (PWD)',
+                'indigenous_peoples' => 'Indigenous Peoples',
+                'solo_parent_dependent' => 'Dependent of Solo Parent',
+                'working_student' => 'Working Student',
+                'child_of_ofw' => 'Child of OFW',
+                'four_ps_beneficiary' => '4Ps Beneficiary',
+                'orphan' => 'Orphan / Ward'
+            ]
+        ]
+    ];
+
+    return $configs[(string) $documentType] ?? null;
 }
 
 if (!isset($_SESSION['user_id']) || !isRoleIn(['provider', 'admin', 'super_admin'])) {
@@ -75,7 +120,10 @@ $documentDetailStmt = $pdo->prepare("
     SELECT
         ud.id,
         ud.document_type,
+        ud.status,
         ud.file_name,
+        ud.admin_notes,
+        ud.rejection_reason,
         dt.name AS document_name,
         CONCAT(COALESCE(sd.firstname, ''), ' ', COALESCE(sd.lastname, '')) AS student_name,
         u.username
@@ -92,6 +140,8 @@ $documentDetails = $documentDetailStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 try {
     if ($action === 'verify') {
         $reviewedGwa = null;
+        $profileUpdate = [];
+        $verificationNote = null;
         if (canEditReviewedGwa() && $documentDetails && isGradeReviewDocument($documentDetails['document_type'] ?? null)) {
             $reviewedGwa = normalizeReviewedGwa($_POST['gwa'] ?? null);
 
@@ -106,7 +156,22 @@ try {
             }
         }
 
-        $result = $documentModel->verifyDocument($documentId, $userId, $reviewedGwa);
+        $supportingVerificationConfig = $documentDetails
+            ? getSupportingVerificationConfig($documentDetails['document_type'] ?? null)
+            : null;
+
+        if ($supportingVerificationConfig !== null) {
+            $verificationValue = trim((string) ($_POST['verification_value'] ?? ''));
+            if ($verificationValue === '' || !array_key_exists($verificationValue, $supportingVerificationConfig['options'])) {
+                echo json_encode(['success' => false, 'message' => 'Select the verified value before verifying this supporting document.']);
+                exit();
+            }
+
+            $profileUpdate[$supportingVerificationConfig['field']] = $verificationValue;
+            $verificationNote = 'Verified as: ' . $supportingVerificationConfig['options'][$verificationValue];
+        }
+
+        $result = $documentModel->verifyDocument($documentId, $userId, $reviewedGwa, $profileUpdate, $verificationNote);
         
         if ($result) {
             if ($documentDetails) {
@@ -121,12 +186,14 @@ try {
                     'entity_name' => (string) ($documentDetails['document_name'] ?? $documentDetails['document_type'] ?? 'Document'),
                     'target_user_id' => (int) $userId,
                     'target_name' => $targetName,
-                    'details' => [
-                        'file_name' => (string) ($documentDetails['file_name'] ?? ''),
-                        'status' => 'verified',
-                        'reviewed_gwa' => $reviewedGwa
-                    ]
-                ]);
+                        'details' => [
+                            'file_name' => (string) ($documentDetails['file_name'] ?? ''),
+                            'status' => 'verified',
+                            'reviewed_gwa' => $reviewedGwa,
+                            'verification_note' => $verificationNote,
+                            'profile_update' => $profileUpdate
+                        ]
+                    ]);
 
                 try {
                     $documentLabel = trim((string) ($documentDetails['document_name'] ?? $documentDetails['document_type'] ?? 'Document'));
@@ -134,6 +201,10 @@ try {
 
                     if ($reviewedGwa !== null && isGradeReviewDocument($documentDetails['document_type'] ?? null)) {
                         $notificationMessage .= ' Your recorded GWA is now ' . number_format((float) $reviewedGwa, 2) . '.';
+                    }
+
+                    if ($verificationNote !== null) {
+                        $notificationMessage .= ' ' . $verificationNote . '.';
                     }
 
                     $notificationModel = new Notification($pdo);
@@ -152,14 +223,77 @@ try {
                     error_log('verify_document_process verify notification error: ' . $notificationError->getMessage());
                 }
             }
-            $successMessage = $reviewedGwa !== null
-                ? 'Document verified and GWA updated successfully.'
-                : 'Document verified successfully';
+            if ($reviewedGwa !== null) {
+                $successMessage = 'Document verified and GWA updated successfully.';
+            } elseif (!empty($profileUpdate)) {
+                $successMessage = 'Supporting document verified and profile value saved successfully.';
+            } else {
+                $successMessage = 'Document verified successfully';
+            }
             echo json_encode(['success' => true, 'message' => $successMessage]);
         } else {
             echo json_encode(['success' => false, 'message' => 'Failed to verify document']);
         }
         
+    } elseif ($action === 'save_note') {
+        $reviewerNote = trim((string) ($_POST['reviewer_note'] ?? ''));
+        $existingAdminNotes = (string) ($documentDetails['admin_notes'] ?? '');
+        $systemNote = stripReviewerDocumentNote($existingAdminNotes);
+        $updatedAdminNote = composeDocumentAdminNote($systemNote, $reviewerNote);
+
+        $result = $documentModel->saveAdminNote($documentId, $userId, $updatedAdminNote);
+
+        if ($result) {
+            if ($documentDetails) {
+                $targetName = trim((string) ($documentDetails['student_name'] ?? ''));
+                if ($targetName === '') {
+                    $targetName = (string) ($documentDetails['username'] ?? 'Student');
+                }
+
+                $activityLog = new ActivityLog($pdo);
+                $activityLog->log('note', 'document', 'Updated a reviewer note on an uploaded document.', [
+                    'entity_id' => (int) $documentId,
+                    'entity_name' => (string) ($documentDetails['document_name'] ?? $documentDetails['document_type'] ?? 'Document'),
+                    'target_user_id' => (int) $userId,
+                    'target_name' => $targetName,
+                    'details' => [
+                        'file_name' => (string) ($documentDetails['file_name'] ?? ''),
+                        'status' => (string) ($documentDetails['status'] ?? ''),
+                        'reviewer_note' => $reviewerNote
+                    ]
+                ]);
+
+                try {
+                    $documentLabel = trim((string) ($documentDetails['document_name'] ?? $documentDetails['document_type'] ?? 'Document'));
+                    $notificationMessage = $reviewerNote !== ''
+                        ? $documentLabel . ' has a new reviewer note: ' . $reviewerNote
+                        : $documentLabel . ' reviewer note was cleared.';
+
+                    $notificationModel = new Notification($pdo);
+                    $notificationModel->createForUser(
+                        (int) $userId,
+                        'document_note',
+                        'Document note updated',
+                        $notificationMessage,
+                        [
+                            'entity_type' => 'document',
+                            'entity_id' => (int) $documentId,
+                            'link_url' => 'documents.php'
+                        ]
+                    );
+                } catch (Throwable $notificationError) {
+                    error_log('verify_document_process save_note notification error: ' . $notificationError->getMessage());
+                }
+            }
+
+            echo json_encode([
+                'success' => true,
+                'message' => $reviewerNote !== '' ? 'Reviewer note saved successfully.' : 'Reviewer note cleared successfully.'
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to save the reviewer note.']);
+        }
+
     } elseif ($action === 'update_gwa') {
         if (!canEditReviewedGwa()) {
             echo json_encode(['success' => false, 'message' => 'Only admins can update the reviewed GWA.']);

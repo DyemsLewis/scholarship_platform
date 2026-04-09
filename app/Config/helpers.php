@@ -209,6 +209,61 @@ if (!function_exists('formatDocumentStatus')) {
     }
 }
 
+if (!function_exists('extractReviewerDocumentNote')) {
+    function extractReviewerDocumentNote($adminNotes): string {
+        $normalized = trim((string) ($adminNotes ?? ''));
+        if ($normalized === '') {
+            return '';
+        }
+
+        $marker = 'Reviewer note:';
+        $position = stripos($normalized, $marker);
+        if ($position === false) {
+            return '';
+        }
+
+        return trim(substr($normalized, $position + strlen($marker)));
+    }
+}
+
+if (!function_exists('stripReviewerDocumentNote')) {
+    function stripReviewerDocumentNote($adminNotes): string {
+        $normalized = trim((string) ($adminNotes ?? ''));
+        if ($normalized === '') {
+            return '';
+        }
+
+        $marker = 'Reviewer note:';
+        $position = stripos($normalized, $marker);
+        if ($position === false) {
+            return $normalized;
+        }
+
+        return trim(substr($normalized, 0, $position));
+    }
+}
+
+if (!function_exists('composeDocumentAdminNote')) {
+    function composeDocumentAdminNote($systemNote, $reviewerNote): ?string {
+        $system = trim((string) ($systemNote ?? ''));
+        $reviewer = trim((string) ($reviewerNote ?? ''));
+
+        if ($system === '' && $reviewer === '') {
+            return null;
+        }
+
+        if ($system === '') {
+            return 'Reviewer note: ' . $reviewer;
+        }
+
+        if ($reviewer === '') {
+            return $system;
+        }
+
+        return $system . "\nReviewer note: " . $reviewer;
+    }
+}
+
 if (!function_exists('formatApplicantTypeLabel')) {
     function formatApplicantTypeLabel($value) {
         $map = [

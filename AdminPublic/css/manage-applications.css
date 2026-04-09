@@ -11,10 +11,10 @@
     overflow: hidden;
     display: grid;
     grid-template-columns: minmax(0, 1.7fr) minmax(240px, 0.9fr);
-    gap: 20px;
+    gap: 16px;
     align-items: stretch;
-    padding: 24px 26px;
-    border-radius: 22px;
+    padding: 20px 22px;
+    border-radius: 20px;
     margin-bottom: 20px;
     background:
         radial-gradient(circle at top right, rgba(255, 255, 255, 0.18), transparent 34%),
@@ -54,17 +54,17 @@
 }
 
 .applications-page-header h1 {
-    margin: 0 0 8px;
+    margin: 0 0 6px;
     color: #ffffff;
-    font-size: clamp(1.8rem, 2.7vw, 2.45rem);
+    font-size: clamp(1.22rem, 1.75vw, 1.6rem);
     line-height: 1.12;
 }
 
 .applications-page-header p {
     margin: 0;
     color: rgba(255, 255, 255, 0.88);
-    font-size: 0.96rem;
-    line-height: 1.6;
+    font-size: 0.9rem;
+    line-height: 1.55;
     max-width: 720px;
 }
 
@@ -653,8 +653,16 @@
 
 @media (max-width: 768px) {
     .applications-page-header {
-        padding: 20px;
-        border-radius: 18px;
+        padding: 18px;
+        border-radius: 16px;
+    }
+
+    .applications-page-header h1 {
+        font-size: 1.12rem;
+    }
+
+    .applications-page-header p {
+        font-size: 0.86rem;
     }
 
     .applications-summary-grid {

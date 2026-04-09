@@ -347,6 +347,48 @@
     font-size: inherit;
 }
 
+.phone-input-shell {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.phone-input-icon {
+    position: absolute;
+    left: 12px;
+    color: var(--primary);
+    font-size: 1rem;
+    z-index: 1;
+}
+
+.phone-prefix {
+    position: absolute;
+    left: 42px;
+    color: #0f172a;
+    font-weight: 600;
+    font-size: 0.96rem;
+    z-index: 1;
+    user-select: none;
+}
+
+.phone-input-shell input[type="text"] {
+    width: 100%;
+    min-width: 0;
+    padding: 12px 14px 12px 84px;
+    border: 1px solid #d8e0ea;
+    border-radius: 10px;
+    font-size: 0.98rem;
+    color: #0f172a;
+    background: #ffffff;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
+}
+
+.phone-input-shell input[type="text"]:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(44, 90, 160, 0.12);
+}
+
 .readonly-input {
     background: #f8fafc !important;
     color: #475569;

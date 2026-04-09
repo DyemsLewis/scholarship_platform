@@ -361,18 +361,40 @@ foreach (preg_split('/\s+/', trim($fullName)) ?: [] as $namePiece) {
 if ($applicantInitials === '') {
     $applicantInitials = 'AP';
 }
+$applicantProfileImageUrl = getDefaultProfileImageUrl('../');
+$applicantProfileImagePath = trim((string) ($application['profile_image_path'] ?? ''));
+if ($applicantProfileImagePath !== '') {
+    $resolvedApplicantProfileImageUrl = resolveStoredFileUrl($applicantProfileImagePath, '../');
+    if ($resolvedApplicantProfileImageUrl) {
+        $applicantProfileImageUrl = $resolvedApplicantProfileImageUrl;
+    }
+}
 $applicationScoreDisplay = $application['probability_score'] !== null
     ? number_format((float) $application['probability_score'], 1) . '%'
     : 'Not calculated';
 $accountStatusLabel = ucfirst((string) ($application['user_status'] ?? 'inactive'));
-$requirementsSnapshotLabel = ((int) ($requirementsSummary['uploaded'] ?? 0)) . ' uploaded / ' . $requirementsVerifiedCount . ' verified';
-$reviewHeaderDescription = 'Review the applicant profile, supporting documents, and decision status for ' . $application['scholarship_name'] . '.';
-$reviewHeaderChips = [
-    ['icon' => 'fa-circle-info', 'label' => 'Status', 'value' => ucfirst($applicationStatus)],
-    ['icon' => 'fa-list-check', 'label' => 'Requirements', 'value' => $reviewReadinessLabel],
-    ['icon' => 'fa-reply', 'label' => 'Student Response', 'value' => $studentResponseLabel],
-    ['icon' => 'fa-percent', 'label' => 'Score', 'value' => $applicationScoreDisplay],
+$applicantProfileBadges = [
+    ['icon' => 'fa-user-graduate', 'label' => $applicantProgramLabel],
+    ['icon' => 'fa-circle-user', 'label' => $accountStatusLabel . ' account'],
 ];
+if ($academicStandingLabel !== 'Not set') {
+    $applicantProfileBadges[] = ['icon' => 'fa-award', 'label' => $academicStandingLabel];
+}
+if ($admissionStatusLabel !== 'Not set') {
+    $applicantProfileBadges[] = ['icon' => 'fa-route', 'label' => $admissionStatusLabel];
+}
+$profileSectionGroups = [
+    ['title' => 'Identity and Contact', 'icon' => 'fa-id-card', 'fields' => $identityFields],
+    ['title' => 'Current Academic Record', 'icon' => 'fa-graduation-cap', 'fields' => $academicFields],
+];
+if (!empty($admissionsFields)) {
+    $profileSectionGroups[] = ['title' => 'Admissions and Transition', 'icon' => 'fa-route', 'fields' => $admissionsFields];
+}
+if (!empty($backgroundFields)) {
+    $profileSectionGroups[] = ['title' => 'Prior Academic Background', 'icon' => 'fa-school', 'fields' => $backgroundFields];
+}
+$profileSectionGroups[] = ['title' => 'Residence and Household Context', 'icon' => 'fa-house-user', 'fields' => $contextFields, 'wide' => true];
+$reviewHeaderDescription = 'Review the applicant profile, supporting documents, and decision status for ' . $application['scholarship_name'] . '.';
 $reviewSpotlightTags = [
     ['icon' => 'fa-user-graduate', 'label' => $applicantProgramLabel],
     ['icon' => 'fa-school', 'label' => $schoolLabel],
@@ -418,6 +440,19 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                 </div>
             <?php endif; ?>
 
+            <div class="page-header app-review-page-header">
+                <div>
+                    <h1>
+                        <i class="fas fa-clipboard-check"></i> Application Review
+                    </h1>
+                    <p><?php echo htmlspecialchars($reviewHeaderDescription); ?></p>
+                </div>
+                <a href="manage_applications.php" class="app-review-header-back app-review-page-back">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Applications</span>
+                </a>
+            </div>
+
             <?php $reviewsCurrentView = 'applications'; include 'layouts/reviews_nav.php'; ?>
 
             <section class="app-review-shell state-<?php echo htmlspecialchars($decisionReadinessTone); ?>">
@@ -435,7 +470,9 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                         </div>
 
                         <div class="app-review-avatar-stage">
-                            <span class="app-review-avatar-mark"><?php echo htmlspecialchars($applicantInitials); ?></span>
+                            <span class="app-review-avatar-mark">
+                                <img src="<?php echo htmlspecialchars($applicantProfileImageUrl); ?>" alt="<?php echo htmlspecialchars($fullName); ?> profile picture">
+                            </span>
                         </div>
                     </div>
 
@@ -445,10 +482,6 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                                 <h1><?php echo htmlspecialchars($fullName); ?></h1>
                                 <p><?php echo htmlspecialchars($application['scholarship_name']); ?> under <?php echo htmlspecialchars($scholarshipProvider); ?>.</p>
                             </div>
-                            <a href="manage_applications.php" class="app-review-header-back">
-                                <i class="fas fa-arrow-left"></i>
-                                <span>Back to Applications</span>
-                            </a>
                         </div>
 
                         <div class="app-review-provider-summary">
@@ -484,22 +517,22 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                         </div>
 
                         <nav class="app-review-stepper" aria-label="Review sections">
-                            <button type="button" class="app-review-step-pill is-active" data-review-target="decision" aria-pressed="true"><span>1</span> Decision</button>
-                            <button type="button" class="app-review-step-pill" data-review-target="profile" aria-pressed="false"><span>2</span> Applicant Profile</button>
-                            <button type="button" class="app-review-step-pill" data-review-target="documents" aria-pressed="false"><span>3</span> Required Documents</button>
-                            <button type="button" class="app-review-step-pill" data-review-target="support" aria-pressed="false"><span>4</span> Review Support</button>
+                            <button type="button" class="app-review-step-pill is-active" data-review-target="profile" aria-pressed="true"><span>1</span> Applicant Profile</button>
+                            <button type="button" class="app-review-step-pill" data-review-target="documents" aria-pressed="false"><span>2</span> Required Documents</button>
+                            <button type="button" class="app-review-step-pill" data-review-target="support" aria-pressed="false"><span>3</span> Review Support</button>
+                            <button type="button" class="app-review-step-pill" data-review-target="decision" aria-pressed="false"><span>4</span> Decision</button>
                         </nav>
                     </div>
                 </div>
             </section>
 
             <div class="app-review-stage-panels">
-                <section class="app-review-stage-panel is-active" data-review-panel="decision" id="decisionSummary">
+                <section class="app-review-stage-panel" data-review-panel="decision" id="decisionSummary">
                     <div class="review-panel app-review-panel app-review-stage-surface">
                         <div class="review-panel-header">
                             <div>
                                 <h2>Decision Summary</h2>
-                                <p>Start here before moving through the rest of the review.</p>
+                                <p>Use this last after reviewing the applicant profile, uploaded documents, and support notes.</p>
                             </div>
                         </div>
                         <div class="app-review-stage-body">
@@ -585,7 +618,7 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                     </div>
                 </section>
 
-                <section class="app-review-stage-panel" data-review-panel="profile" id="applicantProfile">
+                <section class="app-review-stage-panel is-active" data-review-panel="profile" id="applicantProfile">
                     <div class="review-panel review-panel-profile app-review-panel">
                         <div class="review-panel-header">
                             <div>
@@ -593,81 +626,69 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                                 <p>Identity, academic standing, education pathway, and household details for application review.</p>
                             </div>
                         </div>
-                        <div class="profile-review-highlights">
-                            <?php foreach ($profileHighlightItems as $highlightItem): ?>
-                                <article class="profile-highlight-card">
-                                    <span class="profile-highlight-label"><?php echo htmlspecialchars($highlightItem['label']); ?></span>
-                                    <strong class="profile-highlight-value"><?php echo htmlspecialchars($highlightItem['value']); ?></strong>
-                                    <span class="profile-highlight-meta"><?php echo htmlspecialchars($highlightItem['meta']); ?></span>
-                                </article>
-                            <?php endforeach; ?>
-                        </div>
-                        <div class="section-stack">
-                            <section class="profile-review-section">
-                                <h3 class="subsection-title"><i class="fas fa-id-card"></i> Identity and Contact</h3>
-                                <div class="detail-grid">
-                                    <?php foreach ($identityFields as $field): ?>
-                                        <div class="detail-card">
-                                            <span class="detail-label"><?php echo htmlspecialchars($field['label']); ?></span>
-                                            <div class="detail-value"><?php echo htmlspecialchars($field['value']); ?></div>
-                                        </div>
+                        <div class="applicant-profile-shell">
+                            <section class="applicant-profile-summary-card">
+                                <div class="applicant-profile-summary-top">
+                                    <div class="applicant-profile-summary-avatar">
+                                        <img src="<?php echo htmlspecialchars($applicantProfileImageUrl); ?>" alt="<?php echo htmlspecialchars($fullName); ?> profile picture">
+                                    </div>
+                                    <div class="applicant-profile-summary-copy">
+                                        <span class="applicant-profile-summary-kicker">Applicant Snapshot</span>
+                                        <h3><?php echo htmlspecialchars($fullName); ?></h3>
+                                        <p><?php echo htmlspecialchars($schoolLabel . ' / ' . $courseLabel); ?></p>
+                                    </div>
+                                </div>
+
+                                <div class="applicant-profile-summary-contact">
+                                    <span><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(appValue($application['email'] ?? '')); ?></span>
+                                    <span><i class="fas fa-phone"></i> <?php echo htmlspecialchars(appValue($application['mobile_number'] ?? '')); ?></span>
+                                    <span><i class="fas fa-location-dot"></i> <?php echo htmlspecialchars($cityProvinceLabel); ?></span>
+                                </div>
+
+                                <div class="applicant-profile-summary-badges">
+                                    <?php foreach ($applicantProfileBadges as $badge): ?>
+                                        <span class="applicant-profile-badge">
+                                            <i class="fas <?php echo htmlspecialchars($badge['icon']); ?>"></i>
+                                            <?php echo htmlspecialchars($badge['label']); ?>
+                                        </span>
+                                    <?php endforeach; ?>
+                                </div>
+
+                                <div class="applicant-profile-summary-stats">
+                                    <?php foreach ($profileHighlightItems as $highlightItem): ?>
+                                        <article class="applicant-profile-stat-card">
+                                            <span class="applicant-profile-stat-label"><?php echo htmlspecialchars($highlightItem['label']); ?></span>
+                                            <strong class="applicant-profile-stat-value"><?php echo htmlspecialchars($highlightItem['value']); ?></strong>
+                                            <span class="applicant-profile-stat-meta"><?php echo htmlspecialchars($highlightItem['meta']); ?></span>
+                                        </article>
                                     <?php endforeach; ?>
                                 </div>
                             </section>
 
-                            <section class="profile-review-section">
-                                <h3 class="subsection-title"><i class="fas fa-graduation-cap"></i> Current Academic Record</h3>
-                                <div class="detail-grid">
-                                    <?php foreach ($academicFields as $field): ?>
-                                        <div class="detail-card">
-                                            <span class="detail-label"><?php echo htmlspecialchars($field['label']); ?></span>
-                                            <div class="detail-value"><?php echo htmlspecialchars($field['value']); ?></div>
+                            <div class="applicant-profile-block-grid">
+                                <?php foreach ($profileSectionGroups as $group): ?>
+                                    <section class="applicant-profile-block<?php echo !empty($group['wide']) ? ' is-wide' : ''; ?>">
+                                        <div class="applicant-profile-block-head">
+                                            <h3>
+                                                <i class="fas <?php echo htmlspecialchars($group['icon']); ?>"></i>
+                                                <?php echo htmlspecialchars($group['title']); ?>
+                                            </h3>
+                                            <span><?php echo count($group['fields']); ?> item<?php echo count($group['fields']) === 1 ? '' : 's'; ?></span>
                                         </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            </section>
 
-                            <?php if (!empty($admissionsFields)): ?>
-                            <section class="profile-review-section">
-                                <h3 class="subsection-title"><i class="fas fa-route"></i> Admissions and Transition</h3>
-                                <div class="detail-grid">
-                                    <?php foreach ($admissionsFields as $field): ?>
-                                        <div class="detail-card">
-                                            <span class="detail-label"><?php echo htmlspecialchars($field['label']); ?></span>
-                                            <div class="detail-value"><?php echo htmlspecialchars($field['value']); ?></div>
+                                        <div class="applicant-profile-row-list">
+                                            <?php foreach ($group['fields'] as $field): ?>
+                                                <div class="applicant-profile-row-item<?php echo !empty($field['full']) ? ' is-full' : ''; ?>">
+                                                    <span class="applicant-profile-row-label"><?php echo htmlspecialchars($field['label']); ?></span>
+                                                    <div class="applicant-profile-row-value<?php echo !empty($field['muted']) ? ' is-muted' : ''; ?>">
+                                                        <?php echo nl2br(htmlspecialchars($field['value'])); ?>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
                                         </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            </section>
-                            <?php endif; ?>
-
-                            <?php if (!empty($backgroundFields)): ?>
-                            <section class="profile-review-section">
-                                <h3 class="subsection-title"><i class="fas fa-school"></i> Prior Academic Background</h3>
-                                <div class="detail-grid">
-                                    <?php foreach ($backgroundFields as $field): ?>
-                                        <div class="detail-card">
-                                            <span class="detail-label"><?php echo htmlspecialchars($field['label']); ?></span>
-                                            <div class="detail-value"><?php echo htmlspecialchars($field['value']); ?></div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            </section>
-                            <?php endif; ?>
-
-                            <section class="profile-review-section">
-                                <h3 class="subsection-title"><i class="fas fa-house-user"></i> Residence and Household Context</h3>
-                                <div class="detail-grid">
-                                    <?php foreach ($contextFields as $field): ?>
-                                        <div class="detail-card<?php echo !empty($field['full']) ? ' full' : ''; ?>">
-                                            <span class="detail-label"><?php echo htmlspecialchars($field['label']); ?></span>
-                                            <div class="detail-value<?php echo !empty($field['muted']) ? ' muted' : ''; ?>">
-                                                <?php echo nl2br(htmlspecialchars($field['value'])); ?>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
-                            </section>
+                                    </section>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -704,7 +725,11 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                                     $reqHref = is_array($reqDoc) ? resolveStoredFileUrl($reqDoc['file_path'] ?? null, '../') : null;
                                     $reqNumber = str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT);
                                     $reqFileName = is_array($reqDoc) ? (string) ($reqDoc['file_name'] ?? 'Uploaded file') : '';
-                                    $hasReqActions = $reqHref !== '' || ($reqStatus === 'pending' && is_array($reqDoc));
+                                    $reqReviewerNote = is_array($reqDoc) ? extractReviewerDocumentNote($reqDoc['admin_notes'] ?? null) : '';
+                                    $reqRejectionReason = is_array($reqDoc)
+                                        ? trim((string) ($reqDoc['rejection_reason'] ?? ''))
+                                        : '';
+                                    $hasReqActions = is_array($reqDoc) || $reqHref !== '';
                                     $reqSupportText = 'No file uploaded yet.';
                                     if ($reqFileName !== '') {
                                         $reqSupportText = $reqFileName;
@@ -738,8 +763,11 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                                                         <span class="requirement-meta-chip muted"><i class="fas fa-circle-exclamation"></i>Still incomplete</span>
                                                     <?php endif; ?>
                                                 </div>
-                                                <?php if ($reqStatus === 'rejected' && is_array($reqDoc) && !empty($reqDoc['rejection_reason'])): ?>
-                                                    <div class="review-note rejection"><strong>Rejection reason:</strong> <?php echo htmlspecialchars((string) $reqDoc['rejection_reason']); ?></div>
+                                                <?php if ($reqStatus === 'rejected' && $reqRejectionReason !== ''): ?>
+                                                    <div class="review-note rejection"><strong>Rejection reason:</strong> <?php echo htmlspecialchars($reqRejectionReason); ?></div>
+                                                <?php endif; ?>
+                                                <?php if ($reqReviewerNote !== ''): ?>
+                                                    <div class="review-note info"><strong>Reviewer note:</strong> <?php echo nl2br(htmlspecialchars($reqReviewerNote)); ?></div>
                                                 <?php elseif ($reqStatus === 'missing'): ?>
                                                     <div class="review-note warning">This requirement is still missing from the application record.</div>
                                                 <?php endif; ?>
@@ -763,6 +791,15 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                                                         data-file-type="<?php echo htmlspecialchars($reqPreviewType); ?>"
                                                     >
                                                         <i class="fas fa-eye"></i> View File
+                                                    </button>
+                                                <?php endif; ?>
+                                                <?php if (is_array($reqDoc)): ?>
+                                                    <button
+                                                        type="button"
+                                                        class="btn btn-outline"
+                                                        onclick="openDocumentNotePrompt(<?php echo (int) $reqDoc['id']; ?>, <?php echo (int) $application['user_id']; ?>, <?php echo htmlspecialchars(json_encode($reqReviewerNote), ENT_QUOTES, 'UTF-8'); ?>)"
+                                                    >
+                                                        <i class="fas fa-note-sticky"></i> <?php echo $reqReviewerNote !== '' ? 'Update Note' : 'Add Note'; ?>
                                                     </button>
                                                 <?php endif; ?>
                                                 <?php if ($reqStatus === 'pending' && is_array($reqDoc)): ?>
@@ -926,7 +963,7 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
 
         reviewStepButtons.forEach((button) => {
             button.addEventListener('click', () => {
-                setActiveReviewStage(button.dataset.reviewTarget || 'decision');
+                setActiveReviewStage(button.dataset.reviewTarget || 'profile');
             });
         });
 
@@ -936,7 +973,7 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
             '#requiredDocuments': 'documents',
             '#reviewSupport': 'support'
         };
-        const initialReviewStage = reviewStageFromHashMap[window.location.hash] || 'decision';
+        const initialReviewStage = reviewStageFromHashMap[window.location.hash] || 'profile';
         setActiveReviewStage(initialReviewStage);
 
         document.querySelectorAll('.application-decision-trigger').forEach((button) => {
@@ -1053,6 +1090,50 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
             }).then((result) => {
                 if (result.isConfirmed) {
                     submitDocumentReview('verify', docId, userId);
+                }
+            });
+        }
+
+        function openDocumentNotePrompt(docId, userId, currentNote = '') {
+            Swal.fire({
+                title: currentNote ? 'Update reviewer note' : 'Add reviewer note',
+                text: 'This note will be visible to the student in My Documents.',
+                input: 'textarea',
+                inputLabel: 'Reviewer note',
+                inputValue: currentNote,
+                inputPlaceholder: 'Example: Please reupload a clearer copy of this document.',
+                inputAttributes: {
+                    'aria-label': 'Reviewer note'
+                },
+                showCancelButton: true,
+                showDenyButton: currentNote.trim() !== '',
+                denyButtonText: 'Clear Note',
+                confirmButtonText: currentNote ? 'Update Note' : 'Save Note',
+                confirmButtonColor: '#2c5aa0',
+                cancelButtonColor: '#64748b',
+                denyButtonColor: '#94a3b8',
+                preConfirm: (value) => {
+                    const trimmedValue = (value || '').trim();
+                    if (!trimmedValue) {
+                        Swal.showValidationMessage('Enter a note or use Clear Note to remove the existing one.');
+                        return false;
+                    }
+                    return trimmedValue;
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    submitDocumentReview('save_note', docId, userId, '', { reviewer_note: result.value }, {
+                        loadingTitle: 'Saving note...',
+                        successTitle: 'Reviewer note saved'
+                    });
+                    return;
+                }
+
+                if (result.isDenied) {
+                    submitDocumentReview('save_note', docId, userId, '', { reviewer_note: '' }, {
+                        loadingTitle: 'Clearing note...',
+                        successTitle: 'Reviewer note cleared'
+                    });
                 }
             });
         }
@@ -1192,9 +1273,12 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
             submitDocumentReview('reject', docId, userId, reason);
         }
 
-        function submitDocumentReview(action, docId, userId, reason = '') {
+        function submitDocumentReview(action, docId, userId, reason = '', extraParams = {}, uiOptions = {}) {
+            const loadingTitle = uiOptions.loadingTitle || (action === 'verify' ? 'Verifying document...' : 'Rejecting document...');
+            const successTitle = uiOptions.successTitle || (action === 'verify' ? 'Document verified' : 'Document rejected');
+
             Swal.fire({
-                title: action === 'verify' ? 'Verifying document...' : 'Rejecting document...',
+                title: loadingTitle,
                 allowOutsideClick: false,
                 showConfirmButton: false,
                 didOpen: () => Swal.showLoading()
@@ -1205,6 +1289,9 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
             if (reason) {
                 params.append('reason', reason);
             }
+            Object.entries(extraParams).forEach(([key, value]) => {
+                params.append(key, value);
+            });
 
             fetch('../app/AdminControllers/verify_document_process.php', {
                 method: 'POST',
@@ -1222,7 +1309,7 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
 
                     return Swal.fire({
                         icon: 'success',
-                        title: action === 'verify' ? 'Document verified' : 'Document rejected',
+                        title: successTitle,
                         text: data.message,
                         timer: 1600,
                         showConfirmButton: false

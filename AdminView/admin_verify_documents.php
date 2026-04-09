@@ -36,6 +36,43 @@ $documentsHeaderCopy = !empty($providerScope['is_provider']) && !empty($provider
 $documentReviewsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/document-reviews.css') ?: time();
 $canEditReviewedGwa = in_array((string) ($_SESSION['role'] ?? ''), ['admin', 'super_admin'], true);
 $gradeEditableDocumentTypes = ['grades', 'form_138'];
+$supportVerificationConfigs = [
+    'citizenship_proof' => [
+        'field' => 'citizenship',
+        'label' => 'Verified citizenship / residency',
+        'options' => [
+            'filipino' => 'Filipino',
+            'dual_citizen' => 'Dual Citizen',
+            'permanent_resident' => 'Permanent Resident',
+            'other' => 'Other / Additional Residency Proof',
+        ],
+    ],
+    'income_proof' => [
+        'field' => 'household_income_bracket',
+        'label' => 'Verified household income bracket',
+        'options' => [
+            'below_10000' => 'Below PHP 10,000 / month',
+            '10000_20000' => 'PHP 10,000 - 20,000 / month',
+            '20001_40000' => 'PHP 20,001 - 40,000 / month',
+            '40001_80000' => 'PHP 40,001 - 80,000 / month',
+            'above_80000' => 'Above PHP 80,000 / month',
+            'prefer_not_to_say' => 'Prefer not to say',
+        ],
+    ],
+    'special_category_proof' => [
+        'field' => 'special_category',
+        'label' => 'Verified scholarship category',
+        'options' => [
+            'pwd' => 'Person with Disability (PWD)',
+            'indigenous_peoples' => 'Indigenous Peoples',
+            'solo_parent_dependent' => 'Dependent of Solo Parent',
+            'working_student' => 'Working Student',
+            'child_of_ofw' => 'Child of OFW',
+            'four_ps_beneficiary' => '4Ps Beneficiary',
+            'orphan' => 'Orphan / Ward',
+        ],
+    ],
+];
 ?>
 
 <!DOCTYPE html>
@@ -50,6 +87,23 @@ $gradeEditableDocumentTypes = ['grades', 'form_138'];
     <link rel="stylesheet" href="../AdminPublic/css/reviews.css">
     <style>
         /* Document Verification Styles */
+        .documents-page-header {
+            padding: 24px 26px;
+            border-radius: 22px;
+            margin-bottom: 20px;
+        }
+
+        .documents-page-header h1 {
+            font-size: clamp(1.22rem, 1.75vw, 1.6rem);
+        }
+
+        .documents-page-header p {
+            margin-top: 0;
+            max-width: 720px;
+            font-size: 0.96rem;
+            line-height: 1.6;
+        }
+
         .document-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
@@ -266,6 +320,17 @@ $gradeEditableDocumentTypes = ['grades', 'form_138'];
             line-height: 1.5;
         }
 
+        .verification-note {
+            background: #eff6ff;
+            border-left: 3px solid #2c5aa0;
+            padding: 10px;
+            margin-top: 12px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            color: #1d4f91;
+            line-height: 1.5;
+        }
+
         .status-badge {
             justify-self: end;
         }
@@ -423,6 +488,19 @@ $gradeEditableDocumentTypes = ['grades', 'form_138'];
         }
 
         @media (max-width: 768px) {
+            .documents-page-header {
+                padding: 20px;
+                border-radius: 18px;
+            }
+
+            .documents-page-header h1 {
+                font-size: 1.12rem;
+            }
+
+            .documents-page-header p {
+                font-size: 0.9rem;
+            }
+
             .documents-search-form {
                 grid-template-columns: 1fr;
                 align-items: stretch;
@@ -591,8 +669,18 @@ $gradeEditableDocumentTypes = ['grades', 'form_138'];
                         $documentTypeCode = (string) ($doc['document_type'] ?? '');
                         $documentDisplayName = (string) ($doc['document_display_name'] ?? str_replace('_', ' ', $documentTypeCode));
                         $isGradeEditable = $canEditReviewedGwa && in_array($documentTypeCode, $gradeEditableDocumentTypes, true);
+                        $supportVerificationConfig = $supportVerificationConfigs[$documentTypeCode] ?? null;
                         $currentGwaRaw = isset($doc['current_gwa']) ? trim((string) $doc['current_gwa']) : '';
                         $currentGwaDisplay = $currentGwaRaw !== '' ? number_format((float) $currentGwaRaw, 2) : 'Not set';
+                        $currentSupportValueRaw = '';
+                        $currentSupportValueDisplay = 'Not set';
+                        if ($supportVerificationConfig !== null) {
+                            $supportField = (string) ($supportVerificationConfig['field'] ?? '');
+                            $currentSupportValueRaw = $supportField !== '' ? trim((string) ($doc[$supportField] ?? '')) : '';
+                            if ($currentSupportValueRaw !== '' && isset($supportVerificationConfig['options'][$currentSupportValueRaw])) {
+                                $currentSupportValueDisplay = (string) $supportVerificationConfig['options'][$currentSupportValueRaw];
+                            }
+                        }
                     ?>
                             <article class="document-card status-<?php echo htmlspecialchars($doc['status']); ?>" data-doc-id="<?php echo $doc['id']; ?>">
                                 <div class="document-preview">
@@ -646,12 +734,24 @@ $gradeEditableDocumentTypes = ['grades', 'form_138'];
                                             <span class="meta-value"><?php echo htmlspecialchars($currentGwaDisplay); ?></span>
                                         </div>
                                         <?php endif; ?>
+                                        <?php if($supportVerificationConfig !== null): ?>
+                                        <div class="meta-row">
+                                            <span class="meta-label">Profile Value:</span>
+                                            <span class="meta-value"><?php echo htmlspecialchars($currentSupportValueDisplay); ?></span>
+                                        </div>
+                                        <?php endif; ?>
                                     </div>
 
                                     <?php if($doc['status'] == 'rejected' && !empty($doc['rejection_reason'])): ?>
                                     <div class="rejection-note">
                                         <i class="fas fa-exclamation-triangle"></i>
                                         <strong>Rejection Reason:</strong> <?php echo htmlspecialchars($doc['rejection_reason']); ?>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if($doc['status'] == 'verified' && !empty($doc['admin_notes']) && $supportVerificationConfig !== null): ?>
+                                    <div class="verification-note">
+                                        <i class="fas fa-circle-check"></i>
+                                        <strong>Saved Value:</strong> <?php echo htmlspecialchars($doc['admin_notes']); ?>
                                     </div>
                                     <?php endif; ?>
 
@@ -677,8 +777,10 @@ $gradeEditableDocumentTypes = ['grades', 'form_138'];
                                             data-document-id="<?php echo (int) $doc['id']; ?>"
                                             data-user-id="<?php echo (int) $doc['user_id']; ?>"
                                             data-document-name="<?php echo htmlspecialchars($documentDisplayName, ENT_QUOTES); ?>"
+                                            data-document-type="<?php echo htmlspecialchars($documentTypeCode, ENT_QUOTES); ?>"
                                             data-requires-gwa="<?php echo $isGradeEditable ? '1' : '0'; ?>"
                                             data-current-gwa="<?php echo htmlspecialchars($currentGwaRaw, ENT_QUOTES); ?>"
+                                            data-current-support-value="<?php echo htmlspecialchars($currentSupportValueRaw, ENT_QUOTES); ?>"
                                             onclick="verifyDocument(this)">
                                             <i class="fas fa-check-circle"></i> Verify
                                         </button>
@@ -763,6 +865,7 @@ $gradeEditableDocumentTypes = ['grades', 'form_138'];
         let currentDocumentId = null;
         let currentUserId = null;
         const documentReviewCsrfToken = <?php echo json_encode(csrfGetToken('document_review')); ?>;
+        const supportVerificationConfigs = <?php echo json_encode($supportVerificationConfigs, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT); ?>;
         const filePreviewModal = document.getElementById('filePreviewModal');
         const filePreviewFrame = document.getElementById('filePreviewFrame');
         const filePreviewImage = document.getElementById('filePreviewImage');
@@ -979,8 +1082,11 @@ $gradeEditableDocumentTypes = ['grades', 'form_138'];
             const docId = button.dataset.documentId;
             const userId = button.dataset.userId;
             const documentName = button.dataset.documentName || 'Document';
+            const documentType = button.dataset.documentType || '';
             const requiresGwa = button.dataset.requiresGwa === '1';
             const currentGwa = button.dataset.currentGwa || '';
+            const currentSupportValue = button.dataset.currentSupportValue || '';
+            const supportConfig = supportVerificationConfigs[documentType] || null;
 
             if (requiresGwa) {
                 Swal.fire({
@@ -1021,6 +1127,46 @@ $gradeEditableDocumentTypes = ['grades', 'form_138'];
                                 document_id: docId,
                                 user_id: userId,
                                 gwa: result.value
+                            },
+                            'Verifying...',
+                            'Verified!',
+                            'An error occurred while verifying the document.'
+                        );
+                    }
+                });
+                return;
+            }
+
+            if (supportConfig) {
+                Swal.fire({
+                    title: `Verify ${documentName}`,
+                    text: 'Choose the confirmed value for this supporting document before verifying it.',
+                    icon: 'question',
+                    input: 'select',
+                    inputLabel: supportConfig.label || 'Verified value',
+                    inputOptions: supportConfig.options || {},
+                    inputValue: currentSupportValue || '',
+                    inputPlaceholder: 'Select verified value',
+                    showCancelButton: true,
+                    confirmButtonColor: '#10b981',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Save value and Verify',
+                    cancelButtonText: 'Cancel',
+                    preConfirm: (value) => {
+                        if (!value) {
+                            Swal.showValidationMessage('Select the verified value before verifying this supporting document.');
+                            return false;
+                        }
+                        return value;
+                    }
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        submitDocumentReviewAction(
+                            'verify',
+                            {
+                                document_id: docId,
+                                user_id: userId,
+                                verification_value: result.value
                             },
                             'Verifying...',
                             'Verified!',

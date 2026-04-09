@@ -18,6 +18,7 @@ $profileGenderMeta = $profileGenderMap[$profileGenderKey] ?? null;
 $isIncomingApplicant = ($userApplicantType ?? '') === 'incoming_freshman';
 $isCurrentlyEnrolled = in_array((string) ($userEnrollmentStatus ?? ''), ['currently_enrolled', 'regular', 'irregular'], true);
 $showShsDetails = !$isCurrentlyEnrolled;
+$showCollegeProgressFields = !$isIncomingApplicant;
 $uploadedProfileAvatarUrl = !empty($userProfileImageUrl) ? $userProfileImageUrl : null;
 $profileAvatarUrl = $uploadedProfileAvatarUrl ?: getDefaultProfileImageUrl('../');
 $editMiddleInitialValue = strtoupper(substr(str_replace('.', '', trim((string) ($userMiddleInitial ?? ''))), 0, 1));
@@ -454,6 +455,7 @@ $editMiddleInitialValue = strtoupper(substr(str_replace('.', '', trim((string) (
                     </div>
                 </div>
 
+                <?php if ($showCollegeProgressFields): ?>
                 <div style="background: #f8fafc; padding: 10px; border-radius: 8px;">
                     <div style="color: var(--gray); font-size: 0.7rem; margin-bottom: 2px;">Year Level</div>
                     <div style="font-weight: 500; color: var(--dark); font-size: 0.9rem;">
@@ -469,6 +471,7 @@ $editMiddleInitialValue = strtoupper(substr(str_replace('.', '', trim((string) (
                         <?php echo htmlspecialchars($profileAcademicStandingLabel); ?>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <?php if ($showShsDetails): ?>
                 <div style="background: #f8fafc; padding: 10px; border-radius: 8px;">
@@ -764,11 +767,6 @@ $editMiddleInitialValue = strtoupper(substr(str_replace('.', '', trim((string) (
                     <div class="edit-incoming-field">
                         <label for="editShsGraduationYear" style="font-size: 0.75rem;">SHS Graduation Year *</label>
                         <input type="number" id="editShsGraduationYear" name="shs_graduation_year" value="<?php echo htmlspecialchars((string) ($userShsGraduationYear ?? '')); ?>" placeholder="e.g., 2026" min="2000" max="<?php echo date('Y') + 6; ?>" style="width: 100%; padding: 8px; font-size: 0.9rem;">
-                    </div>
-
-                    <div class="edit-incoming-field">
-                        <label for="editShsAverage" style="font-size: 0.75rem;">SHS Average</label>
-                        <input type="number" id="editShsAverage" name="shs_average" value="<?php echo htmlspecialchars((string) ($userShsAverage ?? '')); ?>" placeholder="e.g., 92.50" min="60" max="100" step="0.01" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                     </div>
 
                     <div class="edit-incoming-field">

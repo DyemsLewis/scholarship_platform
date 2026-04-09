@@ -210,7 +210,6 @@ $reviewsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/reviews.css') ?
         <div class="container">
             <div class="reviews-overview-hero">
                 <div class="reviews-overview-main">
-                    <span class="reviews-overview-kicker">Review Center</span>
                     <h1><i class="fas fa-list-check"></i> Reviews</h1>
                     <p>Applications, documents, scholarship submissions, and provider approvals in one review workspace.</p>
                 </div>

@@ -1,6 +1,7 @@
 <?php
 // Model/UserDocument.php
 require_once 'Model.php';
+require_once 'StudentData.php';
 
 class UserDocument extends Model {
     protected $table = 'user_documents';
@@ -358,6 +359,29 @@ class UserDocument extends Model {
         
         return $this->update($documentId, $data);
     }
+
+    public function saveAdminNote($documentId, $userId, ?string $adminNote): bool
+    {
+        $checkStmt = $this->pdo->prepare("
+            SELECT id
+            FROM {$this->table}
+            WHERE id = ? AND user_id = ?
+            LIMIT 1
+        ");
+        $checkStmt->execute([$documentId, $userId]);
+
+        if (!$checkStmt->fetch()) {
+            return false;
+        }
+
+        $stmt = $this->pdo->prepare("
+            UPDATE {$this->table}
+            SET admin_notes = ?
+            WHERE id = ? AND user_id = ?
+        ");
+
+        return $stmt->execute([$adminNote, $documentId, $userId]);
+    }
     
     /**
      * Delete document
@@ -498,6 +522,9 @@ class UserDocument extends Model {
                 sd.school,
                 sd.course,
                 sd.gwa as current_gwa,
+                sd.citizenship,
+                sd.household_income_bracket,
+                sd.special_category,
                 dt.name as document_display_name,
                 dt.description as document_description
             FROM user_documents ud
@@ -534,6 +561,9 @@ class UserDocument extends Model {
                 sd.school,
                 sd.course,
                 sd.gwa as current_gwa,
+                sd.citizenship,
+                sd.household_income_bracket,
+                sd.special_category,
                 dt.name as document_display_name,
                 dt.description as document_description
             FROM user_documents ud
@@ -590,7 +620,7 @@ class UserDocument extends Model {
     /**
      * Verify document (admin action)
      */
-    public function verifyDocument($documentId, $userId, $reviewedGwa = null) {
+    public function verifyDocument($documentId, $userId, $reviewedGwa = null, array $profileUpdate = [], ?string $adminNote = null) {
         try {
             $this->pdo->beginTransaction();
             
@@ -598,16 +628,24 @@ class UserDocument extends Model {
                 UPDATE user_documents 
                 SET status = 'verified', 
                     verified_at = NOW(),
-                    admin_notes = NULL,
+                    admin_notes = ?,
                     rejection_reason = NULL
                 WHERE id = ? AND user_id = ?
             ");
-            $stmt->execute([$documentId, $userId]);
+            $stmt->execute([$adminNote, $documentId, $userId]);
             
             if ($stmt->rowCount() > 0) {
                 if ($reviewedGwa !== null && !$this->saveStudentGwa((int) $userId, $reviewedGwa)) {
                     $this->pdo->rollBack();
                     return false;
+                }
+
+                if (!empty($profileUpdate)) {
+                    $studentDataModel = new StudentData($this->pdo);
+                    if (!$studentDataModel->saveStudentData((int) $userId, $profileUpdate)) {
+                        $this->pdo->rollBack();
+                        return false;
+                    }
                 }
 
                 // Get document details for logging

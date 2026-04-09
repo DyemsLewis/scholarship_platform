@@ -24,6 +24,29 @@ function normalizeNullable($value): ?string {
     return $trimmed === '' ? null : $trimmed;
 }
 
+function normalizeMobileNumber($value): ?string {
+    $trimmed = normalizeInput($value);
+    if ($trimmed === '') {
+        return null;
+    }
+
+    $digits = preg_replace('/\D+/', '', $trimmed) ?? '';
+    if ($digits === '') {
+        return null;
+    }
+
+    if (str_starts_with($digits, '63')) {
+        $digits = substr($digits, 2);
+    }
+
+    if (str_starts_with($digits, '0')) {
+        $digits = substr($digits, 1);
+    }
+
+    $digits = substr($digits, 0, 10);
+    return $digits !== '' ? '+63' . $digits : null;
+}
+
 function normalizeChoice($value, array $allowedValues, ?string $default = null): ?string {
     $normalized = strtolower(normalizeInput($value));
     if ($normalized === '') {
@@ -441,7 +464,7 @@ $targetCollege = normalizeNullable($_POST['target_college'] ?? '');
 $yearLevel = normalizeChoice($_POST['year_level'] ?? '', $allowedYearLevels);
 $enrollmentStatus = normalizeChoice($_POST['enrollment_status'] ?? '', $allowedEnrollmentStatuses);
 $academicStanding = normalizeChoice($_POST['academic_standing'] ?? '', $allowedAcademicStandings);
-$mobileNumber = normalizeNullable($_POST['mobile_number'] ?? '');
+$mobileNumber = normalizeMobileNumber($_POST['mobile_number'] ?? '');
 $citizenship = normalizeChoice($_POST['citizenship'] ?? '', $allowedCitizenships);
 $householdIncomeBracket = normalizeChoice($_POST['household_income_bracket'] ?? '', $allowedIncomeBrackets);
 $specialCategory = normalizeChoice($_POST['special_category'] ?? '', $allowedSpecialCategories);
@@ -567,8 +590,8 @@ if (!isValidAddressPart($houseNo, 80) || !isValidAddressPart($street, 120) || !i
     $errors[] = 'Complete address is required (House #, Street, Barangay, City, Province)';
 }
 if ($mobileNumber !== null) {
-    if (!preg_match('/^[0-9+\-\s()]{7,20}$/', $mobileNumber)) {
-        $errors[] = 'Mobile number format is invalid';
+    if (!preg_match('/^\+639\d{9}$/', $mobileNumber)) {
+        $errors[] = 'Mobile number must be a valid +63 mobile number';
     }
 }
 if (normalizeInput($_POST['citizenship'] ?? '') !== '' && $citizenship === null) {
@@ -790,7 +813,6 @@ try {
     redirectSignupWithErrors(['Registration failed. Please try again.'], $_POST);
 }
 
-$signupUploadNotes = [];
 $signupUploadWarnings = [];
 
 ensureSignupDocumentType($pdo, 'grades', 'Transcript of Records', 'Official transcript of records or grade slip.');
@@ -817,8 +839,6 @@ if (!empty($torUpload) || !empty($form138Upload) || !empty($citizenshipProofUplo
         if (!($torSaveResult['success'] ?? false)) {
             $signupUploadWarnings[] = (string) ($torSaveResult['message'] ?? 'TOR could not be saved right now.');
         } else {
-            $signupUploadNotes[] = 'Your TOR was saved to Documents.';
-
             try {
                 $ocrService = new OcrService();
                 $ocrResult = $ocrService->processDocument(
@@ -830,18 +850,18 @@ if (!empty($torUpload) || !empty($form138Upload) || !empty($citizenshipProofUplo
                 if (($ocrResult['success'] ?? false) && isset($ocrResult['final_gwa']) && is_numeric($ocrResult['final_gwa'])) {
                     $finalGwa = (float) $ocrResult['final_gwa'];
                     if (saveSignupUserGwa($pdo, $user_id, $finalGwa)) {
-                        $signupUploadNotes[] = 'Detected GWA: ' . number_format($finalGwa, 2) . '.';
+                        $signupUploadWarnings[] = 'Detected GWA: ' . number_format($finalGwa, 2) . '.';
                     } else {
-                        $signupUploadWarnings[] = 'Your TOR was scanned, but the detected GWA could not be saved yet.';
+                        $signupUploadWarnings[] = 'The uploaded TOR was scanned, but the detected GWA could not be saved yet.';
                     }
                 } elseif ($ocrResult['success'] ?? false) {
-                    $signupUploadWarnings[] = 'Your TOR was saved, but no GWA was detected. You can upload a clearer copy later.';
+                    $signupUploadWarnings[] = 'No GWA was detected from the uploaded TOR. You can upload a clearer copy later.';
                 } else {
-                    $signupUploadWarnings[] = 'Your TOR was saved, but OCR could not be completed right now.';
+                    $signupUploadWarnings[] = 'OCR could not be completed for the uploaded TOR right now.';
                 }
             } catch (Throwable $e) {
                 error_log('Signup TOR OCR failed: ' . $e->getMessage());
-                $signupUploadWarnings[] = 'Your TOR was saved, but OCR could not be completed right now.';
+                $signupUploadWarnings[] = 'OCR could not be completed for the uploaded TOR right now.';
             }
         }
     }
@@ -860,8 +880,6 @@ if (!empty($torUpload) || !empty($form138Upload) || !empty($citizenshipProofUplo
 
         if (!($form138SaveResult['success'] ?? false)) {
             $signupUploadWarnings[] = (string) ($form138SaveResult['message'] ?? 'Form 138 could not be saved right now.');
-        } else {
-            $signupUploadNotes[] = 'Your Form 138 was saved to Documents.';
         }
     }
 
@@ -879,8 +897,6 @@ if (!empty($torUpload) || !empty($form138Upload) || !empty($citizenshipProofUplo
 
         if (!($citizenshipProofSaveResult['success'] ?? false)) {
             $signupUploadWarnings[] = (string) ($citizenshipProofSaveResult['message'] ?? 'Citizenship proof could not be saved right now.');
-        } else {
-            $signupUploadNotes[] = 'Your citizenship / residency proof was saved to Documents.';
         }
     }
 
@@ -898,8 +914,6 @@ if (!empty($torUpload) || !empty($form138Upload) || !empty($citizenshipProofUplo
 
         if (!($incomeProofSaveResult['success'] ?? false)) {
             $signupUploadWarnings[] = (string) ($incomeProofSaveResult['message'] ?? 'Household income proof could not be saved right now.');
-        } else {
-            $signupUploadNotes[] = 'Your household income proof was saved to Documents.';
         }
     }
 
@@ -917,8 +931,6 @@ if (!empty($torUpload) || !empty($form138Upload) || !empty($citizenshipProofUplo
 
         if (!($specialCategoryProofSaveResult['success'] ?? false)) {
             $signupUploadWarnings[] = (string) ($specialCategoryProofSaveResult['message'] ?? 'Special category proof could not be saved right now.');
-        } else {
-            $signupUploadNotes[] = 'Your special category proof was saved to Documents.';
         }
     }
 }
@@ -928,9 +940,6 @@ clearSignupVerificationSession($email);
 unset($_SESSION['signup_old']);
 
 $successMessageParts = ['Registration successful! Welcome to Scholarship Finder! You can now login.'];
-if (!empty($signupUploadNotes)) {
-    $successMessageParts[] = implode(' ', $signupUploadNotes);
-}
 if (!empty($signupUploadWarnings)) {
     $successMessageParts[] = implode(' ', $signupUploadWarnings);
 }

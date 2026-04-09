@@ -35,6 +35,29 @@ function signupChecked(array $oldInput, string $key): string
     return signupOldValue($oldInput, $key) !== '' ? 'checked' : '';
 }
 
+function signupLocalMobileValue(array $oldInput): string
+{
+    $value = signupOldValue($oldInput, 'mobile_number');
+    if ($value === '') {
+        return '';
+    }
+
+    $digits = preg_replace('/\D+/', '', $value) ?? '';
+    if ($digits === '') {
+        return '';
+    }
+
+    if (str_starts_with($digits, '63')) {
+        $digits = substr($digits, 2);
+    }
+
+    if (str_starts_with($digits, '0')) {
+        $digits = substr($digits, 1);
+    }
+
+    return substr($digits, 0, 10);
+}
+
 $signupEmailValue = signupOldValue($signupOld, 'email', $lastVerifiedEmail);
 $signupApplicantTypeValue = signupOldValue($signupOld, 'applicant_type');
 $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($pdo, $signupEmailValue))
@@ -415,118 +438,6 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
                             </div>
                         </div>
 
-                        <!-- Supporting Documents Section -->
-                        <div class="form-section">
-                            <h3>
-                                <i class="fas fa-file-arrow-up"></i>
-                                Supporting Documents
-                            </h3>
-
-                            <div class="academic-path-note compact-doc-note">
-                                <i class="fas fa-circle-info"></i>
-                                <div id="signupSupportingDocsNoteText">
-                                    These uploads are optional during signup. TOR is helpful for current college students, Form 138 is helpful for incoming freshmen, and the support files below can back up citizenship, income, or scholarship-category details. You can still upload clearer copies later in Documents.
-                                </div>
-                            </div>
-
-                            <div class="signup-grid compact-upload-grid">
-                                <div class="compact-upload-card" id="signupTorUploadCard">
-                                    <div class="compact-upload-header">
-                                        <div>
-                                            <h4>TOR / Grade Report</h4>
-                                            <p>PDF, JPG, or PNG up to 5MB. We will try to scan your GWA after signup.</p>
-                                        </div>
-                                        <span class="compact-upload-badge">Optional</span>
-                                    </div>
-                                    <label for="signupTorFile" class="compact-upload-label">Upload TOR</label>
-                                    <input
-                                        type="file"
-                                        id="signupTorFile"
-                                        name="signup_tor_file"
-                                        class="compact-file-input"
-                                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                                    >
-                                    <small class="compact-upload-status" id="signupTorFileStatus">No file selected</small>
-                                </div>
-
-                                <div class="compact-upload-card" id="signupForm138UploadCard">
-                                    <div class="compact-upload-header">
-                                        <div>
-                                            <h4>Form 138</h4>
-                                            <p>Senior high school report card in PDF, JPG, or PNG up to 5MB.</p>
-                                        </div>
-                                        <span class="compact-upload-badge">Optional</span>
-                                    </div>
-                                    <label for="signupForm138File" class="compact-upload-label">Upload Form 138</label>
-                                    <input
-                                        type="file"
-                                        id="signupForm138File"
-                                        name="signup_form138_file"
-                                        class="compact-file-input"
-                                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                                    >
-                                    <small class="compact-upload-status" id="signupForm138FileStatus">No file selected</small>
-                                </div>
-
-                                <div class="compact-upload-card" id="signupCitizenshipUploadCard">
-                                    <div class="compact-upload-header">
-                                        <div>
-                                            <h4>Citizenship / Residency Proof</h4>
-                                            <p>Birth certificate, passport, or residency document in PDF, JPG, or PNG up to 5MB.</p>
-                                        </div>
-                                        <span class="compact-upload-badge" id="signupCitizenshipUploadBadge">Optional</span>
-                                    </div>
-                                    <label for="signupCitizenshipFile" class="compact-upload-label" id="signupCitizenshipUploadLabel">Upload proof</label>
-                                    <input
-                                        type="file"
-                                        id="signupCitizenshipFile"
-                                        name="signup_citizenship_file"
-                                        class="compact-file-input"
-                                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                                    >
-                                    <small class="compact-upload-status" id="signupCitizenshipFileStatus">No file selected</small>
-                                </div>
-
-                                <div class="compact-upload-card" id="signupIncomeUploadCard">
-                                    <div class="compact-upload-header">
-                                        <div>
-                                            <h4>Household Income Proof</h4>
-                                            <p>Certificate of indigency, payslip, ITR, or income certification in PDF, JPG, or PNG up to 5MB.</p>
-                                        </div>
-                                        <span class="compact-upload-badge" id="signupIncomeUploadBadge">Optional</span>
-                                    </div>
-                                    <label for="signupIncomeFile" class="compact-upload-label" id="signupIncomeUploadLabel">Upload proof</label>
-                                    <input
-                                        type="file"
-                                        id="signupIncomeFile"
-                                        name="signup_income_file"
-                                        class="compact-file-input"
-                                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                                    >
-                                    <small class="compact-upload-status" id="signupIncomeFileStatus">No file selected</small>
-                                </div>
-
-                                <div class="compact-upload-card" id="signupSpecialCategoryUploadCard">
-                                    <div class="compact-upload-header">
-                                        <div>
-                                            <h4>Special Category Proof</h4>
-                                            <p>PWD ID, 4Ps record, solo parent proof, IP certification, or similar file up to 5MB.</p>
-                                        </div>
-                                        <span class="compact-upload-badge" id="signupSpecialCategoryUploadBadge">Optional</span>
-                                    </div>
-                                    <label for="signupSpecialCategoryFile" class="compact-upload-label" id="signupSpecialCategoryUploadLabel">Upload proof</label>
-                                    <input
-                                        type="file"
-                                        id="signupSpecialCategoryFile"
-                                        name="signup_special_category_file"
-                                        class="compact-file-input"
-                                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                                    >
-                                    <small class="compact-upload-status" id="signupSpecialCategoryFileStatus">No file selected</small>
-                                </div>
-                            </div>
-                        </div>
-
                         <!-- Family and Address Section -->
                         <div class="form-section">
                             <h3>
@@ -537,11 +448,13 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
                             <div class="signup-grid">
                                 <div class="form-group">
                                     <label for="signupMobileNumber">Mobile Number</label>
-                                    <div class="input-with-icon">
-                                        <i class="fas fa-phone"></i>
-                                        <input type="text" id="signupMobileNumber" name="mobile_number" placeholder="e.g., 09171234567" value="<?php echo htmlspecialchars(signupOldValue($signupOld, 'mobile_number')); ?>">
+                                    <div class="phone-input-shell">
+                                        <span class="phone-input-icon"><i class="fas fa-phone"></i></span>
+                                        <span class="phone-prefix">+63</span>
+                                        <input type="text" id="signupMobileNumber" inputmode="numeric" maxlength="10" placeholder="9123456789" value="<?php echo htmlspecialchars(signupLocalMobileValue($signupOld)); ?>">
+                                        <input type="hidden" id="signupMobileNumberHidden" name="mobile_number" value="<?php echo htmlspecialchars(signupOldValue($signupOld, 'mobile_number')); ?>">
                                     </div>
-                                    <small class="hint">Optional, but helpful for scholarship contact and review.</small>
+                                    <small class="hint">Optional, but helpful for scholarship contact and review. Enter the 10-digit number after the country code.</small>
                                 </div>
 
                                 <div class="form-group">
@@ -686,6 +599,118 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
                         <input type="hidden" name="latitude" id="latitude" value="<?php echo htmlspecialchars(signupOldValue($signupOld, 'latitude')); ?>">
                         <input type="hidden" name="longitude" id="longitude" value="<?php echo htmlspecialchars(signupOldValue($signupOld, 'longitude')); ?>">
                         <input type="hidden" name="location_name" id="location_name" value="<?php echo htmlspecialchars(signupOldValue($signupOld, 'location_name')); ?>">
+
+                        <!-- Supporting Documents Section -->
+                        <div class="form-section">
+                            <h3>
+                                <i class="fas fa-file-arrow-up"></i>
+                                Supporting Documents
+                            </h3>
+
+                            <div class="academic-path-note compact-doc-note">
+                                <i class="fas fa-circle-info"></i>
+                                <div id="signupSupportingDocsNoteText">
+                                    These uploads are optional during signup. TOR is helpful for current college students, Form 138 is helpful for incoming freshmen, and the support files below can back up citizenship, income, or scholarship-category details. You can still upload clearer copies later in Documents.
+                                </div>
+                            </div>
+
+                            <div class="signup-grid compact-upload-grid">
+                                <div class="compact-upload-card" id="signupTorUploadCard">
+                                    <div class="compact-upload-header">
+                                        <div>
+                                            <h4>TOR / Grade Report</h4>
+                                            <p>PDF, JPG, or PNG up to 5MB. We will try to scan your GWA after signup.</p>
+                                        </div>
+                                        <span class="compact-upload-badge">Optional</span>
+                                    </div>
+                                    <label for="signupTorFile" class="compact-upload-label">Upload TOR</label>
+                                    <input
+                                        type="file"
+                                        id="signupTorFile"
+                                        name="signup_tor_file"
+                                        class="compact-file-input"
+                                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                    >
+                                    <small class="compact-upload-status" id="signupTorFileStatus">No file selected</small>
+                                </div>
+
+                                <div class="compact-upload-card" id="signupForm138UploadCard">
+                                    <div class="compact-upload-header">
+                                        <div>
+                                            <h4>Form 138</h4>
+                                            <p>Senior high school report card in PDF, JPG, or PNG up to 5MB.</p>
+                                        </div>
+                                        <span class="compact-upload-badge">Optional</span>
+                                    </div>
+                                    <label for="signupForm138File" class="compact-upload-label">Upload Form 138</label>
+                                    <input
+                                        type="file"
+                                        id="signupForm138File"
+                                        name="signup_form138_file"
+                                        class="compact-file-input"
+                                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                    >
+                                    <small class="compact-upload-status" id="signupForm138FileStatus">No file selected</small>
+                                </div>
+
+                                <div class="compact-upload-card" id="signupCitizenshipUploadCard">
+                                    <div class="compact-upload-header">
+                                        <div>
+                                            <h4>Citizenship / Residency Proof</h4>
+                                            <p>Birth certificate, passport, or residency document in PDF, JPG, or PNG up to 5MB.</p>
+                                        </div>
+                                        <span class="compact-upload-badge" id="signupCitizenshipUploadBadge">Optional</span>
+                                    </div>
+                                    <label for="signupCitizenshipFile" class="compact-upload-label" id="signupCitizenshipUploadLabel">Upload proof</label>
+                                    <input
+                                        type="file"
+                                        id="signupCitizenshipFile"
+                                        name="signup_citizenship_file"
+                                        class="compact-file-input"
+                                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                    >
+                                    <small class="compact-upload-status" id="signupCitizenshipFileStatus">No file selected</small>
+                                </div>
+
+                                <div class="compact-upload-card" id="signupIncomeUploadCard">
+                                    <div class="compact-upload-header">
+                                        <div>
+                                            <h4>Household Income Proof</h4>
+                                            <p>Certificate of indigency, payslip, ITR, or income certification in PDF, JPG, or PNG up to 5MB.</p>
+                                        </div>
+                                        <span class="compact-upload-badge" id="signupIncomeUploadBadge">Optional</span>
+                                    </div>
+                                    <label for="signupIncomeFile" class="compact-upload-label" id="signupIncomeUploadLabel">Upload proof</label>
+                                    <input
+                                        type="file"
+                                        id="signupIncomeFile"
+                                        name="signup_income_file"
+                                        class="compact-file-input"
+                                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                    >
+                                    <small class="compact-upload-status" id="signupIncomeFileStatus">No file selected</small>
+                                </div>
+
+                                <div class="compact-upload-card" id="signupSpecialCategoryUploadCard">
+                                    <div class="compact-upload-header">
+                                        <div>
+                                            <h4>Special Category Proof</h4>
+                                            <p>PWD ID, 4Ps record, solo parent proof, IP certification, or similar file up to 5MB.</p>
+                                        </div>
+                                        <span class="compact-upload-badge" id="signupSpecialCategoryUploadBadge">Optional</span>
+                                    </div>
+                                    <label for="signupSpecialCategoryFile" class="compact-upload-label" id="signupSpecialCategoryUploadLabel">Upload proof</label>
+                                    <input
+                                        type="file"
+                                        id="signupSpecialCategoryFile"
+                                        name="signup_special_category_file"
+                                        class="compact-file-input"
+                                        accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                                    >
+                                    <small class="compact-upload-status" id="signupSpecialCategoryFileStatus">No file selected</small>
+                                </div>
+                            </div>
+                        </div>
                         
                         <!-- Terms and Conditions -->
                         <div class="terms-checkbox">
@@ -737,6 +762,30 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
         // Must be exactly one letter, no numbers or special characters
         const initialRegex = /^[A-Za-z]$/;
         return initialRegex.test(str);
+    }
+
+    function extractLocalMobileDigits(value) {
+        let digits = value.replace(/\D/g, '');
+        if (digits.startsWith('63')) {
+            digits = digits.slice(2);
+        }
+        if (digits.startsWith('0')) {
+            digits = digits.slice(1);
+        }
+        return digits.slice(0, 10);
+    }
+
+    function syncSignupMobileNumber() {
+        const visibleInput = document.getElementById('signupMobileNumber');
+        const hiddenInput = document.getElementById('signupMobileNumberHidden');
+        if (!visibleInput || !hiddenInput) {
+            return '';
+        }
+
+        const localDigits = extractLocalMobileDigits(visibleInput.value);
+        visibleInput.value = localDigits;
+        hiddenInput.value = localDigits ? `+63${localDigits}` : '';
+        return localDigits;
     }
     
     // Clear error styling and message for a field
@@ -938,6 +987,8 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
     const signupForm = document.getElementById('signupForm');
     const signupSubmitBtn = document.getElementById('signupSubmitBtn');
     const emailInput = document.getElementById('signupEmail');
+    const mobileNumberInput = document.getElementById('signupMobileNumber');
+    const mobileNumberHiddenInput = document.getElementById('signupMobileNumberHidden');
     const genderInput = document.getElementById('signupGender');
     const verificationCodeInput = document.getElementById('signupVerificationCode');
     const sendVerificationCodeBtn = document.getElementById('sendVerificationCodeBtn');
@@ -1598,6 +1649,13 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
         });
     }
 
+    if (mobileNumberInput) {
+        mobileNumberInput.addEventListener('input', function() {
+            syncSignupMobileNumber();
+        });
+        syncSignupMobileNumber();
+    }
+
     if (courseSelect) {
         courseSelect.addEventListener('change', toggleCourseOtherField);
         toggleCourseOtherField();
@@ -1666,6 +1724,7 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
         }
         e.preventDefault();
         try {
+            syncSignupMobileNumber();
             const firstname = document.getElementById('signupFirstname').value.trim();
             const lastname = document.getElementById('signupLastname').value.trim();
             const middleinitial = document.getElementById('signupMiddlename').value.trim();
@@ -1682,6 +1741,7 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
             const barangay = barangayInput ? barangayInput.value.trim() : '';
             const city = cityInput ? cityInput.value.trim() : '';
             const province = provinceInput ? provinceInput.value.trim() : '';
+            const mobileNumber = mobileNumberHiddenInput ? mobileNumberHiddenInput.value.trim() : '';
             const applicantType = applicantTypeSelect ? applicantTypeSelect.value : '';
             const admissionStatus = admissionStatusInput ? admissionStatusInput.value : '';
             const yearLevel = yearLevelInput ? yearLevelInput.value : '';
@@ -1752,6 +1812,16 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
                     confirmButtonColor: '#3085d6'
                 });
                 setFieldError('signupMiddlename', 'middlenameError', 'Middle initial must be a single letter (A-Z)');
+                return;
+            }
+
+            if (mobileNumber && !/^\+639\d{9}$/.test(mobileNumber)) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Invalid Mobile Number',
+                    text: 'Enter a valid 10-digit mobile number after +63.',
+                    confirmButtonColor: '#3085d6'
+                });
                 return;
             }
 

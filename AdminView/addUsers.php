@@ -69,11 +69,30 @@ function tableHasColumn(PDO $pdo, string $tableName, string $columnName): bool {
 }
 
 function normalizePhoneValue(string $value): string {
-    return trim($value);
+    $value = trim($value);
+    if ($value === '') {
+        return '';
+    }
+
+    $digits = preg_replace('/\D+/', '', $value) ?? '';
+    if ($digits === '') {
+        return '';
+    }
+
+    if (str_starts_with($digits, '63')) {
+        $digits = substr($digits, 2);
+    }
+
+    if (str_starts_with($digits, '0')) {
+        $digits = substr($digits, 1);
+    }
+
+    $digits = substr($digits, 0, 10);
+    return $digits !== '' ? '+63' . $digits : '';
 }
 
 function isValidPhoneValue(string $value): bool {
-    return (bool) preg_match('/^[0-9+()\-\s]{7,25}$/', $value);
+    return (bool) preg_match('/^\+639\d{9}$/', $value);
 }
 
 function isValidAdminNameValue(string $value): bool {
@@ -170,6 +189,19 @@ function addAdminMiddleInitialDisplayValue(array $oldInput): string {
 
     $lettersOnly = preg_replace('/[^A-Za-z]/', '', $value) ?? '';
     return strtoupper(substr($lettersOnly, 0, 1));
+}
+
+function addAdminPhoneLocalValue(array $oldInput): string {
+    $value = normalizePhoneValue(addAdminOldValue($oldInput, 'phone_number', addAdminOldValue($oldInput, 'office_phone')));
+    if ($value === '') {
+        return '';
+    }
+
+    if (str_starts_with($value, '+63')) {
+        return substr($value, 3);
+    }
+
+    return $value;
 }
 
 $addAdminOld = isset($_SESSION['add_admin_old']) && is_array($_SESSION['add_admin_old']) ? $_SESSION['add_admin_old'] : [];
@@ -288,7 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($phoneNumber === '') $errors[] = 'Phone number is required';
     if ($position === '') $errors[] = 'Position is required';
     if ($phoneNumber !== '' && !isValidPhoneValue($phoneNumber)) {
-        $errors[] = 'Phone number format is invalid';
+        $errors[] = 'Phone number must be a valid +63 mobile number';
     }
 
     // Check if username already exists
@@ -383,9 +415,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="../public/css/admin_style.css">
     <link rel="stylesheet" href="../public/css/style.css">
-    <link rel="stylesheet" href="../AdminPublic/css/add-users.css">
+    <link rel="stylesheet" href="../public/css/signup.css?v=<?php echo urlencode((string) (@filemtime(__DIR__ . '/../public/css/signup.css') ?: time())); ?>">
+    <link rel="stylesheet" href="../AdminPublic/css/add-users.css?v=<?php echo urlencode((string) (@filemtime(__DIR__ . '/../AdminPublic/css/add-users.css') ?: time())); ?>">
 </head>
-<body>
+<body class="add-admin-page">
     <!-- Header -->
     <?php include 'layouts/admin_header.php'; ?>
 
@@ -395,9 +428,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="signup-container">
                 <div class="signup-card">
                     <div class="signup-header">
-                        <i class="fas fa-user-plus"></i>
+                        <i class="fas fa-user-shield signup-header-icon"></i>
                         <h1>Add Admin Account</h1>
-                        <p>Create administrator and super administrator accounts</p>
+                        <p>Create internal administrator accounts using the same guided setup pattern as student registration.</p>
+                    </div>
+
+                    <div class="signup-note">
+                        <strong>Internal account setup:</strong> this page is only for administrative staff. Choose the role first, complete the staff details, and the system will match the access scope and responsibilities automatically.
                     </div>
 
                     <?php if (!empty($formErrors)): ?>
@@ -430,15 +467,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             <option value="admin" <?php echo addAdminSelected($addAdminOld, 'role', 'admin', 'admin'); ?>>Administrator</option>
                                             <option value="super_admin" <?php echo addAdminSelected($addAdminOld, 'role', 'super_admin'); ?>>Super Administrator</option>
                                         </select>
+                                        <span class="select-chevron"><i class="fas fa-chevron-down"></i></span>
                                     </div>
-                                    <small class="hint">
+                                    <small class="hint admin-role-hint">
                                         <span class="role-badge admin">Admin</span> - Daily operations and review work
                                         <span class="role-badge super-admin" style="margin-left: 10px;">Super Admin</span> - Full system governance
                                     </small>
                                 </div>
                             </div>
                             
-                            <div class="info-note">
+                            <div class="info-note admin-role-note">
                                 <i class="fas fa-info-circle"></i>
                                 <div>
                                     <strong>Note:</strong> Provider organizations register through the public provider signup page.
@@ -451,7 +489,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="form-section">
                             <h3>
                                 <i class="fas fa-user-circle"></i>
-                                Role Information
+                                Personal Information
                             </h3>
 
                             <div id="adminIdentityFields" class="signup-grid">
@@ -477,6 +515,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                         <i class="fas fa-font"></i>
                                         <input type="text" id="middleinitial" name="middleinitial" placeholder="e.g., D" maxlength="1" value="<?php echo htmlspecialchars(addAdminMiddleInitialDisplayValue($addAdminOld)); ?>">
                                     </div>
+                                    <small class="hint">Only one letter, no period or numbers.</small>
                                 </div>
 
                                 <div class="form-group">
@@ -490,6 +529,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             </option>
                                             <?php endforeach; ?>
                                         </select>
+                                        <span class="select-chevron"><i class="fas fa-chevron-down"></i></span>
                                     </div>
                                 </div>
                             </div>
@@ -499,16 +539,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="form-section">
                             <h3>
                                 <i class="fas fa-briefcase"></i>
-                                Profile Details
+                                Staff Profile
                             </h3>
 
                             <div id="adminProfileFields" class="signup-grid">
                                 <div class="form-group">
                                     <label for="phone_number_admin">Phone Number *</label>
-                                    <div class="input-with-icon">
-                                        <i class="fas fa-phone"></i>
-                                        <input type="text" id="phone_number_admin" name="phone_number" placeholder="e.g., +63 917 123 4567" value="<?php echo htmlspecialchars(addAdminOldValue($addAdminOld, 'phone_number', addAdminOldValue($addAdminOld, 'office_phone'))); ?>">
+                                    <div class="phone-input-shell">
+                                        <span class="phone-input-icon"><i class="fas fa-phone"></i></span>
+                                        <span class="phone-prefix">+63</span>
+                                        <input type="text" id="phone_number_admin" inputmode="numeric" maxlength="10" placeholder="9123456789" value="<?php echo htmlspecialchars(addAdminPhoneLocalValue($addAdminOld)); ?>">
+                                        <input type="hidden" id="phone_number_hidden" name="phone_number" value="<?php echo htmlspecialchars(normalizePhoneValue(addAdminOldValue($addAdminOld, 'phone_number', addAdminOldValue($addAdminOld, 'office_phone')))); ?>">
                                     </div>
+                                    <small class="hint">Enter the 10-digit mobile number after the country code.</small>
                                 </div>
 
                                 <div class="form-group">
@@ -522,6 +565,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                             </option>
                                             <?php endforeach; ?>
                                         </select>
+                                        <span class="select-chevron"><i class="fas fa-chevron-down"></i></span>
                                     </div>
                                 </div>
 
@@ -529,7 +573,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                                 <input type="hidden" id="access_level" name="access_level" value="<?php echo htmlspecialchars($selectedAdminAccessLevel); ?>">
 
-                                <div class="form-group">
+                                <div class="form-group signup-full-width">
                                     <label>Administrative Scope</label>
                                     <div class="readonly-field">
                                         Access is assigned automatically from the selected role and position.
@@ -632,6 +676,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const lastnameInput = document.getElementById('lastname');
         const middleinitialInput = document.getElementById('middleinitial');
         const phoneNumberInput = document.getElementById('phone_number_admin');
+        const phoneNumberHiddenInput = document.getElementById('phone_number_hidden');
         const usernameInput = document.getElementById('username');
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
@@ -659,14 +704,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         function isValidAdminPhone(value) {
-            return /^[0-9+()\-\s]{7,25}$/.test(value);
+            return /^\+639\d{9}$/.test(value);
         }
 
+        function sanitizeAdminNameValue(value) {
+            return value.replace(/[^A-Za-z\s\-'.]/g, '').replace(/\s{2,}/g, ' ');
+        }
+
+        function extractLocalPhoneDigits(value) {
+            let digits = value.replace(/\D/g, '');
+            if (digits.startsWith('63')) {
+                digits = digits.slice(2);
+            }
+            if (digits.startsWith('0')) {
+                digits = digits.slice(1);
+            }
+            return digits.slice(0, 10);
+        }
+
+        function syncAdminPhoneNumber() {
+            const localDigits = extractLocalPhoneDigits(phoneNumberInput.value);
+            phoneNumberInput.value = localDigits;
+            if (phoneNumberHiddenInput) {
+                phoneNumberHiddenInput.value = localDigits ? `+63${localDigits}` : '';
+            }
+            return localDigits;
+        }
+
+        firstnameInput?.addEventListener('input', function() {
+            this.value = sanitizeAdminNameValue(this.value);
+        });
+
+        lastnameInput?.addEventListener('input', function() {
+            this.value = sanitizeAdminNameValue(this.value);
+        });
+
+        middleinitialInput?.addEventListener('input', function() {
+            this.value = this.value.replace(/[^A-Za-z]/g, '').slice(0, 1).toUpperCase();
+        });
+
+        phoneNumberInput?.addEventListener('input', function() {
+            syncAdminPhoneNumber();
+        });
+
+        syncAdminPhoneNumber();
+
         addUserForm.addEventListener('submit', function(e) {
+            syncAdminPhoneNumber();
             const firstname = firstnameInput.value.trim();
             const lastname = lastnameInput.value.trim();
             const middleinitial = middleinitialInput.value.trim();
-            const phoneNumber = phoneNumberInput.value.trim();
+            const phoneNumber = (phoneNumberHiddenInput ? phoneNumberHiddenInput.value.trim() : '').trim();
             const username = usernameInput.value.trim();
             const email = emailInput.value.trim();
             const password = passwordInput.value;
@@ -711,7 +799,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!isValidAdminPhone(phoneNumber)) {
                 e.preventDefault();
-                showAdminValidationError('Invalid Phone Number', 'Phone number should contain only numbers, spaces, plus signs, parentheses, or hyphens.', phoneNumberInput);
+                showAdminValidationError('Invalid Phone Number', 'Enter a valid 10-digit mobile number after +63.', phoneNumberInput);
                 return;
             }
 
@@ -834,12 +922,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const profile = resolvePositionProfile(role, positionSelect ? positionSelect.value : '');
 
             if (isSuperAdmin) {
-                infoNote.style.backgroundColor = '#fff3cd';
-                infoNote.style.color = '#856404';
+                infoNote.style.backgroundColor = '#fff7ed';
+                infoNote.style.borderColor = '#fed7aa';
+                infoNote.style.color = '#9a3412';
                 infoNote.innerHTML = '<i class="fas fa-exclamation-triangle"></i><div><strong>Super Admin:</strong> Full system governance and full administrative responsibilities.</div>';
             } else {
-                infoNote.style.backgroundColor = '#e3f2fd';
-                infoNote.style.color = '#1976d2';
+                infoNote.style.backgroundColor = '#eef4ff';
+                infoNote.style.borderColor = '#cfe0ff';
+                infoNote.style.color = '#1d4f91';
                 infoNote.innerHTML = '<i class="fas fa-info-circle"></i><div><strong>Admin:</strong> Responsibilities are assigned from the selected position.</div>';
             }
 

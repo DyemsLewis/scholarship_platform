@@ -960,6 +960,12 @@
     color: #1d4ed8;
 }
 
+.review-note.info {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4f91;
+}
+
 .review-note.rejection {
     background: #fef2f2;
     border: 1px solid #fecaca;
@@ -4018,6 +4024,26 @@
     overflow: hidden;
 }
 
+.app-review-page-header {
+    margin-bottom: 14px;
+}
+
+.app-review-page-back {
+    background: #ffffff;
+    border-color: rgba(255, 255, 255, 0.7);
+    color: #21406d;
+    box-shadow: 0 10px 24px rgba(19, 39, 71, 0.12);
+}
+
+.app-review-page-back:hover {
+    background: #f8fbff;
+    border-color: #ffffff;
+}
+
+.app-review-page-meta {
+    margin-bottom: 14px;
+}
+
 .app-review-shell-inner {
     display: grid;
     grid-template-columns: 220px minmax(0, 1fr);
@@ -4104,6 +4130,14 @@
     font-size: 1.7rem;
     font-weight: 800;
     letter-spacing: 0.06em;
+    overflow: hidden;
+}
+
+.app-review-avatar-mark img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .app-review-shell-title-wrap h1 {
@@ -4463,5 +4497,280 @@
     .app-review-stage-body {
         padding-left: 15px;
         padding-right: 15px;
+    }
+}
+
+/* Applicant profile redesign */
+.applicant-profile-shell {
+    display: grid;
+    gap: 18px;
+}
+
+.applicant-profile-summary-card {
+    display: grid;
+    gap: 16px;
+    padding: 18px;
+    border: 1px solid #dbe4ef;
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.applicant-profile-summary-top {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
+}
+
+.applicant-profile-summary-avatar {
+    width: 74px;
+    height: 74px;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid #d7e3f3;
+    background: #eef4ff;
+    flex-shrink: 0;
+}
+
+.applicant-profile-summary-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.applicant-profile-summary-copy {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.applicant-profile-summary-kicker {
+    color: #59708f;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.applicant-profile-summary-copy h3 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 1.32rem;
+    line-height: 1.18;
+}
+
+.applicant-profile-summary-copy p {
+    margin: 0;
+    color: #526176;
+    line-height: 1.55;
+}
+
+.applicant-profile-summary-contact {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
+
+.applicant-profile-summary-contact span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 0;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #dbe4ef;
+    background: #f8fafc;
+    color: #35506f;
+    font-size: 0.88rem;
+}
+
+.applicant-profile-summary-contact i,
+.applicant-profile-badge i {
+    color: #2c5aa0;
+}
+
+.applicant-profile-summary-badges {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+}
+
+.applicant-profile-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 0;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid #dbe4ef;
+    background: #f8fafc;
+    color: #35506f;
+    font-size: 0.86rem;
+}
+
+.applicant-profile-summary-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.applicant-profile-stat-card {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    padding: 14px;
+    border-radius: 16px;
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+.applicant-profile-stat-label {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.applicant-profile-stat-value {
+    color: #0f172a;
+    font-size: 1.02rem;
+    line-height: 1.35;
+}
+
+.applicant-profile-stat-meta {
+    color: #64748b;
+    font-size: 0.84rem;
+    line-height: 1.45;
+}
+
+.applicant-profile-block-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.applicant-profile-block {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+    padding: 18px;
+    border-radius: 18px;
+    border: 1px solid #dbe4ef;
+    background: #ffffff;
+}
+
+.applicant-profile-block.is-wide {
+    grid-column: 1 / -1;
+}
+
+.applicant-profile-block-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.applicant-profile-block-head h3 {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: #1f365c;
+    font-size: 1rem;
+}
+
+.applicant-profile-block-head h3 i {
+    color: #2c5aa0;
+}
+
+.applicant-profile-block-head span {
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.applicant-profile-row-list {
+    display: grid;
+    gap: 10px;
+}
+
+.applicant-profile-row-item {
+    display: grid;
+    grid-template-columns: minmax(130px, 180px) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+    min-width: 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.applicant-profile-row-item.is-full {
+    grid-template-columns: 1fr;
+}
+
+.applicant-profile-row-label {
+    color: #64748b;
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.applicant-profile-row-value {
+    min-width: 0;
+    color: #0f172a;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    word-break: break-word;
+}
+
+.applicant-profile-row-value.is-muted {
+    color: #526176;
+}
+
+@media (max-width: 1180px) {
+    .applicant-profile-summary-stats,
+    .applicant-profile-block-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 820px) {
+    .applicant-profile-summary-top,
+    .applicant-profile-block-head,
+    .applicant-profile-row-item {
+        grid-template-columns: 1fr;
+    }
+
+    .applicant-profile-summary-top,
+    .applicant-profile-block-head {
+        display: grid;
+    }
+
+    .applicant-profile-summary-stats,
+    .applicant-profile-block-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .applicant-profile-summary-card,
+    .applicant-profile-block {
+        padding: 15px;
+        border-radius: 16px;
+    }
+
+    .applicant-profile-summary-avatar {
+        width: 62px;
+        height: 62px;
+        border-radius: 16px;
+    }
+
+    .applicant-profile-summary-copy h3 {
+        font-size: 1.14rem;
     }
 }

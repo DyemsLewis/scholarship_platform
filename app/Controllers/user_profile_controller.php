@@ -358,7 +358,9 @@ class UserProfileController {
                 'shs_school' => $this->normalizeNullable($data['shs_school'] ?? null),
                 'shs_strand' => $this->normalizeNullable($data['shs_strand'] ?? null),
                 'shs_graduation_year' => $this->normalizeNullable($data['shs_graduation_year'] ?? null),
-                'shs_average' => $this->normalizeNullable($data['shs_average'] ?? null),
+                'shs_average' => array_key_exists('shs_average', $data)
+                    ? $this->normalizeNullable($data['shs_average'] ?? null)
+                    : ($existingData['shs_average'] ?? null),
                 'admission_status' => $admissionStatus,
                 'target_college' => $this->normalizeNullable($data['target_college'] ?? null),
                 'target_course' => $this->normalizeNullable($data['target_course'] ?? null),
@@ -584,7 +586,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $shsSchool = trim((string) ($_POST['shs_school'] ?? ''));
             $shsStrand = trim((string) ($_POST['shs_strand'] ?? ''));
             $shsGraduationYear = trim((string) ($_POST['shs_graduation_year'] ?? ''));
-            $shsAverage = trim((string) ($_POST['shs_average'] ?? ''));
+            $hasShsAverageField = array_key_exists('shs_average', $_POST);
+            $shsAverage = $hasShsAverageField ? trim((string) ($_POST['shs_average'] ?? '')) : null;
             $targetCollege = trim((string) ($_POST['target_college'] ?? ''));
             $targetCourse = trim((string) ($_POST['target_course'] ?? ''));
             $mobileNumber = trim((string) ($_POST['mobile_number'] ?? ''));
@@ -717,7 +720,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
             }
 
-            if ($shsAverage !== '') {
+            if ($hasShsAverageField && $shsAverage !== '') {
                 if (!is_numeric($shsAverage)) {
                     $errors[] = 'Senior high school average must be a valid number';
                 } else {
@@ -756,7 +759,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 'shs_school' => $shsSchool,
                 'shs_strand' => $shsStrand,
                 'shs_graduation_year' => $shsGraduationYear,
-                'shs_average' => $shsAverage,
                 'admission_status' => $admissionStatus,
                 'target_college' => $targetCollege,
                 'target_course' => $targetCourse,
@@ -776,6 +778,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 'longitude' => $longitudeRaw,
                 'location_name' => trim((string) ($_POST['location_name'] ?? ''))
             ];
+
+            if ($hasShsAverageField) {
+                $data['shs_average'] = $shsAverage;
+            }
 
             $result = $controller->updateProfile($_SESSION['user_id'], $data);
             echo json_encode($result);

@@ -338,6 +338,17 @@
     color: #991b1b;
 }
 
+.reviewer-note {
+    background: #eff6ff;
+    border-left: 3px solid #2c5aa0;
+    padding: 10px;
+    border-radius: 8px;
+    margin: 12px 0;
+    font-size: 0.7rem;
+    line-height: 1.5;
+    color: #1d4f91;
+}
+
 .academic-upload-note {
     display: flex;
     align-items: flex-start;

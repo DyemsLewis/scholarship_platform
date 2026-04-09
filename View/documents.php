@@ -189,6 +189,11 @@ $completion = $totalTypes > 0 ? round(($totalUploaded / $totalTypes) * 100) : 0;
                     $statusIcon = $status == 'verified' ? 'check-circle' : 
                                  ($status == 'pending' ? 'clock' : 
                                  ($status == 'rejected' ? 'times-circle' : 'exclamation-circle'));
+                    $reviewerNote = $uploadedDoc ? extractReviewerDocumentNote($uploadedDoc['admin_notes'] ?? null) : '';
+                    $rejectionReason = $uploadedDoc ? trim((string) ($uploadedDoc['rejection_reason'] ?? '')) : '';
+                    if ($rejectionReason === '' && $status === 'rejected' && $uploadedDoc) {
+                        $rejectionReason = stripReviewerDocumentNote($uploadedDoc['admin_notes'] ?? null);
+                    }
                     $searchBlob = strtolower(trim(implode(' ', array_filter([
                         $docName,
                         $docType,
@@ -237,10 +242,17 @@ $completion = $totalTypes > 0 ? round(($totalUploaded / $totalTypes) * 100) : 0;
                                 </div>
                             </div>
                             
-                            <?php if ($status == 'rejected' && !empty($uploadedDoc['admin_notes'])): ?>
+                            <?php if ($status == 'rejected' && $rejectionReason !== ''): ?>
                             <div class="rejection-note">
                                 <i class="fas fa-exclamation-circle"></i>
-                                <strong>Reason:</strong> <?php echo htmlspecialchars($uploadedDoc['admin_notes']); ?>
+                                <strong>Reason:</strong> <?php echo htmlspecialchars($rejectionReason); ?>
+                            </div>
+                            <?php endif; ?>
+
+                            <?php if ($reviewerNote !== ''): ?>
+                            <div class="reviewer-note">
+                                <i class="fas fa-note-sticky"></i>
+                                <strong>Reviewer Note:</strong> <?php echo nl2br(htmlspecialchars($reviewerNote)); ?>
                             </div>
                             <?php endif; ?>
 
