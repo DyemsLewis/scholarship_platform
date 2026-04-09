@@ -4,6 +4,8 @@ require_once __DIR__ . '/../app/Config/db_config.php';
 require_once __DIR__ . '/../app/Config/url_token.php';
 require_once __DIR__ . '/../app/Controllers/scholarshipResultController.php';
 require_once __DIR__ . '/../app/Models/UserDocument.php';
+
+$scholarshipsPageCssVersion = @filemtime(__DIR__ . '/../public/css/scholarships-page.css') ?: time();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -17,7 +19,7 @@ require_once __DIR__ . '/../app/Models/UserDocument.php';
 <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/resultmap.css')); ?>">
 <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/card-pagination.css')); ?>">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/scholarships-page.css')); ?>">
+<link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/scholarships-page.css') . '?v=' . rawurlencode((string) $scholarshipsPageCssVersion)); ?>">
 </head>
 <body>
     <!-- Header -->

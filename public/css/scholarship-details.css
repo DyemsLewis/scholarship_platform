@@ -35,20 +35,6 @@ body.scholarship-detail-modal-open {
     color: #173c6d;
 }
 
-.scholarship-detail-pagebar-tag {
-    display: inline-flex;
-    align-items: center;
-    padding: 6px 10px;
-    border: 1px solid #dbe7f5;
-    border-radius: 999px;
-    background: #ffffff;
-    color: #526277;
-    font-size: 0.67rem;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-}
-
 .scholarship-hero-card,
 .scholarship-detail-panel,
 .scholarship-rules-dialog {
@@ -155,11 +141,16 @@ body.scholarship-detail-modal-open {
     gap: 12px;
 }
 
+.scholarship-hero-tools,
 .scholarship-hero-badges,
 .scholarship-action-row {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.scholarship-hero-tools {
+    justify-content: flex-end;
 }
 
 .scholarship-status-badge,
@@ -699,6 +690,10 @@ body.scholarship-detail-modal-open {
     margin-top: 12px;
 }
 
+.scholarship-match-note {
+    margin-top: 14px;
+}
+
 .scholarship-rules-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -758,7 +753,8 @@ body.scholarship-detail-modal-open {
     }
 
     .scholarship-action-row,
-    .scholarship-hero-badges {
+    .scholarship-hero-badges,
+    .scholarship-hero-tools {
         flex-direction: column;
         align-items: stretch;
     }

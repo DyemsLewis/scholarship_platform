@@ -1064,6 +1064,219 @@ $cantApplyRuleItems = [
 ];
 
 $rulesInfoNote = 'These rules explain system readiness only. Final approval still depends on the provider review process.';
+
+$coursePathwayCheck = null;
+foreach ($currentInfoChecks as $currentInfoCheck) {
+    if (strtolower(trim((string) ($currentInfoCheck['key'] ?? ''))) === 'course_pathway') {
+        $coursePathwayCheck = $currentInfoCheck;
+        break;
+    }
+}
+
+$courseMatchValue = 'Course details still needed';
+$courseMatchDetail = 'Add your current or target course so the system can compare it with the scholarship focus.';
+$courseMatchClass = 'info';
+if (is_array($coursePathwayCheck)) {
+    $courseMatchStatus = strtolower(trim((string) ($coursePathwayCheck['status'] ?? 'pending')));
+    $courseMatchDetail = trim((string) ($coursePathwayCheck['detail'] ?? $courseMatchDetail));
+
+    if ($courseMatchStatus === 'met') {
+        $courseMatchValue = 'Strong course alignment';
+        $courseMatchClass = 'good';
+    } elseif ($courseMatchStatus === 'warn') {
+        $courseMatchValue = 'Partial course alignment';
+        $courseMatchClass = 'warn';
+    } else {
+        $courseMatchValue = 'Course details still needed';
+        $courseMatchClass = 'info';
+    }
+} elseif (!empty($userCourse) || !empty($userTargetCourse)) {
+    $courseMatchValue = 'Course information on file';
+    $courseMatchDetail = 'The DSS compares your current or target course with the scholarship focus.';
+}
+
+$profileMatchValue = ($profileEvaluation['total'] ?? 0) > 0
+    ? (($profileEvaluation['met'] ?? 0) . '/' . ($profileEvaluation['total'] ?? 0) . ' audience rules aligned')
+    : 'No extra audience filters';
+$profileMatchClass = ($profileEvaluation['total'] ?? 0) > 0
+    ? ($profileClass === 'bad' ? 'bad' : ($profileClass === 'warn' ? 'warn' : 'good'))
+    : 'info';
+
+$studentContextValue = $currentInfoTotal > 0
+    ? ($currentInfoMet . '/' . $currentInfoTotal . ' support signals aligned')
+    : 'No extra context checks';
+$studentContextClass = $currentInfoClass === 'good'
+    ? 'good'
+    : ($currentInfoClass === 'warn' ? 'warn' : 'info');
+
+$deadlineSignalValue = $applicationWindowDecision;
+$deadlineSignalDetail = $applicationWindowDetail;
+$deadlineSignalClass = $applicationWindowClass === 'bad'
+    ? 'bad'
+    : ($applicationWindowClass === 'warn' ? 'warn' : 'good');
+
+$providerSignalValue = 'Standard provider signal';
+$providerSignalDetail = 'Provider profile contributes a smaller general ranking signal in the DSS.';
+$providerSignalClass = 'info';
+$providerNameForScore = (string) ($scholarship['provider'] ?? '');
+$recognizedProviders = ['CHED', 'DOST', 'University of the Philippines', 'SM Foundation', 'Ayala Foundation'];
+$recognizedProviderMatch = false;
+foreach ($recognizedProviders as $recognizedProvider) {
+    if ($providerNameForScore !== '' && stripos($providerNameForScore, $recognizedProvider) !== false) {
+        $recognizedProviderMatch = true;
+        break;
+    }
+}
+if ($recognizedProviderMatch) {
+    $providerSignalValue = 'Established provider signal';
+    $providerSignalDetail = 'Recognized providers receive a slightly stronger ranking signal in the DSS.';
+    $providerSignalClass = 'good';
+} elseif ($providerNameForScore !== '' && (stripos($providerNameForScore, 'university') !== false || stripos($providerNameForScore, 'college') !== false)) {
+    $providerSignalValue = 'Academic institution signal';
+    $providerSignalDetail = 'College and university providers receive a moderate ranking signal in the DSS.';
+    $providerSignalClass = 'good';
+}
+
+$matchGuideButtonLabel = $matchPercentage !== null
+    ? ('Why ' . (int) $matchPercentage . '% match?')
+    : 'How match works';
+$matchGuideTitle = $matchPercentage !== null
+    ? ('Why this shows as ' . (int) $matchPercentage . '% match')
+    : 'How the match score works';
+
+if (!$isLoggedIn) {
+    $matchGuideSummary = 'This is a personalized fit score. Log in and complete your student details to see how well this scholarship matches your profile.';
+} elseif ($requiresGwa) {
+    $matchGuideSummary = 'This score is still partly estimated because your academic record is missing. The DSS is using your other profile signals for now.';
+} elseif ($matchPercentage !== null && $matchPercentage >= 80) {
+    $matchGuideSummary = 'This is a strong fit score because several major DSS signals line up well with this scholarship.';
+} elseif ($matchPercentage !== null && $matchPercentage >= 60) {
+    $matchGuideSummary = 'This is a moderate fit score. Some major DSS signals line up, but a few areas are weaker or still incomplete.';
+} elseif ($matchPercentage !== null) {
+    $matchGuideSummary = 'This is a lower fit score right now because the scholarship and your current record are not aligning strongly yet.';
+} else {
+    $matchGuideSummary = 'The DSS uses your current academic and profile details to build a fit score for each scholarship.';
+}
+
+$matchGuideNote = 'This percentage ranks fit only. Required documents affect whether you can submit, and final approval still depends on provider review.';
+
+$matchScorePositiveReasons = [];
+$matchScoreLimitingReasons = [];
+
+if ($requiredGwa !== null) {
+    if (!$isLoggedIn) {
+        $pushReason($matchScoreLimitingReasons, 'Log in so the system can compare your GWA with the scholarship requirement.');
+    } elseif (empty($userGWA)) {
+        $pushReason($matchScoreLimitingReasons, 'Your academic record is missing, so the score is only partly estimated right now.');
+    } elseif ((float) $userGWA <= (float) $requiredGwa) {
+        $pushReason($matchScorePositiveReasons, 'Your GWA is within the required range for this scholarship.');
+    } else {
+        $pushReason($matchScoreLimitingReasons, 'Your current GWA is above the scholarship limit.');
+    }
+} else {
+    $pushReason($matchScorePositiveReasons, 'This scholarship does not require a fixed GWA cutoff.');
+}
+
+if (is_array($coursePathwayCheck)) {
+    $courseScoreReasonText = trim((string) ($coursePathwayCheck['detail'] ?? ''));
+    $courseScoreStatus = strtolower(trim((string) ($coursePathwayCheck['status'] ?? 'pending')));
+    if ($courseScoreStatus === 'met') {
+        $pushReason($matchScorePositiveReasons, $courseScoreReasonText);
+    } elseif (in_array($courseScoreStatus, ['warn', 'pending'], true)) {
+        $pushReason($matchScoreLimitingReasons, $courseScoreReasonText);
+    }
+}
+
+if (($profileEvaluation['total'] ?? 0) > 0) {
+    if (($profileEvaluation['failed'] ?? 0) > 0) {
+        $pushReason($matchScoreLimitingReasons, 'Some applicant profile rules do not match this scholarship audience yet.');
+    } elseif (($profileEvaluation['pending'] ?? 0) > 0) {
+        $pushReason($matchScoreLimitingReasons, 'Some audience-fit details are still missing from your profile.');
+    } else {
+        $pushReason($matchScorePositiveReasons, 'Your applicant profile matches the target audience rules.');
+    }
+} else {
+    $pushReason($matchScorePositiveReasons, 'The scholarship is open to a broader set of applicants, which helps your fit score.');
+}
+
+if ($currentInfoTotal > 0) {
+    if ($currentInfoPending > 0) {
+        $pushReason($matchScoreLimitingReasons, 'Some current student details are still missing, so the DSS cannot use the full context yet.');
+    } elseif ($currentInfoWarn > 0) {
+        $pushReason($matchScoreLimitingReasons, 'Some current student signals only partially support this scholarship focus.');
+    } elseif ($currentInfoMet > 0) {
+        $pushReason($matchScorePositiveReasons, 'Your current student details support this scholarship focus.');
+    }
+}
+
+if ($applicationNotYetOpen) {
+    $pushReason($matchScoreLimitingReasons, 'Applications have not opened yet, so the timing signal is weaker right now.');
+} elseif ($deadlineClass === 'bad') {
+    $pushReason($matchScoreLimitingReasons, 'The application period has already closed.');
+} elseif ($deadlineClass === 'warn') {
+    $pushReason($matchScoreLimitingReasons, 'The deadline is close, so the timing signal is smaller.');
+} else {
+    $pushReason($matchScorePositiveReasons, 'The application window timing supports this recommendation.');
+}
+
+if ($recognizedProviderMatch) {
+    $pushReason($matchScorePositiveReasons, 'The provider is recognized in the DSS as an established scholarship source.');
+} elseif ($providerSignalClass === 'good') {
+    $pushReason($matchScorePositiveReasons, 'The provider receives an academic-institution ranking signal in the DSS.');
+}
+
+$matchScorePositiveItems = !empty($matchScorePositiveReasons)
+    ? array_slice($matchScorePositiveReasons, 0, 4)
+    : ['The DSS has not found strong positive scoring signals yet.'];
+$matchScoreLimitingItems = !empty($matchScoreLimitingReasons)
+    ? array_slice($matchScoreLimitingReasons, 0, 4)
+    : ['No major factor is pulling the match score down right now.'];
+
+$matchScoreFactors = [
+    [
+        'label' => 'Academic fit',
+        'value' => $academicDecision,
+        'detail' => $academicDetail,
+        'class' => $academicClass,
+        'icon' => 'fa-chart-line',
+    ],
+    [
+        'label' => 'Course focus',
+        'value' => $courseMatchValue,
+        'detail' => $courseMatchDetail,
+        'class' => $courseMatchClass,
+        'icon' => 'fa-graduation-cap',
+    ],
+    [
+        'label' => 'Audience fit',
+        'value' => $profileMatchValue,
+        'detail' => $profileDetail,
+        'class' => $profileMatchClass,
+        'icon' => 'fa-user-check',
+    ],
+    [
+        'label' => 'Student context',
+        'value' => $studentContextValue,
+        'detail' => $currentInfoDetail,
+        'class' => $studentContextClass,
+        'icon' => 'fa-id-card',
+    ],
+    [
+        'label' => 'Application timing',
+        'value' => $deadlineSignalValue,
+        'detail' => $deadlineSignalDetail,
+        'class' => $deadlineSignalClass,
+        'icon' => 'fa-calendar-days',
+    ],
+    [
+        'label' => 'Provider signal',
+        'value' => $providerSignalValue,
+        'detail' => $providerSignalDetail,
+        'class' => $providerSignalClass,
+        'icon' => 'fa-building-columns',
+    ],
+];
+
 $studentFocusItems = !empty($attentionReasons) ? $attentionReasons : $matchedReasons;
 $studentFocusTone = !empty($attentionReasons) ? 'warning' : 'positive';
 $studentFocusTitle = !empty($attentionReasons) ? 'Why you cannot apply yet' : 'Why you can apply right now';
@@ -1123,7 +1336,6 @@ if (empty($importantNotes) && $visitSiteUrl !== '') {
                 <i class="fas fa-arrow-left"></i>
                 Back to Scholarships
             </a>
-            <span class="scholarship-detail-pagebar-tag">Student View</span>
         </div>
 
         <article class="scholarship-hero-card state-<?php echo htmlspecialchars($detailCardStatusClass); ?>">
@@ -1158,10 +1370,17 @@ if (empty($importantNotes) && $visitSiteUrl !== '') {
                         </span>
                     </div>
 
-                    <button type="button" class="scholarship-rules-trigger" id="detailRulesOpen" aria-haspopup="dialog" aria-controls="detailRulesModal">
-                        <i class="fas fa-circle-info"></i>
-                        Rules Guide
-                    </button>
+                    <div class="scholarship-hero-tools">
+                        <button type="button" class="scholarship-rules-trigger" id="detailMatchOpen" aria-haspopup="dialog" aria-controls="detailMatchModal">
+                            <i class="fas fa-percent"></i>
+                            <?php echo htmlspecialchars($matchGuideButtonLabel); ?>
+                        </button>
+
+                        <button type="button" class="scholarship-rules-trigger" id="detailRulesOpen" aria-haspopup="dialog" aria-controls="detailRulesModal">
+                            <i class="fas fa-circle-info"></i>
+                            Rules Guide
+                        </button>
+                    </div>
                 </div>
 
                 <div class="scholarship-hero-copy">
@@ -1427,6 +1646,62 @@ if (empty($importantNotes) && $visitSiteUrl !== '') {
             </aside>
         </div>
 
+        <div class="scholarship-rules-modal" id="detailMatchModal" hidden>
+            <div class="scholarship-rules-backdrop" data-close-detail-match></div>
+            <div class="scholarship-rules-dialog" role="dialog" aria-modal="true" aria-labelledby="detailMatchTitle">
+                <div class="scholarship-rules-header">
+                    <div>
+                        <span class="scholarship-detail-eyebrow">Match Guide</span>
+                        <h2 id="detailMatchTitle"><?php echo htmlspecialchars($matchGuideTitle); ?></h2>
+                    </div>
+                    <button type="button" class="scholarship-rules-close" data-close-detail-match aria-label="Close match guide">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <p class="scholarship-rules-copy"><?php echo htmlspecialchars($matchGuideSummary); ?></p>
+
+                <div class="scholarship-text-block scholarship-match-note">
+                    <p><?php echo htmlspecialchars($matchGuideNote); ?></p>
+                </div>
+
+                <div class="scholarship-check-grid scholarship-match-factor-grid">
+                    <?php foreach ($matchScoreFactors as $matchScoreFactor): ?>
+                        <article class="scholarship-check-item state-<?php echo htmlspecialchars((string) ($matchScoreFactor['class'] ?? 'info')); ?>">
+                            <div class="scholarship-check-icon">
+                                <i class="fas <?php echo htmlspecialchars((string) ($matchScoreFactor['icon'] ?? 'fa-circle-info')); ?>"></i>
+                            </div>
+                            <div class="scholarship-check-copy">
+                                <span><?php echo htmlspecialchars((string) ($matchScoreFactor['label'] ?? 'Factor')); ?></span>
+                                <strong><?php echo htmlspecialchars((string) ($matchScoreFactor['value'] ?? '')); ?></strong>
+                                <p><?php echo htmlspecialchars((string) ($matchScoreFactor['detail'] ?? '')); ?></p>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="scholarship-rules-grid">
+                    <section class="scholarship-rules-card">
+                        <h3>Main reasons helping this score</h3>
+                        <ul class="scholarship-bullet-list tone-positive">
+                            <?php foreach ($matchScorePositiveItems as $matchScorePositiveItem): ?>
+                                <li><?php echo htmlspecialchars($matchScorePositiveItem); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </section>
+
+                    <section class="scholarship-rules-card scholarship-rules-card-warning">
+                        <h3>What is limiting the score right now</h3>
+                        <ul class="scholarship-bullet-list tone-warning">
+                            <?php foreach ($matchScoreLimitingItems as $matchScoreLimitingItem): ?>
+                                <li><?php echo htmlspecialchars($matchScoreLimitingItem); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </section>
+                </div>
+            </div>
+        </div>
+
         <div class="scholarship-rules-modal" id="detailRulesModal" hidden>
             <div class="scholarship-rules-backdrop" data-close-detail-rules></div>
             <div class="scholarship-rules-dialog" role="dialog" aria-modal="true" aria-labelledby="detailRulesTitle">
@@ -1470,32 +1745,74 @@ if (empty($importantNotes) && $visitSiteUrl !== '') {
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/script.js')); ?>"></script>
 <script>
 (function () {
-    const modal = document.getElementById('detailRulesModal');
-    const openButton = document.getElementById('detailRulesOpen');
-    if (!modal || !openButton) {
-        return;
+    const modalConfigs = [
+        {
+            modalId: 'detailMatchModal',
+            openId: 'detailMatchOpen',
+            closeSelector: '[data-close-detail-match]'
+        },
+        {
+            modalId: 'detailRulesModal',
+            openId: 'detailRulesOpen',
+            closeSelector: '[data-close-detail-rules]'
+        }
+    ];
+
+    const allModals = modalConfigs
+        .map(function (config) {
+            return document.getElementById(config.modalId);
+        })
+        .filter(Boolean);
+
+    function syncBodyState() {
+        const hasOpenModal = allModals.some(function (modal) {
+            return !modal.hidden;
+        });
+
+        document.body.classList.toggle('scholarship-detail-modal-open', hasOpenModal);
     }
 
-    const closeElements = modal.querySelectorAll('[data-close-detail-rules]');
-
-    function openModal() {
-        modal.hidden = false;
-        document.body.classList.add('scholarship-detail-modal-open');
-    }
-
-    function closeModal() {
+    function closeModal(modal) {
+        if (!modal) {
+            return;
+        }
         modal.hidden = true;
-        document.body.classList.remove('scholarship-detail-modal-open');
+        syncBodyState();
     }
 
-    openButton.addEventListener('click', openModal);
-    closeElements.forEach(function (element) {
-        element.addEventListener('click', closeModal);
+    function openModal(targetModal) {
+        allModals.forEach(function (modal) {
+            modal.hidden = modal !== targetModal;
+        });
+        syncBodyState();
+    }
+
+    modalConfigs.forEach(function (config) {
+        const modal = document.getElementById(config.modalId);
+        const openButton = document.getElementById(config.openId);
+        if (!modal || !openButton) {
+            return;
+        }
+
+        const closeElements = modal.querySelectorAll(config.closeSelector);
+
+        openButton.addEventListener('click', function () {
+            openModal(modal);
+        });
+
+        closeElements.forEach(function (element) {
+            element.addEventListener('click', function () {
+                closeModal(modal);
+            });
+        });
     });
 
     document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && !modal.hidden) {
-            closeModal();
+        if (event.key === 'Escape') {
+            allModals.forEach(function (modal) {
+                modal.hidden = true;
+            });
+            syncBodyState();
         }
     });
 })();
