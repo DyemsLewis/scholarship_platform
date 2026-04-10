@@ -110,10 +110,40 @@ function isValidProfileMiddleInitial(value) {
     return value === '' || /^[A-Za-z]$/.test(value);
 }
 
+function extractProfileLocalMobileDigits(value) {
+    let digits = String(value || '').replace(/\D/g, '');
+    if (digits.startsWith('63')) {
+        digits = digits.slice(2);
+    }
+    if (digits.startsWith('0')) {
+        digits = digits.slice(1);
+    }
+    return digits.slice(0, 10);
+}
+
+function syncProfileMobileNumber() {
+    const visibleInput = document.getElementById('editMobileNumber');
+    const hiddenInput = document.getElementById('editMobileNumberHidden');
+    if (!visibleInput || !hiddenInput) {
+        return '';
+    }
+
+    const localDigits = extractProfileLocalMobileDigits(visibleInput.value);
+    visibleInput.value = localDigits;
+    hiddenInput.value = localDigits ? `+63${localDigits}` : '';
+    return localDigits;
+}
+
 const middleInitialInput = document.getElementById('editMiddleInitial');
 middleInitialInput?.addEventListener('input', function () {
     this.value = this.value.replace(/[^A-Za-z]/g, '').slice(0, 1).toUpperCase();
 });
+
+const profileMobileNumberInput = document.getElementById('editMobileNumber');
+profileMobileNumberInput?.addEventListener('input', function () {
+    syncProfileMobileNumber();
+});
+syncProfileMobileNumber();
 
 const profileImageInput = document.getElementById('editProfileImage');
 const profileAvatarPreview = document.getElementById('profileAvatarPreview');
@@ -211,9 +241,11 @@ document.getElementById('editProfileForm')?.addEventListener('submit', function(
     const firstNameInput = document.getElementById('editFirstName');
     const middleInitialInput = document.getElementById('editMiddleInitial');
     const lastNameInput = document.getElementById('editLastName');
+    const mobileNumberInput = document.getElementById('editMobileNumber');
     const firstName = firstNameInput ? firstNameInput.value.trim() : '';
     const middleInitial = middleInitialInput ? middleInitialInput.value.trim() : '';
     const lastName = lastNameInput ? lastNameInput.value.trim() : '';
+    const localMobileNumber = syncProfileMobileNumber();
 
     if (!firstName) {
         Swal.fire({
@@ -257,6 +289,15 @@ document.getElementById('editProfileForm')?.addEventListener('submit', function(
             title: 'Invalid Middle Initial',
             text: 'Middle initial must be a single letter.'
         }).then(() => middleInitialInput?.focus());
+        return;
+    }
+
+    if (localMobileNumber && !/^9\d{9}$/.test(localMobileNumber)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Mobile Number',
+            text: 'Enter a valid 10-digit mobile number after +63.'
+        }).then(() => mobileNumberInput?.focus());
         return;
     }
 

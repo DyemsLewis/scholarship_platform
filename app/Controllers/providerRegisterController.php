@@ -3,6 +3,7 @@ require_once __DIR__ . '/../Config/session_bootstrap.php';
 
 require_once __DIR__ . '/../Config/db_config.php';
 require_once __DIR__ . '/../Config/csrf.php';
+require_once __DIR__ . '/../Config/helpers.php';
 require_once __DIR__ . '/../Config/signup_verification.php';
 require_once __DIR__ . '/../Config/notification_helpers.php';
 require_once __DIR__ . '/../Config/password_policy.php';
@@ -245,7 +246,7 @@ $contactFirstName = providerNormalizeInput($_POST['contact_person_firstname'] ??
 $contactLastName = providerNormalizeInput($_POST['contact_person_lastname'] ?? '');
 $contactPosition = providerNormalizeInput($_POST['contact_person_position'] ?? '');
 $phoneNumber = providerNormalizeInput($_POST['phone_number'] ?? '');
-$mobileNumber = providerNormalizeNullable($_POST['mobile_number'] ?? '');
+$mobileNumber = normalizePhilippineMobileNumber($_POST['mobile_number'] ?? '');
 $houseNo = providerNormalizeNullable($_POST['house_no'] ?? '');
 $street = providerNormalizeInput($_POST['street'] ?? '');
 $barangay = providerNormalizeInput($_POST['barangay'] ?? '');
@@ -312,8 +313,8 @@ if (!providerValidPhone($phoneNumber, true)) {
     $errors[] = 'Phone number is required and must be valid.';
 }
 
-if (!providerValidPhone($mobileNumber, false)) {
-    $errors[] = 'Mobile number must be valid.';
+if (!isValidPhilippineMobileNumber($_POST['mobile_number'] ?? '', false)) {
+    $errors[] = 'Mobile number must be a valid +63 mobile number.';
 }
 
 if (!providerValidText($street, 120) || !providerValidText($barangay, 120) || !providerValidText($city, 120) || !providerValidText($province, 120)) {

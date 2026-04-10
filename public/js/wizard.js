@@ -152,6 +152,7 @@ class ScholarshipWizard {
     validateDocumentsStep() {
         const missingDocs = this.getIntValue('missingDocsCount');
         const rejectedDocs = this.getIntValue('rejectedDocsCount');
+        const pendingDocs = this.getIntValue('pendingDocsCount');
 
         if (missingDocs > 0) {
             this.showToast('Please upload all missing required documents.', 'warning');
@@ -160,6 +161,11 @@ class ScholarshipWizard {
 
         if (rejectedDocs > 0) {
             this.showToast('Please re-upload rejected required documents.', 'warning');
+            return false;
+        }
+
+        if (pendingDocs > 0) {
+            this.showPendingDocumentsAlert('Please wait for all required documents to finish review before applying.');
             return false;
         }
 
@@ -222,7 +228,12 @@ class ScholarshipWizard {
                 await this.showSubmissionSuccess(data.message || 'Application submitted successfully.');
                 window.location.href = 'scholarships.php';
             } catch (error) {
-                this.showToast(error.message || 'Failed to submit application.', 'error');
+                const errorMessage = error.message || 'Failed to submit application.';
+                if (this.isPendingDocumentsMessage(errorMessage)) {
+                    await this.showPendingDocumentsAlert(errorMessage);
+                } else {
+                    this.showToast(errorMessage, 'error');
+                }
                 if (submitButton) {
                     submitButton.disabled = false;
                     submitButton.innerHTML = originalLabel;
@@ -266,6 +277,28 @@ class ScholarshipWizard {
 
         window.alert(message);
         return Promise.resolve();
+    }
+
+    showPendingDocumentsAlert(message) {
+        if (typeof Swal !== 'undefined') {
+            return Swal.fire({
+                icon: 'warning',
+                title: 'Documents Still Pending',
+                text: message,
+                confirmButtonText: 'Okay',
+                confirmButtonColor: '#d97706'
+            });
+        }
+
+        this.showToast(message, 'warning');
+        return Promise.resolve();
+    }
+
+    isPendingDocumentsMessage(message) {
+        const normalizedMessage = String(message || '').toLowerCase();
+        return normalizedMessage.includes('pending review')
+            || normalizedMessage.includes('finish review before applying')
+            || normalizedMessage.includes('still pending review');
     }
 
     showToast(message, type = 'info') {

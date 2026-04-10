@@ -106,7 +106,7 @@ if (isset($_SESSION['user_id'])) {
     $userBarangay = $_SESSION['user_barangay'] ?? '';
     $userCity = $_SESSION['user_city'] ?? '';
     $userProvince = $_SESSION['user_province'] ?? '';
-    $userMobileNumber = $_SESSION['user_mobile_number'] ?? '';
+    $userMobileNumber = formatPhilippineMobileNumber($_SESSION['user_mobile_number'] ?? '');
     $userCitizenship = $_SESSION['user_citizenship'] ?? '';
     $userHouseholdIncomeBracket = $_SESSION['user_household_income_bracket'] ?? '';
     $userSpecialCategory = $_SESSION['user_special_category'] ?? '';
@@ -162,7 +162,9 @@ if (isset($_SESSION['user_id'])) {
 
                 foreach ($sessionFieldMap as $dataKey => $sessionKey) {
                     if (array_key_exists($dataKey, $latestStudentData)) {
-                        $_SESSION[$sessionKey] = $latestStudentData[$dataKey];
+                        $_SESSION[$sessionKey] = $dataKey === 'mobile_number'
+                            ? formatPhilippineMobileNumber($latestStudentData[$dataKey] ?? '')
+                            : $latestStudentData[$dataKey];
                     }
                 }
             }
@@ -202,7 +204,7 @@ if (isset($_SESSION['user_id'])) {
             $userBarangay = $_SESSION['user_barangay'] ?? '';
             $userCity = $_SESSION['user_city'] ?? '';
             $userProvince = $_SESSION['user_province'] ?? '';
-            $userMobileNumber = $_SESSION['user_mobile_number'] ?? '';
+            $userMobileNumber = formatPhilippineMobileNumber($_SESSION['user_mobile_number'] ?? '');
             $userCitizenship = $_SESSION['user_citizenship'] ?? '';
             $userHouseholdIncomeBracket = $_SESSION['user_household_income_bracket'] ?? '';
             $userSpecialCategory = $_SESSION['user_special_category'] ?? '';

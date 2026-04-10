@@ -105,6 +105,11 @@ class ScholarshipService {
         return $matchedScholarships;
     }
 
+    public function getMatchAssessmentForScholarship(array $scholarship, $userGWA, $userCourse, array $userProfile = []): array
+    {
+        return $this->calculateMatchScore($scholarship, $userGWA, $userCourse, $userProfile);
+    }
+
     private function normalizeProfile(array $userProfile, $userCourse = ''): array {
         $profile = [
             'applicant_type' => strtolower(trim((string) ($userProfile['applicant_type'] ?? ''))),

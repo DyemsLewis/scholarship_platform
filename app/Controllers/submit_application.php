@@ -196,14 +196,18 @@ try {
         }
     }
 
-    // Allow application when documents are pending review, but block if any required doc is missing.
+    // Required documents must be complete and fully verified before application submission.
     $documentModel = new UserDocument($pdo);
     $requirementSummary = $documentModel->checkScholarshipRequirements($userId, $scholarshipId);
     $missingDocuments = $requirementSummary['missing'] ?? [];
     $rejectedDocuments = [];
+    $pendingDocuments = [];
     foreach (($requirementSummary['requirements'] ?? []) as $requirement) {
         if (($requirement['status'] ?? '') === 'rejected' && !empty($requirement['name'])) {
             $rejectedDocuments[] = (string) $requirement['name'];
+        }
+        if (($requirement['status'] ?? '') === 'pending' && !empty($requirement['name'])) {
+            $pendingDocuments[] = (string) $requirement['name'];
         }
     }
 
@@ -228,6 +232,18 @@ try {
         jsonResponse(422, [
             'success' => false,
             'message' => 'Cannot submit yet. Please re-upload rejected required documents: ' . $preview . '.'
+        ]);
+    }
+
+    if (!empty($pendingDocuments)) {
+        $preview = implode(', ', array_slice($pendingDocuments, 0, 3));
+        if (count($pendingDocuments) > 3) {
+            $preview .= ' and ' . (count($pendingDocuments) - 3) . ' more';
+        }
+
+        jsonResponse(422, [
+            'success' => false,
+            'message' => 'Cannot submit yet. These required documents are still pending review: ' . $preview . '.'
         ]);
     }
 

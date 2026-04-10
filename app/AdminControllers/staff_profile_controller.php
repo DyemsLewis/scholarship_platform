@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../Config/session_bootstrap.php';
 require_once __DIR__ . '/../Config/db_config.php';
 require_once __DIR__ . '/../Config/access_control.php';
+require_once __DIR__ . '/../Config/helpers.php';
 require_once __DIR__ . '/../Config/password_policy.php';
 require_once __DIR__ . '/../Models/User.php';
 require_once __DIR__ . '/../Models/StaffAccountProfile.php';
@@ -140,7 +141,7 @@ class StaffSelfProfileController {
             'contact_person_lastname' => trim((string) ($data['contact_person_lastname'] ?? ($existing['contact_person_lastname'] ?? ''))),
             'contact_person_position' => trim((string) ($data['contact_person_position'] ?? ($existing['contact_person_position'] ?? ''))),
             'phone_number' => trim((string) ($data['phone_number'] ?? ($existing['phone_number'] ?? ''))),
-            'mobile_number' => trim((string) ($data['mobile_number'] ?? ($existing['mobile_number'] ?? ''))),
+            'mobile_number' => formatPhilippineMobileNumber($data['mobile_number'] ?? ($existing['mobile_number'] ?? '')),
             'organization_email' => trim((string) ($data['organization_email'] ?? ($existing['organization_email'] ?? ($user['email'] ?? '')))),
             'website' => trim((string) ($data['website'] ?? ($existing['website'] ?? ''))),
             'organization_type' => strtolower(trim((string) ($data['organization_type'] ?? ($existing['organization_type'] ?? '')))),
@@ -182,8 +183,8 @@ class StaffSelfProfileController {
             $errors[] = 'Phone number format is invalid';
         }
 
-        if ($payload['mobile_number'] !== '' && !preg_match('/^[0-9+()\-\s]{7,25}$/', $payload['mobile_number'])) {
-            $errors[] = 'Mobile number format is invalid';
+        if (!isValidPhilippineMobileNumber($data['mobile_number'] ?? ($existing['mobile_number'] ?? ''), false)) {
+            $errors[] = 'Mobile number must be a valid +63 mobile number';
         }
 
         if ($payload['organization_type'] !== '' && !in_array($payload['organization_type'], $organizationTypeOptions, true)) {

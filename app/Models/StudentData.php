@@ -1,5 +1,6 @@
 <?php
 // Model/StudentData.php
+require_once __DIR__ . '/../Config/helpers.php';
 class StudentData {
     private $pdo;
 
@@ -71,7 +72,7 @@ class StudentData {
             'barangay' => fn() => $this->normalizeString($resolve('barangay', null)),
             'city' => fn() => $this->normalizeString($resolve('city', null)),
             'province' => fn() => $this->normalizeString($resolve('province', null)),
-            'mobile_number' => fn() => $this->normalizeString($resolve('mobile_number', null)),
+            'mobile_number' => fn() => normalizePhilippineMobileNumber($resolve('mobile_number', null)),
             'citizenship' => fn() => $this->normalizeString($resolve('citizenship', null)),
             'household_income_bracket' => fn() => $this->normalizeString($resolve('household_income_bracket', null)),
             'special_category' => fn() => $this->normalizeString($resolve('special_category', null)),

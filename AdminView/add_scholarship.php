@@ -1151,16 +1151,11 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
                         <input type="text" data-field="province" placeholder="Province">
                     </div>
                 </div>
-                <div class="form-row-modern" style="margin-bottom: 10px;">
-                    <div class="form-group-modern" style="margin-bottom: 0;">
-                        <label>Pin Latitude (optional)</label>
-                        <input type="number" step="0.00000001" data-field="latitude" placeholder="e.g., 14.59950000">
-                    </div>
-                    <div class="form-group-modern" style="margin-bottom: 0;">
-                        <label>Pin Longitude (optional)</label>
-                        <input type="number" step="0.00000001" data-field="longitude" placeholder="e.g., 120.98420000">
-                    </div>
-                </div>
+                <input type="hidden" data-field="latitude">
+                <input type="hidden" data-field="longitude">
+                <small class="helper-text" style="display: block; margin-bottom: 10px;">
+                    Pin coordinates stay hidden and are saved automatically when you use Set Pin or Use Main Pin.
+                </small>
                 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                     <button type="button" class="btn-modern btn-outline-modern set-remote-pin-btn">
                         <i class="fas fa-map-marker-alt"></i> Set Pin

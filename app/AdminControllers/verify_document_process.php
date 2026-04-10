@@ -20,7 +20,12 @@ function isGradeReviewDocument(?string $documentType): bool
 
 function canEditReviewedGwa(): bool
 {
-    return in_array((string) ($_SESSION['role'] ?? ''), ['admin', 'super_admin'], true);
+    return isAdminRole();
+}
+
+function canModerateDocumentDecision(): bool
+{
+    return isAdminRole();
 }
 
 function normalizeReviewedGwa($value): ?string
@@ -104,6 +109,11 @@ if (!$csrfValidation['valid']) {
 $action = $_POST['action'] ?? '';
 $documentId = $_POST['document_id'] ?? null;
 $userId = $_POST['user_id'] ?? null;
+
+if (in_array($action, ['verify', 'reject'], true) && !canModerateDocumentDecision()) {
+    echo json_encode(['success' => false, 'message' => 'Only admins can verify or reject documents.']);
+    exit();
+}
 
 if (!$documentId || !$userId) {
     echo json_encode(['success' => false, 'message' => 'Missing required parameters']);

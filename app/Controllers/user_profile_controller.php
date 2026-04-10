@@ -2,6 +2,7 @@
 // Controller/user_profile_controller.php
 require_once __DIR__ . '/../Config/session_bootstrap.php';
 require_once __DIR__ . '/../Config/db_config.php';
+require_once __DIR__ . '/../Config/helpers.php';
 require_once __DIR__ . '/../Config/password_policy.php';
 require_once __DIR__ . '/../Models/User.php';
 require_once __DIR__ . '/../Models/StudentData.php';
@@ -336,7 +337,7 @@ class UserProfileController {
             $citizenship = $this->normalizeChoice($data['citizenship'] ?? null, $allowedCitizenships);
             $householdIncomeBracket = $this->normalizeChoice($data['household_income_bracket'] ?? null, $allowedIncomeBrackets);
             $specialCategory = $this->normalizeChoice($data['special_category'] ?? null, $allowedSpecialCategories);
-            $mobileNumber = $this->normalizeNullable($data['mobile_number'] ?? null);
+            $mobileNumber = normalizePhilippineMobileNumber($data['mobile_number'] ?? null);
 
             if ($admissionStatus === null && $this->isCollegeApplicantType($applicantType)) {
                 $admissionStatus = 'enrolled';
@@ -477,7 +478,7 @@ class UserProfileController {
             $_SESSION['user_year_level'] = $studentData['year_level'] ?? '';
             $_SESSION['user_enrollment_status'] = $studentData['enrollment_status'] ?? '';
             $_SESSION['user_academic_standing'] = $studentData['academic_standing'] ?? '';
-            $_SESSION['user_mobile_number'] = $studentData['mobile_number'] ?? '';
+            $_SESSION['user_mobile_number'] = formatPhilippineMobileNumber($studentData['mobile_number'] ?? '');
             $_SESSION['user_citizenship'] = $studentData['citizenship'] ?? '';
             $_SESSION['user_household_income_bracket'] = $studentData['household_income_bracket'] ?? '';
             $_SESSION['user_special_category'] = $studentData['special_category'] ?? '';
@@ -590,7 +591,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $shsAverage = $hasShsAverageField ? trim((string) ($_POST['shs_average'] ?? '')) : null;
             $targetCollege = trim((string) ($_POST['target_college'] ?? ''));
             $targetCourse = trim((string) ($_POST['target_course'] ?? ''));
-            $mobileNumber = trim((string) ($_POST['mobile_number'] ?? ''));
+            $mobileNumberInput = trim((string) ($_POST['mobile_number'] ?? ''));
+            $mobileNumber = normalizePhilippineMobileNumber($mobileNumberInput);
 
             if ($admissionStatus === null && $isCollegeApplicantType($applicantType)) {
                 $admissionStatus = 'enrolled';
@@ -688,8 +690,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 }
             }
 
-            if ($mobileNumber !== '' && !preg_match('/^[0-9+\-\s()]{7,20}$/', $mobileNumber)) {
-                $errors[] = 'Mobile number format is invalid';
+            if (!isValidPhilippineMobileNumber($mobileNumberInput, false)) {
+                $errors[] = 'Mobile number must be a valid +63 mobile number';
             }
 
             if (trim((string) ($_POST['gender'] ?? '')) !== '' && $gender === null) {

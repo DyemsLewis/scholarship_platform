@@ -31,10 +31,11 @@ if ($activeFilter === 'all') {
 }
 $documentsVisibleCount = count($documents);
 $documentsHeaderCopy = !empty($providerScope['is_provider']) && !empty($providerScope['organization_name'])
-    ? 'Document submissions linked to scholarships under ' . $providerScope['organization_name'] . '.'
+    ? 'Document submissions linked to scholarships under ' . $providerScope['organization_name'] . '. Providers can review files here, but only admins can verify or reject them.'
     : 'Review uploaded applicant documents and complete verification decisions.';
 $documentReviewsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/document-reviews.css') ?: time();
-$canEditReviewedGwa = in_array((string) ($_SESSION['role'] ?? ''), ['admin', 'super_admin'], true);
+$canEditReviewedGwa = isAdminRole();
+$canModerateDocuments = isAdminRole();
 $gradeEditableDocumentTypes = ['grades', 'form_138'];
 $supportVerificationConfigs = [
     'citizenship_proof' => [
@@ -762,7 +763,15 @@ $supportVerificationConfigs = [
                                                 class="btn btn-view btn-sm open-file-modal"
                                                 data-file-url="<?php echo htmlspecialchars($fileUrl); ?>"
                                                 data-file-name="<?php echo htmlspecialchars((string) ($doc['file_name'] ?? 'Document'), ENT_QUOTES); ?>"
-                                                data-file-type="<?php echo htmlspecialchars($previewType); ?>">
+                                                data-file-type="<?php echo htmlspecialchars($previewType); ?>"
+                                                data-document-id="<?php echo (int) $doc['id']; ?>"
+                                                data-user-id="<?php echo (int) $doc['user_id']; ?>"
+                                                data-document-name="<?php echo htmlspecialchars($documentDisplayName, ENT_QUOTES); ?>"
+                                                data-document-type="<?php echo htmlspecialchars($documentTypeCode, ENT_QUOTES); ?>"
+                                                data-document-status="<?php echo htmlspecialchars((string) ($doc['status'] ?? ''), ENT_QUOTES); ?>"
+                                                data-requires-gwa="<?php echo $isGradeEditable ? '1' : '0'; ?>"
+                                                data-current-gwa="<?php echo htmlspecialchars($currentGwaRaw, ENT_QUOTES); ?>"
+                                                data-current-support-value="<?php echo htmlspecialchars($currentSupportValueRaw, ENT_QUOTES); ?>">
                                                 <i class="fas fa-eye"></i> View File
                                             </button>
                                         <?php else: ?>
@@ -770,24 +779,7 @@ $supportVerificationConfigs = [
                                                 <i class="fas fa-file-circle-xmark"></i> File Unavailable
                                             </button>
                                         <?php endif; ?>
-                                        <?php if($doc['status'] == 'pending'): ?>
-                                        <button
-                                            type="button"
-                                            class="btn btn-verify btn-sm"
-                                            data-document-id="<?php echo (int) $doc['id']; ?>"
-                                            data-user-id="<?php echo (int) $doc['user_id']; ?>"
-                                            data-document-name="<?php echo htmlspecialchars($documentDisplayName, ENT_QUOTES); ?>"
-                                            data-document-type="<?php echo htmlspecialchars($documentTypeCode, ENT_QUOTES); ?>"
-                                            data-requires-gwa="<?php echo $isGradeEditable ? '1' : '0'; ?>"
-                                            data-current-gwa="<?php echo htmlspecialchars($currentGwaRaw, ENT_QUOTES); ?>"
-                                            data-current-support-value="<?php echo htmlspecialchars($currentSupportValueRaw, ENT_QUOTES); ?>"
-                                            onclick="verifyDocument(this)">
-                                            <i class="fas fa-check-circle"></i> Verify
-                                        </button>
-                                        <button onclick="openRejectModal(<?php echo $doc['id']; ?>, <?php echo $doc['user_id']; ?>)" class="btn btn-reject btn-sm">
-                                            <i class="fas fa-times-circle"></i> Reject
-                                        </button>
-                                        <?php elseif($isGradeEditable): ?>
+                                        <?php if($isGradeEditable && $doc['status'] !== 'pending'): ?>
                                         <button
                                             type="button"
                                             class="btn btn-gwa btn-sm"
@@ -837,6 +829,24 @@ $supportVerificationConfigs = [
                     </button>
                     <button type="button" class="btn btn-outline file-preview-reset-btn" id="filePreviewZoomReset">Reset</button>
                 </div>
+                <?php if ($canModerateDocuments): ?>
+                <div class="file-preview-primary-actions" id="filePreviewPrimaryActions" hidden>
+                    <button
+                        type="button"
+                        class="btn btn-verify"
+                        id="filePreviewVerifyButton"
+                        onclick="verifyDocument(this)">
+                        <i class="fas fa-check-circle"></i> Verify
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-reject"
+                        id="filePreviewRejectButton"
+                        onclick="openRejectModalFromButton(this)">
+                        <i class="fas fa-times-circle"></i> Reject
+                    </button>
+                </div>
+                <?php endif; ?>
                 <button type="button" class="btn btn-primary" onclick="closeFilePreviewModal()">Close</button>
             </div>
         </div>
@@ -847,7 +857,7 @@ $supportVerificationConfigs = [
         <div class="modal-content">
             <div class="modal-header">
                 <h3><i class="fas fa-times-circle" style="color: #ef4444;"></i> Reject Document</h3>
-                <button class="close-modal" onclick="closeRejectModal()">&times;</button>
+                <button type="button" class="close-modal" onclick="closeRejectModal()" aria-label="Close reject modal">&times;</button>
             </div>
             <div class="modal-body" style="padding: 10px;">
                 <p>Please provide a reason for rejecting this document. This will be shown to the student.</p>
@@ -875,6 +885,10 @@ $supportVerificationConfigs = [
         const filePreviewZoomIn = document.getElementById('filePreviewZoomIn');
         const filePreviewZoomReset = document.getElementById('filePreviewZoomReset');
         const filePreviewZoomLevel = document.getElementById('filePreviewZoomLevel');
+        const filePreviewFrameWrap = document.querySelector('.file-preview-frame-wrap');
+        const filePreviewPrimaryActions = document.getElementById('filePreviewPrimaryActions');
+        const filePreviewVerifyButton = document.getElementById('filePreviewVerifyButton');
+        const filePreviewRejectButton = document.getElementById('filePreviewRejectButton');
         let filePreviewType = 'document';
         let filePreviewBaseUrl = '';
         let filePreviewZoom = 1;
@@ -947,11 +961,7 @@ $supportVerificationConfigs = [
 
         document.querySelectorAll('.open-file-modal').forEach((button) => {
             button.addEventListener('click', function() {
-                openFilePreviewModal(
-                    button.dataset.fileUrl || '',
-                    button.dataset.fileName || 'Document',
-                    button.dataset.fileType || 'document'
-                );
+                openFilePreviewModal(button);
             });
         });
 
@@ -967,7 +977,39 @@ $supportVerificationConfigs = [
             filePreviewZoomReset.addEventListener('click', resetFilePreviewZoom);
         }
 
-        function openFilePreviewModal(fileUrl, fileName, fileType) {
+        function syncFilePreviewActionButtons(sourceButton) {
+            if (!filePreviewPrimaryActions || !filePreviewVerifyButton || !filePreviewRejectButton) {
+                return;
+            }
+
+            const canModeratePendingDocument = !!sourceButton
+                && (sourceButton.dataset.documentStatus || '') === 'pending'
+                && (sourceButton.dataset.documentId || '') !== ''
+                && (sourceButton.dataset.userId || '') !== '';
+
+            filePreviewPrimaryActions.hidden = !canModeratePendingDocument;
+
+            [filePreviewVerifyButton, filePreviewRejectButton].forEach((button) => {
+                if (!button) {
+                    return;
+                }
+
+                button.dataset.documentId = canModeratePendingDocument ? (sourceButton.dataset.documentId || '') : '';
+                button.dataset.userId = canModeratePendingDocument ? (sourceButton.dataset.userId || '') : '';
+                button.dataset.documentName = canModeratePendingDocument ? (sourceButton.dataset.documentName || 'Document') : '';
+                button.dataset.documentType = canModeratePendingDocument ? (sourceButton.dataset.documentType || '') : '';
+                button.dataset.requiresGwa = canModeratePendingDocument ? (sourceButton.dataset.requiresGwa || '0') : '0';
+                button.dataset.currentGwa = canModeratePendingDocument ? (sourceButton.dataset.currentGwa || '') : '';
+                button.dataset.currentSupportValue = canModeratePendingDocument ? (sourceButton.dataset.currentSupportValue || '') : '';
+            });
+        }
+
+        function openFilePreviewModal(sourceButton) {
+            const sourceData = sourceButton && sourceButton.dataset ? sourceButton.dataset : {};
+            const fileUrl = sourceData.fileUrl || '';
+            const fileName = sourceData.fileName || 'Document';
+            const fileType = sourceData.fileType || 'document';
+
             if (!filePreviewModal || !filePreviewFrame || !filePreviewImage || !filePreviewName || !filePreviewFallback || !fileUrl) {
                 return;
             }
@@ -980,7 +1022,13 @@ $supportVerificationConfigs = [
             filePreviewImage.style.display = 'none';
             filePreviewFrame.removeAttribute('src');
             filePreviewImage.removeAttribute('src');
+            filePreviewFrame.style.zoom = '1';
+            filePreviewFrame.style.transform = '';
+            filePreviewFrame.style.transformOrigin = '';
+            filePreviewImage.style.transform = '';
+            filePreviewImage.style.transformOrigin = '';
             filePreviewFallback.hidden = true;
+            syncFilePreviewActionButtons(sourceButton);
 
             if (fileType === 'image') {
                 filePreviewImage.src = fileUrl;
@@ -988,6 +1036,7 @@ $supportVerificationConfigs = [
                 applyFilePreviewZoom();
             } else {
                 if (fileType === 'pdf') {
+                    filePreviewFrame.src = `${fileUrl}#toolbar=1&navpanes=0`;
                     applyFilePreviewZoom();
                 } else {
                     filePreviewFrame.src = fileUrl;
@@ -1018,6 +1067,10 @@ $supportVerificationConfigs = [
             filePreviewImage.style.maxWidth = '';
             filePreviewImage.style.maxHeight = '';
             filePreviewFallback.hidden = true;
+            if (filePreviewFrameWrap) {
+                filePreviewFrameWrap.classList.remove('is-zoomed');
+            }
+            syncFilePreviewActionButtons(null);
             filePreviewType = 'document';
             filePreviewBaseUrl = '';
             filePreviewZoom = 1;
@@ -1041,21 +1094,25 @@ $supportVerificationConfigs = [
         }
 
         function applyFilePreviewZoom() {
+            if (filePreviewFrameWrap) {
+                filePreviewFrameWrap.classList.toggle('is-zoomed', filePreviewZoom > 1.01);
+            }
+
             if (filePreviewType === 'image') {
-                if (Math.abs(filePreviewZoom - 1) < 0.01) {
-                    filePreviewImage.style.width = '';
-                    filePreviewImage.style.maxWidth = '';
-                    filePreviewImage.style.maxHeight = '';
-                } else {
-                    filePreviewImage.style.width = `${Math.round(filePreviewZoom * 100)}%`;
-                    filePreviewImage.style.maxWidth = 'none';
-                    filePreviewImage.style.maxHeight = 'none';
-                }
+                filePreviewImage.style.transform = `scale(${filePreviewZoom})`;
+                filePreviewImage.style.transformOrigin = 'top left';
                 return;
             }
 
             if (filePreviewType === 'pdf' && filePreviewBaseUrl) {
-                filePreviewFrame.src = `${filePreviewBaseUrl}#toolbar=1&navpanes=0&zoom=${Math.round(filePreviewZoom * 100)}`;
+                filePreviewFrame.style.zoom = String(filePreviewZoom);
+                if (filePreviewFrame.style.zoom !== String(filePreviewZoom)) {
+                    filePreviewFrame.style.transform = `scale(${filePreviewZoom})`;
+                    filePreviewFrame.style.transformOrigin = 'top left';
+                } else {
+                    filePreviewFrame.style.transform = '';
+                    filePreviewFrame.style.transformOrigin = '';
+                }
             }
         }
 
@@ -1087,6 +1144,10 @@ $supportVerificationConfigs = [
             const currentGwa = button.dataset.currentGwa || '';
             const currentSupportValue = button.dataset.currentSupportValue || '';
             const supportConfig = supportVerificationConfigs[documentType] || null;
+
+            if (filePreviewModal && filePreviewModal.getAttribute('aria-hidden') === 'false') {
+                closeFilePreviewModal();
+            }
 
             if (requiresGwa) {
                 Swal.fire({
@@ -1208,6 +1269,10 @@ $supportVerificationConfigs = [
             const documentName = button.dataset.documentName || 'Document';
             const currentGwa = button.dataset.currentGwa || '';
 
+            if (filePreviewModal && filePreviewModal.getAttribute('aria-hidden') === 'false') {
+                closeFilePreviewModal();
+            }
+
             Swal.fire({
                 title: `Update GWA for ${documentName}`,
                 text: 'Save the reviewed GWA linked to this uploaded grade document.',
@@ -1251,6 +1316,17 @@ $supportVerificationConfigs = [
             });
         }
 
+        function openRejectModalFromButton(button) {
+            if (!button) {
+                return;
+            }
+
+            const docId = button.dataset.documentId || '';
+            const userId = button.dataset.userId || '';
+            closeFilePreviewModal();
+            openRejectModal(docId, userId);
+        }
+
         function openRejectModal(docId, userId) {
             currentDocumentId = docId;
             currentUserId = userId;
@@ -1266,6 +1342,8 @@ $supportVerificationConfigs = [
 
         function confirmReject() {
             const reason = document.getElementById('rejectionReason').value.trim();
+            const targetDocumentId = currentDocumentId;
+            const targetUserId = currentUserId;
             
             if (!reason) {
                 Swal.fire({
@@ -1287,6 +1365,8 @@ $supportVerificationConfigs = [
                 cancelButtonText: 'Cancel'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    closeRejectModal();
+
                     // Show loading
                     Swal.fire({
                         title: 'Rejecting...',
@@ -1304,7 +1384,7 @@ $supportVerificationConfigs = [
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
                         },
-                        body: 'csrf_token=' + encodeURIComponent(documentReviewCsrfToken) + '&action=reject&document_id=' + currentDocumentId + '&user_id=' + currentUserId + '&reason=' + encodeURIComponent(reason)
+                        body: 'csrf_token=' + encodeURIComponent(documentReviewCsrfToken) + '&action=reject&document_id=' + encodeURIComponent(targetDocumentId) + '&user_id=' + encodeURIComponent(targetUserId) + '&reason=' + encodeURIComponent(reason)
                     })
                     .then(response => response.json())
                     .then(data => {

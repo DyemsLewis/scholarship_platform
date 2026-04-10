@@ -209,6 +209,59 @@ if (!function_exists('formatDocumentStatus')) {
     }
 }
 
+if (!function_exists('normalizePhilippineMobileNumber')) {
+    function normalizePhilippineMobileNumber($value): ?string
+    {
+        $trimmed = trim((string) ($value ?? ''));
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $digits = preg_replace('/\D+/', '', $trimmed) ?? '';
+        if ($digits === '') {
+            return null;
+        }
+
+        if (str_starts_with($digits, '63')) {
+            $digits = substr($digits, 2);
+        }
+
+        if (str_starts_with($digits, '0')) {
+            $digits = substr($digits, 1);
+        }
+
+        if (strlen($digits) !== 10 || !str_starts_with($digits, '9')) {
+            return null;
+        }
+
+        return '+63' . $digits;
+    }
+}
+
+if (!function_exists('isValidPhilippineMobileNumber')) {
+    function isValidPhilippineMobileNumber($value, bool $required = false): bool
+    {
+        $trimmed = trim((string) ($value ?? ''));
+        if ($trimmed === '') {
+            return !$required;
+        }
+
+        return normalizePhilippineMobileNumber($trimmed) !== null;
+    }
+}
+
+if (!function_exists('formatPhilippineMobileNumber')) {
+    function formatPhilippineMobileNumber($value, string $fallback = ''): string
+    {
+        $trimmed = trim((string) ($value ?? ''));
+        if ($trimmed === '') {
+            return $fallback;
+        }
+
+        return normalizePhilippineMobileNumber($trimmed) ?? $trimmed;
+    }
+}
+
 if (!function_exists('extractReviewerDocumentNote')) {
     function extractReviewerDocumentNote($adminNotes): string {
         $normalized = trim((string) ($adminNotes ?? ''));

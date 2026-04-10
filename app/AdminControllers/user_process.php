@@ -522,7 +522,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $contactPersonLastName = trim($_POST['contact_person_lastname'] ?? $lastname);
             $contactPersonPosition = trim($_POST['contact_person_position'] ?? ($_POST['position_title'] ?? ''));
             $phoneNumber = trim($_POST['phone_number'] ?? ($_POST['office_phone'] ?? ''));
-            $mobileNumber = trim($_POST['mobile_number'] ?? '');
+            $mobileNumber = formatPhilippineMobileNumber($_POST['mobile_number'] ?? '');
             $organizationEmail = trim($_POST['organization_email'] ?? $email);
             $website = trim($_POST['website'] ?? '');
             $address = trim($_POST['address'] ?? ($_POST['office_address'] ?? ''));
@@ -567,8 +567,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if ($phoneNumber !== '' && !preg_match('/^[0-9+()\\-\\s]{7,25}$/', $phoneNumber)) {
                     $errors[] = 'Phone number format is invalid';
                 }
-                if ($mobileNumber !== '' && !preg_match('/^[0-9+()\\-\\s]{7,25}$/', $mobileNumber)) {
-                    $errors[] = 'Mobile number format is invalid';
+                if (!isValidPhilippineMobileNumber($_POST['mobile_number'] ?? '', false)) {
+                    $errors[] = 'Mobile number must be a valid +63 mobile number';
                 }
                 if ($organizationEmail !== '' && !filter_var($organizationEmail, FILTER_VALIDATE_EMAIL)) {
                     $errors[] = 'Organization email format is invalid';

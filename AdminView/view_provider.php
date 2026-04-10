@@ -577,7 +577,7 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
                             </div>
                             <div class="detail-card">
                                 <span class="detail-label">Mobile Number</span>
-                                <div class="detail-value"><?php echo htmlspecialchars(providerReviewValue($providerProfile['mobile_number'] ?? '')); ?></div>
+                                <div class="detail-value"><?php echo htmlspecialchars(providerReviewValue(formatPhilippineMobileNumber($providerProfile['mobile_number'] ?? ''))); ?></div>
                             </div>
                             <div class="detail-card">
                                 <span class="detail-label">Login Username</span>

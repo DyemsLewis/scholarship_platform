@@ -7,6 +7,7 @@ require_once __DIR__ . '/../app/Config/url_token.php';
 require_once __DIR__ . '/../app/Config/csrf.php';
 require_once __DIR__ . '/../app/Config/helpers.php';
 require_once __DIR__ . '/../app/Models/UserDocument.php';
+require_once __DIR__ . '/../app/Controllers/scholarshipResultController.php';
 
 requireRoles(['provider', 'admin', 'super_admin'], '../View/index.php', 'You do not have permission to view applications.');
 
@@ -82,6 +83,17 @@ function appTableHasColumn(PDO $pdo, string $tableName, string $columnName): boo
     return $cache[$key];
 }
 
+function appOptionalColumnSelect(PDO $pdo, string $tableAlias, string $tableName, string $columnName, ?string $alias = null): string
+{
+    $selectAlias = $alias ?? $columnName;
+
+    if (!appTableHasColumn($pdo, $tableName, $columnName)) {
+        return 'NULL AS ' . $selectAlias . ',';
+    }
+
+    return $tableAlias . '.' . $columnName . ' AS ' . $selectAlias . ',';
+}
+
 $applicationRejectionReasonSelect = appTableHasColumn($pdo, 'applications', 'rejection_reason')
     ? 'a.rejection_reason AS application_rejection_reason,'
     : 'NULL AS application_rejection_reason,';
@@ -91,6 +103,20 @@ $applicationStudentResponseStatusSelect = appTableHasColumn($pdo, 'applications'
 $applicationStudentRespondedAtSelect = appTableHasColumn($pdo, 'applications', 'student_responded_at')
     ? 'a.student_responded_at AS student_responded_at,'
     : 'NULL AS student_responded_at,';
+$scholarshipEligibilitySelect = appOptionalColumnSelect($pdo, 's', 'scholarships', 'eligibility', 'scholarship_eligibility');
+$scholarshipMinGwaSelect = appOptionalColumnSelect($pdo, 's', 'scholarships', 'min_gwa', 'scholarship_min_gwa');
+$scholarshipMaxGwaSelect = appOptionalColumnSelect($pdo, 's', 'scholarships', 'max_gwa', 'scholarship_max_gwa');
+$scholarshipAddressSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'address', 'scholarship_address');
+$scholarshipCitySelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'city', 'scholarship_city');
+$scholarshipProvinceSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'province', 'scholarship_province');
+$scholarshipApplicationOpenDateSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'application_open_date', 'scholarship_application_open_date');
+$scholarshipTargetApplicantTypeSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_applicant_type');
+$scholarshipTargetYearLevelSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_year_level');
+$scholarshipRequiredAdmissionStatusSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'required_admission_status');
+$scholarshipTargetStrandSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_strand');
+$scholarshipTargetCitizenshipSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_citizenship');
+$scholarshipTargetIncomeBracketSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_income_bracket');
+$scholarshipTargetSpecialCategorySelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_special_category');
 
 try {
     $stmt = $pdo->prepare("
@@ -110,9 +136,23 @@ try {
             sd.*,
             s.id AS scholarship_id,
             s.name AS scholarship_name,
+            {$scholarshipEligibilitySelect}
+            {$scholarshipMinGwaSelect}
+            {$scholarshipMaxGwaSelect}
             sd2.provider,
             sd2.deadline,
             sd2.benefits,
+            {$scholarshipAddressSelect}
+            {$scholarshipCitySelect}
+            {$scholarshipProvinceSelect}
+            {$scholarshipApplicationOpenDateSelect}
+            {$scholarshipTargetApplicantTypeSelect}
+            {$scholarshipTargetYearLevelSelect}
+            {$scholarshipRequiredAdmissionStatusSelect}
+            {$scholarshipTargetStrandSelect}
+            {$scholarshipTargetCitizenshipSelect}
+            {$scholarshipTargetIncomeBracketSelect}
+            {$scholarshipTargetSpecialCategorySelect}
             s.description AS scholarship_description,
             sl.location_name AS student_location_name
         FROM applications a
@@ -246,7 +286,7 @@ $cityProvinceLabel = !empty($cityProvinceParts) ? implode(', ', $cityProvincePar
 $identityFields = [
     ['label' => 'Applicant Name', 'value' => $fullName],
     ['label' => 'Email Address', 'value' => appValue($application['email'] ?? '')],
-    ['label' => 'Mobile Number', 'value' => appValue($application['mobile_number'] ?? '')],
+    ['label' => 'Mobile Number', 'value' => appValue(formatPhilippineMobileNumber($application['mobile_number'] ?? ''))],
     ['label' => 'Gender', 'value' => $formattedGenderLabel],
     ['label' => 'Birthdate / Age', 'value' => $birthAndAgeLabel],
     ['label' => 'Citizenship', 'value' => $citizenshipLabel],
@@ -329,6 +369,394 @@ if ($studentAccepted) {
     $decisionReadinessLabel = 'Decision completed';
     $decisionReadinessNote = 'The application has already been rejected.';
 }
+
+$applicantScoreProfile = [
+    'applicant_type' => $application['applicant_type'] ?? '',
+    'year_level' => $application['year_level'] ?? '',
+    'admission_status' => $application['admission_status'] ?? '',
+    'shs_strand' => $application['shs_strand'] ?? '',
+    'course' => $application['course'] ?? '',
+    'target_course' => $application['target_course'] ?? '',
+    'school' => $application['school'] ?? '',
+    'target_college' => $application['target_college'] ?? '',
+    'enrollment_status' => $application['enrollment_status'] ?? '',
+    'academic_standing' => $application['academic_standing'] ?? '',
+    'city' => $application['city'] ?? '',
+    'province' => $application['province'] ?? '',
+    'citizenship' => $application['citizenship'] ?? '',
+    'household_income_bracket' => $application['household_income_bracket'] ?? '',
+    'special_category' => $application['special_category'] ?? '',
+];
+
+$scoreScholarshipContext = [
+    'id' => (int) ($application['scholarship_id'] ?? 0),
+    'name' => (string) ($application['scholarship_name'] ?? ''),
+    'description' => (string) ($application['scholarship_description'] ?? ''),
+    'eligibility' => (string) ($application['scholarship_eligibility'] ?? ''),
+    'provider' => (string) ($application['provider'] ?? ''),
+    'deadline' => $application['deadline'] ?? null,
+    'application_open_date' => $application['scholarship_application_open_date'] ?? null,
+    'min_gwa' => $application['scholarship_min_gwa'] ?? null,
+    'max_gwa' => $application['scholarship_max_gwa'] ?? null,
+    'address' => (string) ($application['scholarship_address'] ?? ''),
+    'city' => (string) ($application['scholarship_city'] ?? ''),
+    'province' => (string) ($application['scholarship_province'] ?? ''),
+    'target_applicant_type' => (string) ($application['target_applicant_type'] ?? ''),
+    'target_year_level' => (string) ($application['target_year_level'] ?? ''),
+    'required_admission_status' => (string) ($application['required_admission_status'] ?? ''),
+    'target_strand' => (string) ($application['target_strand'] ?? ''),
+    'target_citizenship' => (string) ($application['target_citizenship'] ?? ''),
+    'target_income_bracket' => (string) ($application['target_income_bracket'] ?? ''),
+    'target_special_category' => (string) ($application['target_special_category'] ?? ''),
+];
+
+if (!empty($scoreScholarshipContext['deadline'])) {
+    try {
+        $matchDeadlineDate = new DateTime((string) $scoreScholarshipContext['deadline']);
+        $matchNow = new DateTime();
+        $matchInterval = $matchNow->diff($matchDeadlineDate);
+        $matchDaysRemaining = (int) $matchInterval->days;
+        if ($matchDeadlineDate < $matchNow) {
+            $matchDaysRemaining *= -1;
+        }
+        $scoreScholarshipContext['days_remaining'] = $matchDaysRemaining;
+    } catch (Throwable $e) {
+        $scoreScholarshipContext['days_remaining'] = null;
+    }
+} else {
+    $scoreScholarshipContext['days_remaining'] = null;
+}
+
+$applicantGwaValue = appHasValue($application['gwa'] ?? null) ? (float) $application['gwa'] : null;
+$applicantCourseValue = trim((string) ($application['course'] ?? ''));
+$scholarshipService = new ScholarshipService($pdo);
+$matchAssessment = $scholarshipService->getMatchAssessmentForScholarship(
+    $scoreScholarshipContext,
+    $applicantGwaValue,
+    $applicantCourseValue,
+    $applicantScoreProfile
+);
+
+$matchGuideScore = $application['probability_score'] !== null
+    ? (int) round((float) $application['probability_score'])
+    : (isset($matchAssessment['percentage']) ? (int) $matchAssessment['percentage'] : null);
+$matchProfileTotal = (int) ($matchAssessment['profile_requirement_total'] ?? 0);
+$matchProfileMet = (int) ($matchAssessment['profile_requirement_met'] ?? 0);
+$matchProfilePending = (int) ($matchAssessment['profile_requirement_pending'] ?? 0);
+$matchProfileFailed = (int) ($matchAssessment['profile_requirement_failed'] ?? 0);
+$matchCurrentInfoChecks = is_array($matchAssessment['current_info_checks'] ?? null) ? $matchAssessment['current_info_checks'] : [];
+$matchCurrentInfoTotal = (int) ($matchAssessment['current_info_total'] ?? 0);
+$matchCurrentInfoMet = (int) ($matchAssessment['current_info_met'] ?? 0);
+$matchCurrentInfoPending = (int) ($matchAssessment['current_info_pending'] ?? 0);
+$matchCurrentInfoWarn = (int) ($matchAssessment['current_info_warn'] ?? 0);
+$matchRequiresGwa = !empty($matchAssessment['requires_gwa']);
+
+$matchRequiredGwa = null;
+if ($scoreScholarshipContext['min_gwa'] !== null && $scoreScholarshipContext['min_gwa'] !== '') {
+    $matchRequiredGwa = (float) $scoreScholarshipContext['min_gwa'];
+} elseif ($scoreScholarshipContext['max_gwa'] !== null && $scoreScholarshipContext['max_gwa'] !== '') {
+    $matchRequiredGwa = (float) $scoreScholarshipContext['max_gwa'];
+}
+
+$matchPushReason = static function (array &$reasons, string $reason, int $limit = 4): void {
+    $normalized = trim(preg_replace('/\s+/', ' ', $reason) ?? $reason);
+    if ($normalized === '' || in_array($normalized, $reasons, true) || count($reasons) >= $limit) {
+        return;
+    }
+
+    $reasons[] = $normalized;
+};
+
+$matchAcademicDecision = 'No GWA requirement';
+$matchAcademicClass = 'info';
+if ($matchRequiredGwa !== null) {
+    if ($applicantGwaValue === null) {
+        $matchAcademicDecision = 'Pending: upload grades';
+        $matchAcademicClass = 'warn';
+    } elseif ($applicantGwaValue <= $matchRequiredGwa) {
+        $matchAcademicDecision = 'Passed';
+        $matchAcademicClass = 'good';
+    } else {
+        $matchAcademicDecision = 'Above limit';
+        $matchAcademicClass = 'bad';
+    }
+}
+$matchAcademicDetail = $matchRequiredGwa !== null
+    ? ('Required GWA: ' . number_format($matchRequiredGwa, 2) . ' or better.')
+    : 'No fixed academic cutoff is configured for this scholarship.';
+
+$matchCoursePathwayCheck = null;
+foreach ($matchCurrentInfoChecks as $currentInfoCheck) {
+    if (strtolower(trim((string) ($currentInfoCheck['key'] ?? ''))) === 'course_pathway') {
+        $matchCoursePathwayCheck = $currentInfoCheck;
+        break;
+    }
+}
+
+$matchCourseValue = 'Course details still needed';
+$matchCourseDetail = 'Add the applicant\'s current or target course so the DSS can compare it with the scholarship focus.';
+$matchCourseClass = 'info';
+if (is_array($matchCoursePathwayCheck)) {
+    $matchCourseStatus = strtolower(trim((string) ($matchCoursePathwayCheck['status'] ?? 'pending')));
+    $matchCourseDetail = trim((string) ($matchCoursePathwayCheck['detail'] ?? $matchCourseDetail));
+
+    if ($matchCourseStatus === 'met') {
+        $matchCourseValue = 'Strong course alignment';
+        $matchCourseClass = 'good';
+    } elseif ($matchCourseStatus === 'warn') {
+        $matchCourseValue = 'Partial course alignment';
+        $matchCourseClass = 'warn';
+    }
+} elseif (appHasValue($application['course'] ?? null) || appHasValue($application['target_course'] ?? null)) {
+    $matchCourseValue = 'Course information on file';
+    $matchCourseDetail = 'The DSS compares the applicant\'s current or target course with the scholarship focus.';
+}
+
+$matchProfileClass = 'info';
+if ($matchProfileTotal > 0) {
+    if ($matchProfileFailed > 0) {
+        $matchProfileClass = 'bad';
+    } elseif ($matchProfilePending > 0) {
+        $matchProfileClass = 'warn';
+    } else {
+        $matchProfileClass = 'good';
+    }
+}
+$matchProfileValue = $matchProfileTotal > 0
+    ? ($matchProfileMet . '/' . $matchProfileTotal . ' audience rules aligned')
+    : 'No extra audience filters';
+$matchProfileDetail = $matchProfileTotal > 0
+    ? ($matchProfileMet . '/' . $matchProfileTotal . ' configured profile filters are aligned.')
+    : 'This scholarship does not require extra profile filters.';
+
+$matchStudentContextClass = 'info';
+if ($matchCurrentInfoTotal > 0) {
+    if ($matchCurrentInfoPending > 0 || $matchCurrentInfoWarn > 0) {
+        $matchStudentContextClass = 'warn';
+    } elseif ($matchCurrentInfoMet > 0) {
+        $matchStudentContextClass = 'good';
+    }
+}
+$matchStudentContextValue = $matchCurrentInfoTotal > 0
+    ? ($matchCurrentInfoMet . '/' . $matchCurrentInfoTotal . ' support signals aligned')
+    : 'No extra context checks';
+$matchStudentContextDetail = $matchCurrentInfoTotal > 0
+    ? ($matchCurrentInfoMet . '/' . $matchCurrentInfoTotal . ' current student signals are aligned.')
+    : 'No additional current-information checks are required.';
+
+$matchApplicationNotYetOpen = false;
+$matchApplicationOpenDateDisplay = 'Open now';
+if (!empty($scoreScholarshipContext['application_open_date'])) {
+    try {
+        $matchApplicationOpenDate = new DateTime((string) $scoreScholarshipContext['application_open_date']);
+        $matchApplicationOpenDate->setTime(0, 0, 0);
+        $matchApplicationOpenDateDisplay = $matchApplicationOpenDate->format('M d, Y');
+        if ($matchApplicationOpenDate > new DateTime()) {
+            $matchApplicationNotYetOpen = true;
+        }
+    } catch (Throwable $e) {
+        $matchApplicationNotYetOpen = false;
+        $matchApplicationOpenDateDisplay = 'Open now';
+    }
+}
+
+$matchDeadlineClass = 'info';
+$matchDeadlineDecision = 'Open / no deadline';
+$matchDeadlineDetail = 'This scholarship is open without a fixed closing date.';
+if (!empty($scoreScholarshipContext['deadline'])) {
+    $matchDeadlineDateDisplay = appDate((string) $scoreScholarshipContext['deadline'], 'M d, Y', 'Not set');
+    try {
+        $matchDeadlineDate = new DateTime((string) $scoreScholarshipContext['deadline']);
+        $matchNow = new DateTime();
+        if ($matchDeadlineDate < $matchNow) {
+            $matchDeadlineDecision = 'Closed';
+            $matchDeadlineClass = 'bad';
+        } else {
+            $matchDeadlineDaysLeft = (int) $matchNow->diff($matchDeadlineDate)->days;
+            if ($matchDeadlineDaysLeft <= 7) {
+                $matchDeadlineDecision = 'Urgent (' . $matchDeadlineDaysLeft . ' day' . ($matchDeadlineDaysLeft === 1 ? '' : 's') . ' left)';
+                $matchDeadlineClass = 'warn';
+            } else {
+                $matchDeadlineDecision = 'Open';
+                $matchDeadlineClass = 'good';
+            }
+        }
+        $matchDeadlineDetail = 'Submission deadline: ' . $matchDeadlineDateDisplay . '.';
+    } catch (Throwable $e) {
+        $matchDeadlineDetail = 'This scholarship has a stored deadline, but it could not be parsed for the guide.';
+    }
+}
+
+$matchTimingValue = $matchApplicationNotYetOpen ? ('Opens ' . $matchApplicationOpenDateDisplay) : $matchDeadlineDecision;
+$matchTimingDetail = $matchApplicationNotYetOpen
+    ? ('Applications open on ' . $matchApplicationOpenDateDisplay . '.')
+    : $matchDeadlineDetail;
+$matchTimingClass = $matchApplicationNotYetOpen
+    ? 'warn'
+    : ($matchDeadlineClass === 'bad' ? 'bad' : ($matchDeadlineClass === 'warn' ? 'warn' : 'good'));
+
+$matchProviderValue = 'Standard provider signal';
+$matchProviderDetail = 'Provider profile contributes a smaller general ranking signal in the DSS.';
+$matchProviderClass = 'info';
+$recognizedProviders = ['CHED', 'DOST', 'University of the Philippines', 'SM Foundation', 'Ayala Foundation'];
+$recognizedProviderMatch = false;
+foreach ($recognizedProviders as $recognizedProvider) {
+    if ($scoreScholarshipContext['provider'] !== '' && stripos($scoreScholarshipContext['provider'], $recognizedProvider) !== false) {
+        $recognizedProviderMatch = true;
+        break;
+    }
+}
+if ($recognizedProviderMatch) {
+    $matchProviderValue = 'Established provider signal';
+    $matchProviderDetail = 'Recognized providers receive a slightly stronger ranking signal in the DSS.';
+    $matchProviderClass = 'good';
+} elseif (
+    $scoreScholarshipContext['provider'] !== ''
+    && (
+        stripos($scoreScholarshipContext['provider'], 'university') !== false
+        || stripos($scoreScholarshipContext['provider'], 'college') !== false
+    )
+) {
+    $matchProviderValue = 'Academic institution signal';
+    $matchProviderDetail = 'College and university providers receive a moderate ranking signal in the DSS.';
+    $matchProviderClass = 'good';
+}
+
+$matchGuideButtonLabel = $matchGuideScore !== null
+    ? ('Why ' . $matchGuideScore . '% match?')
+    : 'How match works';
+$matchGuideTitle = $matchGuideScore !== null
+    ? ('Why this shows as ' . $matchGuideScore . '% match')
+    : 'How the match score works';
+
+if ($matchRequiresGwa) {
+    $matchGuideSummary = 'This score is still partly estimated because the applicant\'s academic record is missing. The DSS is using the other profile signals for now.';
+} elseif ($matchGuideScore !== null && $matchGuideScore >= 80) {
+    $matchGuideSummary = 'This is a strong fit score because several major DSS signals line up well with this scholarship.';
+} elseif ($matchGuideScore !== null && $matchGuideScore >= 60) {
+    $matchGuideSummary = 'This is a moderate fit score. Some major DSS signals line up, but a few areas are weaker or still incomplete.';
+} elseif ($matchGuideScore !== null) {
+    $matchGuideSummary = 'This is a lower fit score right now because the scholarship and the applicant record are not aligning strongly yet.';
+} else {
+    $matchGuideSummary = 'The DSS uses the applicant\'s academic and profile details to build a fit score for each scholarship.';
+}
+
+$matchGuideNote = 'This percentage ranks fit only. Required documents affect approval readiness, and the final decision still depends on provider review.';
+$matchPositiveReasons = [];
+$matchLimitingReasons = [];
+
+if ($matchRequiredGwa !== null) {
+    if ($applicantGwaValue === null) {
+        $matchPushReason($matchLimitingReasons, 'The academic record is missing, so the score is only partly estimated right now.');
+    } elseif ($applicantGwaValue <= $matchRequiredGwa) {
+        $matchPushReason($matchPositiveReasons, 'The applicant GWA is within the required range for this scholarship.');
+    } else {
+        $matchPushReason($matchLimitingReasons, 'The current GWA is above the scholarship limit.');
+    }
+} else {
+    $matchPushReason($matchPositiveReasons, 'This scholarship does not require a fixed GWA cutoff.');
+}
+
+if (is_array($matchCoursePathwayCheck)) {
+    $matchCourseReasonText = trim((string) ($matchCoursePathwayCheck['detail'] ?? ''));
+    $matchCourseStatus = strtolower(trim((string) ($matchCoursePathwayCheck['status'] ?? 'pending')));
+    if ($matchCourseStatus === 'met') {
+        $matchPushReason($matchPositiveReasons, $matchCourseReasonText);
+    } elseif (in_array($matchCourseStatus, ['warn', 'pending'], true)) {
+        $matchPushReason($matchLimitingReasons, $matchCourseReasonText);
+    }
+}
+
+if ($matchProfileTotal > 0) {
+    if ($matchProfileFailed > 0) {
+        $matchPushReason($matchLimitingReasons, 'Some applicant profile rules do not match this scholarship audience yet.');
+    } elseif ($matchProfilePending > 0) {
+        $matchPushReason($matchLimitingReasons, 'Some audience-fit details are still missing from the applicant profile.');
+    } else {
+        $matchPushReason($matchPositiveReasons, 'The applicant profile matches the target audience rules.');
+    }
+} else {
+    $matchPushReason($matchPositiveReasons, 'The scholarship is open to a broader set of applicants, which helps the fit score.');
+}
+
+if ($matchCurrentInfoTotal > 0) {
+    if ($matchCurrentInfoPending > 0) {
+        $matchPushReason($matchLimitingReasons, 'Some current student details are still missing, so the DSS cannot use the full context yet.');
+    } elseif ($matchCurrentInfoWarn > 0) {
+        $matchPushReason($matchLimitingReasons, 'Some current student signals only partially support this scholarship focus.');
+    } elseif ($matchCurrentInfoMet > 0) {
+        $matchPushReason($matchPositiveReasons, 'The current student details support this scholarship focus.');
+    }
+}
+
+if ($matchApplicationNotYetOpen) {
+    $matchPushReason($matchLimitingReasons, 'Applications have not opened yet, so the timing signal is weaker right now.');
+} elseif ($matchDeadlineClass === 'bad') {
+    $matchPushReason($matchLimitingReasons, 'The application period has already closed.');
+} elseif ($matchDeadlineClass === 'warn') {
+    $matchPushReason($matchLimitingReasons, 'The deadline is close, so the timing signal is smaller.');
+} else {
+    $matchPushReason($matchPositiveReasons, 'The application window timing supports this recommendation.');
+}
+
+if ($recognizedProviderMatch) {
+    $matchPushReason($matchPositiveReasons, 'The provider is recognized in the DSS as an established scholarship source.');
+} elseif ($matchProviderClass === 'good') {
+    $matchPushReason($matchPositiveReasons, 'The provider receives an academic-institution ranking signal in the DSS.');
+}
+
+$matchPositiveItems = !empty($matchPositiveReasons)
+    ? array_slice($matchPositiveReasons, 0, 4)
+    : ['The DSS has not found strong positive scoring signals yet.'];
+$matchLimitingItems = !empty($matchLimitingReasons)
+    ? array_slice($matchLimitingReasons, 0, 4)
+    : ['No major factor is pulling the match score down right now.'];
+
+$matchScoreFactors = [
+    [
+        'label' => 'Academic fit',
+        'value' => $matchAcademicDecision,
+        'detail' => $matchAcademicDetail,
+        'class' => $matchAcademicClass,
+        'icon' => 'fa-chart-line',
+    ],
+    [
+        'label' => 'Course focus',
+        'value' => $matchCourseValue,
+        'detail' => $matchCourseDetail,
+        'class' => $matchCourseClass,
+        'icon' => 'fa-graduation-cap',
+    ],
+    [
+        'label' => 'Audience fit',
+        'value' => $matchProfileValue,
+        'detail' => $matchProfileDetail,
+        'class' => $matchProfileClass,
+        'icon' => 'fa-user-check',
+    ],
+    [
+        'label' => 'Student context',
+        'value' => $matchStudentContextValue,
+        'detail' => $matchStudentContextDetail,
+        'class' => $matchStudentContextClass,
+        'icon' => 'fa-id-card',
+    ],
+    [
+        'label' => 'Application timing',
+        'value' => $matchTimingValue,
+        'detail' => $matchTimingDetail,
+        'class' => $matchTimingClass,
+        'icon' => 'fa-calendar-days',
+    ],
+    [
+        'label' => 'Provider signal',
+        'value' => $matchProviderValue,
+        'detail' => $matchProviderDetail,
+        'class' => $matchProviderClass,
+        'icon' => 'fa-building-columns',
+    ],
+];
+
 $canApproveApplication = $applicationStatus === 'pending' && ($requirementsTotalCount === 0 || $requirementsVerifiedCount >= $requirementsTotalCount);
 $approvalBlockMessage = 'Approval is unavailable while required documents are pending, missing, or rejected.';
 $applicantInitials = '';
@@ -355,6 +783,7 @@ if ($applicantProfileImagePath !== '') {
 $applicationScoreDisplay = $application['probability_score'] !== null
     ? number_format((float) $application['probability_score'], 1) . '%'
     : 'Not calculated';
+$canModerateDocuments = isAdminRole();
 $accountStatusLabel = ucfirst((string) ($application['user_status'] ?? 'inactive'));
 $profileSectionGroups = [
     ['title' => 'Identity and Contact', 'icon' => 'fa-id-card', 'fields' => $identityFields],
@@ -381,6 +810,9 @@ $viewApplicationStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/view-ap
 $applicationActionParams = ['id' => (int) $application['application_id']];
 $approveUrl = buildEntityUrl('../app/AdminControllers/application_process.php', 'application', (int) $application['application_id'], 'approve', array_merge(['action' => 'approve'], $applicationActionParams));
 $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', 'application', (int) $application['application_id'], 'reject', array_merge(['action' => 'reject'], $applicationActionParams));
+$applicationFlashSuccess = isset($_SESSION['success']) ? (string) $_SESSION['success'] : '';
+$applicationFlashError = isset($_SESSION['error']) ? (string) $_SESSION['error'] : '';
+unset($_SESSION['success'], $_SESSION['error']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -399,18 +831,22 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
 
     <section class="admin-dashboard application-review-page">
         <div class="container">
-            <?php if (isset($_SESSION['success'])): ?>
+            <?php if ($applicationFlashSuccess !== ''): ?>
+                <noscript>
                 <div class="alert alert-success application-review-alert">
                     <i class="fas fa-check-circle"></i>
-                    <?php echo htmlspecialchars($_SESSION['success']); unset($_SESSION['success']); ?>
+                    <?php echo htmlspecialchars($applicationFlashSuccess); ?>
                 </div>
+                </noscript>
             <?php endif; ?>
 
-            <?php if (isset($_SESSION['error'])): ?>
+            <?php if ($applicationFlashError !== ''): ?>
+                <noscript>
                 <div class="alert alert-error application-review-alert">
                     <i class="fas fa-exclamation-circle"></i>
-                    <?php echo htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?>
+                    <?php echo htmlspecialchars($applicationFlashError); ?>
                 </div>
+                </noscript>
             <?php endif; ?>
 
             <div class="page-header app-review-page-header">
@@ -473,6 +909,10 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                             <article class="app-review-summary-tile">
                                 <span>Score</span>
                                 <strong><?php echo htmlspecialchars($applicationScoreDisplay); ?></strong>
+                                <button type="button" class="app-review-match-guide-trigger" data-open-match-guide>
+                                    <i class="fas fa-circle-question"></i>
+                                    <?php echo htmlspecialchars($matchGuideButtonLabel); ?>
+                                </button>
                             </article>
                             <article class="app-review-summary-tile">
                                 <span>Requirements</span>
@@ -657,6 +1097,9 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                                     <strong><?php echo $requirementStatusCounts['pending'] + $requirementStatusCounts['verified']; ?></strong>
                                 </div>
                             </div>
+                            <?php if (!$canModerateDocuments): ?>
+                                <div class="review-note info">Providers can review uploaded files here, but only admins can verify or reject documents.</div>
+                            <?php endif; ?>
 
                             <div class="requirements-review-list">
                                 <?php foreach (($requirementsSummary['requirements'] ?? []) as $index => $requirement): ?>
@@ -730,6 +1173,9 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                                                         data-file-url="<?php echo htmlspecialchars($reqHref); ?>"
                                                         data-file-name="<?php echo htmlspecialchars((string) ($reqDoc['file_name'] ?? 'Document')); ?>"
                                                         data-file-type="<?php echo htmlspecialchars($reqPreviewType); ?>"
+                                                        data-document-id="<?php echo (int) ($reqDoc['id'] ?? 0); ?>"
+                                                        data-user-id="<?php echo (int) $application['user_id']; ?>"
+                                                        data-document-status="<?php echo htmlspecialchars($reqStatus); ?>"
                                                     >
                                                         <i class="fas fa-eye"></i> View File
                                                     </button>
@@ -743,7 +1189,7 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                                                         <i class="fas fa-note-sticky"></i> <?php echo $reqReviewerNote !== '' ? 'Update Note' : 'Add Note'; ?>
                                                     </button>
                                                 <?php endif; ?>
-                                                <?php if ($reqStatus === 'pending' && is_array($reqDoc)): ?>
+                                                <?php if ($canModerateDocuments && $reqStatus === 'pending' && is_array($reqDoc)): ?>
                                                     <button type="button" class="btn btn-success" onclick="verifyDocument(<?php echo (int) $reqDoc['id']; ?>, <?php echo (int) $application['user_id']; ?>)"><i class="fas fa-check-circle"></i> Verify</button>
                                                     <button type="button" class="btn btn-danger" onclick="openRejectModal(<?php echo (int) $reqDoc['id']; ?>, <?php echo (int) $application['user_id']; ?>)"><i class="fas fa-times-circle"></i> Reject</button>
                                                 <?php endif; ?>
@@ -790,7 +1236,15 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                         <div class="sidebar-stack">
                             <div class="meta-item"><span class="label">Current Status</span><span class="value"><span class="status-pill <?php echo htmlspecialchars($applicationStatus); ?>"><i class="fas <?php echo htmlspecialchars($statusIconMap[$applicationStatus] ?? 'fa-circle-info'); ?>"></i> <?php echo htmlspecialchars(ucfirst($applicationStatus)); ?></span></span></div>
                             <div class="meta-item"><span class="label">Student Response</span><span class="value"><?php echo htmlspecialchars($studentResponseLabel); ?></span><span class="subvalue"><?php echo htmlspecialchars($studentResponseNote); ?></span></div>
-                            <div class="meta-item"><span class="label">Application Score</span><span class="value"><?php echo $application['probability_score'] !== null ? htmlspecialchars(number_format((float) $application['probability_score'], 1) . '%') : 'Not calculated'; ?></span><span class="subvalue">Profile score</span></div>
+                            <div class="meta-item">
+                                <span class="label">Application Score</span>
+                                <span class="value"><?php echo $application['probability_score'] !== null ? htmlspecialchars(number_format((float) $application['probability_score'], 1) . '%') : 'Not calculated'; ?></span>
+                                <span class="subvalue">Profile score</span>
+                                <button type="button" class="app-review-match-guide-trigger is-inline" data-open-match-guide>
+                                    <i class="fas fa-circle-question"></i>
+                                    <?php echo htmlspecialchars($matchGuideButtonLabel); ?>
+                                </button>
+                            </div>
                             <div class="meta-item"><span class="label">Requirements Snapshot</span><span class="value"><?php echo htmlspecialchars(((int) ($requirementsSummary['uploaded'] ?? 0)) . ' uploaded | ' . $requirementsVerifiedCount . ' verified'); ?></span><span class="subvalue"><?php echo htmlspecialchars($requirementsPendingCount . ' pending'); ?></span></div>
                             <div class="meta-item"><span class="label">Applicant Account</span><span class="value"><?php echo htmlspecialchars(ucfirst((string) ($application['user_status'] ?? 'inactive'))); ?></span><span class="subvalue">Student account standing</span></div>
                             <?php if ($requirementsTotalCount > 0 && $requirementsVerifiedCount < $requirementsTotalCount): ?><div class="review-note warning"><?php echo htmlspecialchars($requirementsRemainingCount . ' required document' . ($requirementsRemainingCount === 1 ? ' is' : 's are') . ' still awaiting completion or verification.'); ?></div><?php endif; ?>
@@ -812,6 +1266,65 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
             </div>
         </div>
     </section>
+
+    <div id="matchGuideModal" class="app-modal app-modal-wide" aria-hidden="true">
+        <div class="app-modal-content match-guide-modal-content">
+            <div class="app-modal-header">
+                <div class="match-guide-modal-heading">
+                    <h3><i class="fas fa-chart-pie app-modal-heading-icon info"></i> <?php echo htmlspecialchars($matchGuideTitle); ?></h3>
+                    <p class="app-modal-intro"><?php echo htmlspecialchars($matchGuideSummary); ?></p>
+                </div>
+                <button type="button" class="app-modal-close" onclick="closeMatchGuideModal()" aria-label="Close match guide modal">&times;</button>
+            </div>
+            <div class="app-modal-body">
+                <div class="review-note info match-guide-note">
+                    <strong>Note:</strong> <?php echo htmlspecialchars($matchGuideNote); ?>
+                </div>
+
+                <div class="match-guide-factor-grid">
+                    <?php foreach ($matchScoreFactors as $matchScoreFactor): ?>
+                        <article class="match-guide-factor-card state-<?php echo htmlspecialchars((string) ($matchScoreFactor['class'] ?? 'info')); ?>">
+                            <span class="match-guide-factor-icon">
+                                <i class="fas <?php echo htmlspecialchars((string) ($matchScoreFactor['icon'] ?? 'fa-circle-info')); ?>"></i>
+                            </span>
+                            <div class="match-guide-factor-copy">
+                                <span class="match-guide-factor-label"><?php echo htmlspecialchars((string) ($matchScoreFactor['label'] ?? 'Factor')); ?></span>
+                                <strong><?php echo htmlspecialchars((string) ($matchScoreFactor['value'] ?? 'Not available')); ?></strong>
+                                <p><?php echo htmlspecialchars((string) ($matchScoreFactor['detail'] ?? '')); ?></p>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+
+                <div class="match-guide-reason-grid">
+                    <section class="match-guide-reason-card positive">
+                        <div class="match-guide-reason-head">
+                            <h4><i class="fas fa-arrow-trend-up"></i> Signals supporting this score</h4>
+                        </div>
+                        <ul class="match-guide-reason-list">
+                            <?php foreach ($matchPositiveItems as $matchPositiveItem): ?>
+                                <li><?php echo htmlspecialchars($matchPositiveItem); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </section>
+
+                    <section class="match-guide-reason-card warning">
+                        <div class="match-guide-reason-head">
+                            <h4><i class="fas fa-triangle-exclamation"></i> Signals limiting this score</h4>
+                        </div>
+                        <ul class="match-guide-reason-list">
+                            <?php foreach ($matchLimitingItems as $matchLimitingItem): ?>
+                                <li><?php echo htmlspecialchars($matchLimitingItem); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </section>
+                </div>
+            </div>
+            <div class="app-modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeMatchGuideModal()">Close</button>
+            </div>
+        </div>
+    </div>
 
     <div id="rejectModal" class="app-modal" aria-hidden="true">
         <div class="app-modal-content">
@@ -857,6 +1370,16 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                     </button>
                     <button type="button" class="btn btn-outline file-preview-reset-btn" id="filePreviewZoomReset">Reset</button>
                 </div>
+                <?php if ($canModerateDocuments): ?>
+                    <div class="file-preview-primary-actions" id="filePreviewPrimaryActions" hidden>
+                        <button type="button" class="btn btn-success" id="filePreviewVerifyButton" onclick="verifyPreviewDocument()">
+                            <i class="fas fa-check-circle"></i> Verify
+                        </button>
+                        <button type="button" class="btn btn-danger" id="filePreviewRejectButton" onclick="rejectPreviewDocument()">
+                            <i class="fas fa-times-circle"></i> Reject
+                        </button>
+                    </div>
+                <?php endif; ?>
                 <button type="button" class="btn btn-primary" onclick="closeFilePreviewModal()">Close</button>
             </div>
         </div>
@@ -868,8 +1391,12 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
     <script>
         let currentDocumentId = null;
         let currentUserId = null;
+        const applicationFlashQueue = [];
+        const applicationFlashSuccess = <?php echo json_encode($applicationFlashSuccess); ?>;
+        const applicationFlashError = <?php echo json_encode($applicationFlashError); ?>;
         const applicationReviewCsrfToken = <?php echo json_encode(csrfGetToken('application_review')); ?>;
         const documentReviewCsrfToken = <?php echo json_encode(csrfGetToken('document_review')); ?>;
+        const matchGuideModal = document.getElementById('matchGuideModal');
         const filePreviewModal = document.getElementById('filePreviewModal');
         const filePreviewFrame = document.getElementById('filePreviewFrame');
         const filePreviewImage = document.getElementById('filePreviewImage');
@@ -879,11 +1406,48 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
         const filePreviewZoomIn = document.getElementById('filePreviewZoomIn');
         const filePreviewZoomReset = document.getElementById('filePreviewZoomReset');
         const filePreviewZoomLevel = document.getElementById('filePreviewZoomLevel');
+        const filePreviewFrameWrap = document.getElementById('filePreviewFrameWrap');
+        const filePreviewPrimaryActions = document.getElementById('filePreviewPrimaryActions');
+        const filePreviewVerifyButton = document.getElementById('filePreviewVerifyButton');
+        const filePreviewRejectButton = document.getElementById('filePreviewRejectButton');
         const reviewStepButtons = Array.from(document.querySelectorAll('[data-review-target]'));
         const reviewStagePanels = Array.from(document.querySelectorAll('[data-review-panel]'));
         let filePreviewType = 'document';
         let filePreviewBaseUrl = '';
         let filePreviewZoom = 1;
+        let filePreviewDocumentId = 0;
+        let filePreviewUserId = 0;
+        let filePreviewDocumentStatus = '';
+
+        if (applicationFlashSuccess) {
+            applicationFlashQueue.push({
+                icon: 'success',
+                title: 'Success',
+                text: applicationFlashSuccess,
+                confirmButtonColor: '#2c5aa0'
+            });
+        }
+
+        if (applicationFlashError) {
+            applicationFlashQueue.push({
+                icon: 'error',
+                title: 'Action failed',
+                text: applicationFlashError,
+                confirmButtonColor: '#dc2626'
+            });
+        }
+
+        async function showApplicationFlashQueue() {
+            if (!window.Swal || !applicationFlashQueue.length) {
+                return;
+            }
+
+            for (const flashConfig of applicationFlashQueue) {
+                await Swal.fire(flashConfig);
+            }
+        }
+
+        showApplicationFlashQueue();
 
         function setActiveReviewStage(target) {
             if (!target) {
@@ -1008,12 +1572,12 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
 
         document.querySelectorAll('.open-file-modal').forEach((button) => {
             button.addEventListener('click', function() {
-                openFilePreviewModal(
-                    button.dataset.fileUrl || '',
-                    button.dataset.fileName || 'Document',
-                    button.dataset.fileType || 'document'
-                );
+                openFilePreviewModal(button);
             });
+        });
+
+        document.querySelectorAll('[data-open-match-guide]').forEach((button) => {
+            button.addEventListener('click', openMatchGuideModal);
         });
 
         if (filePreviewZoomOut) {
@@ -1095,13 +1659,48 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
             document.getElementById('rejectModal').classList.add('active');
         }
 
+        function openMatchGuideModal() {
+            if (!matchGuideModal) {
+                return;
+            }
+
+            matchGuideModal.classList.add('active');
+            matchGuideModal.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeMatchGuideModal() {
+            if (!matchGuideModal) {
+                return;
+            }
+
+            matchGuideModal.classList.remove('active');
+            matchGuideModal.setAttribute('aria-hidden', 'true');
+        }
+
         function closeRejectModal() {
             document.getElementById('rejectModal').classList.remove('active');
             currentDocumentId = null;
             currentUserId = null;
         }
 
-        function openFilePreviewModal(fileUrl, fileName, fileType) {
+        function syncFilePreviewActions() {
+            if (!filePreviewPrimaryActions || !filePreviewVerifyButton || !filePreviewRejectButton) {
+                return;
+            }
+
+            const canModeratePendingDocument = filePreviewDocumentId > 0
+                && filePreviewUserId > 0
+                && filePreviewDocumentStatus === 'pending';
+
+            filePreviewPrimaryActions.hidden = !canModeratePendingDocument;
+        }
+
+        function openFilePreviewModal(sourceButton) {
+            const sourceData = sourceButton && sourceButton.dataset ? sourceButton.dataset : {};
+            const fileUrl = sourceData.fileUrl || '';
+            const fileName = sourceData.fileName || 'Document';
+            const fileType = sourceData.fileType || 'document';
+
             if (!filePreviewModal || !filePreviewFrame || !filePreviewImage || !filePreviewName || !filePreviewFallback || !fileUrl) {
                 return;
             }
@@ -1109,12 +1708,21 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
             filePreviewType = fileType;
             filePreviewBaseUrl = fileUrl;
             filePreviewZoom = 1;
+            filePreviewDocumentId = parseInt(sourceData.documentId || '0', 10) || 0;
+            filePreviewUserId = parseInt(sourceData.userId || '0', 10) || 0;
+            filePreviewDocumentStatus = (sourceData.documentStatus || '').trim().toLowerCase();
             filePreviewName.textContent = fileName;
             filePreviewFrame.style.display = 'none';
             filePreviewImage.style.display = 'none';
             filePreviewFrame.removeAttribute('src');
             filePreviewImage.removeAttribute('src');
+            filePreviewFrame.style.zoom = '1';
+            filePreviewFrame.style.transform = '';
+            filePreviewFrame.style.transformOrigin = '';
+            filePreviewImage.style.transform = '';
+            filePreviewImage.style.transformOrigin = '';
             filePreviewFallback.hidden = true;
+            syncFilePreviewActions();
 
             if (fileType === 'image') {
                 filePreviewImage.src = fileUrl;
@@ -1122,6 +1730,7 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                 applyFilePreviewZoom();
             } else {
                 if (fileType === 'pdf') {
+                    filePreviewFrame.src = `${fileUrl}#toolbar=1&navpanes=0`;
                     applyFilePreviewZoom();
                 } else {
                     filePreviewFrame.src = fileUrl;
@@ -1149,9 +1758,21 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
             filePreviewImage.style.width = '';
             filePreviewImage.style.maxWidth = '';
             filePreviewImage.style.maxHeight = '';
+            filePreviewImage.style.transform = '';
+            filePreviewImage.style.transformOrigin = '';
+            filePreviewFrame.style.zoom = '1';
+            filePreviewFrame.style.transform = '';
+            filePreviewFrame.style.transformOrigin = '';
+            if (filePreviewFrameWrap) {
+                filePreviewFrameWrap.classList.remove('is-zoomed');
+            }
             filePreviewType = 'document';
             filePreviewBaseUrl = '';
             filePreviewZoom = 1;
+            filePreviewDocumentId = 0;
+            filePreviewUserId = 0;
+            filePreviewDocumentStatus = '';
+            syncFilePreviewActions();
             updateFilePreviewZoomControls();
         }
 
@@ -1172,21 +1793,25 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
         }
 
         function applyFilePreviewZoom() {
+            if (filePreviewFrameWrap) {
+                filePreviewFrameWrap.classList.toggle('is-zoomed', filePreviewZoom > 1.01);
+            }
+
             if (filePreviewType === 'image') {
-                if (Math.abs(filePreviewZoom - 1) < 0.01) {
-                    filePreviewImage.style.width = '';
-                    filePreviewImage.style.maxWidth = '';
-                    filePreviewImage.style.maxHeight = '';
-                } else {
-                    filePreviewImage.style.width = `${Math.round(filePreviewZoom * 100)}%`;
-                    filePreviewImage.style.maxWidth = 'none';
-                    filePreviewImage.style.maxHeight = 'none';
-                }
+                filePreviewImage.style.transform = `scale(${filePreviewZoom})`;
+                filePreviewImage.style.transformOrigin = 'top left';
                 return;
             }
 
             if (filePreviewType === 'pdf' && filePreviewBaseUrl) {
-                filePreviewFrame.src = `${filePreviewBaseUrl}#toolbar=1&navpanes=0&zoom=${Math.round(filePreviewZoom * 100)}`;
+                filePreviewFrame.style.zoom = String(filePreviewZoom);
+                if (filePreviewFrame.style.zoom !== String(filePreviewZoom)) {
+                    filePreviewFrame.style.transform = `scale(${filePreviewZoom})`;
+                    filePreviewFrame.style.transformOrigin = 'top left';
+                } else {
+                    filePreviewFrame.style.transform = '';
+                    filePreviewFrame.style.transformOrigin = '';
+                }
             }
         }
 
@@ -1221,6 +1846,22 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
 
             closeRejectModal();
             submitDocumentReview('reject', docId, userId, reason);
+        }
+
+        function verifyPreviewDocument() {
+            if (filePreviewDocumentId <= 0 || filePreviewUserId <= 0) {
+                return;
+            }
+
+            verifyDocument(filePreviewDocumentId, filePreviewUserId);
+        }
+
+        function rejectPreviewDocument() {
+            if (filePreviewDocumentId <= 0 || filePreviewUserId <= 0) {
+                return;
+            }
+
+            openRejectModal(filePreviewDocumentId, filePreviewUserId);
         }
 
         function submitDocumentReview(action, docId, userId, reason = '', extraParams = {}, uiOptions = {}) {
@@ -1273,12 +1914,16 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
 
         document.addEventListener('keydown', function(event) {
             if (event.key === 'Escape') {
+                closeMatchGuideModal();
                 closeRejectModal();
                 closeFilePreviewModal();
             }
         });
 
         document.addEventListener('click', function(event) {
+            if (event.target === matchGuideModal) {
+                closeMatchGuideModal();
+            }
             const rejectModal = document.getElementById('rejectModal');
             if (event.target === rejectModal) {
                 closeRejectModal();

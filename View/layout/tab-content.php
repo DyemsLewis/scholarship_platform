@@ -22,6 +22,8 @@ $showCollegeProgressFields = !$isIncomingApplicant;
 $uploadedProfileAvatarUrl = !empty($userProfileImageUrl) ? $userProfileImageUrl : null;
 $profileAvatarUrl = $uploadedProfileAvatarUrl ?: getDefaultProfileImageUrl('../');
 $editMiddleInitialValue = strtoupper(substr(str_replace('.', '', trim((string) ($userMiddleInitial ?? ''))), 0, 1));
+$normalizedEditMobileNumber = normalizePhilippineMobileNumber($userMobileNumber ?? '');
+$editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($normalizedEditMobileNumber, 3) : '';
 ?>
 <style>
     .profile-overview-hero {
@@ -89,6 +91,37 @@ $editMiddleInitialValue = strtoupper(substr(str_replace('.', '', trim((string) (
         display: flex;
         gap: 8px;
         flex-wrap: wrap;
+    }
+
+    .profile-phone-input-shell {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .profile-phone-input-icon {
+        position: absolute;
+        left: 12px;
+        color: var(--primary);
+        font-size: 0.95rem;
+        z-index: 1;
+    }
+
+    .profile-phone-prefix {
+        position: absolute;
+        left: 40px;
+        color: var(--dark);
+        font-weight: 600;
+        font-size: 0.9rem;
+        z-index: 1;
+        user-select: none;
+    }
+
+    .profile-phone-input-shell input[type="text"] {
+        width: 100%;
+        min-width: 0;
+        padding: 8px 10px 8px 80px !important;
+        font-size: 0.9rem;
     }
 
     .profile-avatar-circle {
@@ -790,7 +823,13 @@ $editMiddleInitialValue = strtoupper(substr(str_replace('.', '', trim((string) (
                 <div class="profile-two-col-grid">
                     <div>
                         <label for="editMobileNumber" style="font-size: 0.75rem;">Mobile Number</label>
-                        <input type="text" id="editMobileNumber" name="mobile_number" value="<?php echo htmlspecialchars($userMobileNumber ?? ''); ?>" placeholder="e.g., 09171234567" style="width: 100%; padding: 8px; font-size: 0.9rem;">
+                        <div class="profile-phone-input-shell">
+                            <span class="profile-phone-input-icon"><i class="fas fa-phone"></i></span>
+                            <span class="profile-phone-prefix">+63</span>
+                            <input type="text" id="editMobileNumber" inputmode="numeric" maxlength="10" value="<?php echo htmlspecialchars($editLocalMobileNumberValue); ?>" placeholder="9123456789" style="width: 100%; font-size: 0.9rem;">
+                            <input type="hidden" id="editMobileNumberHidden" name="mobile_number" value="<?php echo htmlspecialchars($normalizedEditMobileNumber ?? ''); ?>">
+                        </div>
+                        <small style="font-size: 0.7rem; display: block; margin-top: 6px;">Enter the 10-digit mobile number after the country code.</small>
                     </div>
 
                     <div>

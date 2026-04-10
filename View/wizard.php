@@ -441,7 +441,7 @@ if ($scholarship && !empty($scholarship['application_open_date'])) {
 }
 
 $alreadyApplied = $existingApplication !== null;
-$documentsReady = ($missingRequired === 0 && $rejectedRequired === 0);
+$documentsReady = ($missingRequired === 0 && $rejectedRequired === 0 && $pendingRequired === 0);
 $profileRulesReady = !empty($profileEvaluation['eligible']);
 
 $canSubmit = $isLoggedIn
@@ -468,6 +468,8 @@ if (!$isLoggedIn) {
     $blockReason = 'Upload all missing required documents first.';
 } elseif ($rejectedRequired > 0) {
     $blockReason = 'Re-upload rejected required documents first.';
+} elseif ($pendingRequired > 0) {
+    $blockReason = 'Wait for all required documents to finish review before applying.';
 } elseif (($profileEvaluation['pending'] ?? 0) > 0) {
     $blockReason = 'Complete your applicant profile first.';
 } elseif (($profileEvaluation['failed'] ?? 0) > 0) {
@@ -648,7 +650,7 @@ if (($profileEvaluation['pending'] ?? 0) > 0) {
 }
 if ($pendingRequired > 0) {
     $wizardSignalChips[] = [
-        'tone' => 'info',
+        'tone' => 'warning',
         'icon' => 'fa-clock',
         'label' => $pendingRequired . ' pending review'
     ];
@@ -681,7 +683,7 @@ $wizardEligibilityChecks[] = [
 ];
 $wizardEligibilityChecks[] = [
     'title' => 'Required documents',
-    'state' => $totalRequired === 0 ? 'ok' : ($rejectedRequired > 0 ? 'blocked' : ($missingRequired > 0 ? 'attention' : ($pendingRequired > 0 ? 'info' : 'ok'))),
+    'state' => $totalRequired === 0 ? 'ok' : ($rejectedRequired > 0 ? 'blocked' : ($missingRequired > 0 ? 'attention' : ($pendingRequired > 0 ? 'attention' : 'ok'))),
     'icon' => $totalRequired === 0 ? 'fa-circle-check' : ($rejectedRequired > 0 ? 'fa-xmark-circle' : ($missingRequired > 0 ? 'fa-folder-open' : ($pendingRequired > 0 ? 'fa-clock' : 'fa-circle-check'))),
     'detail' => $totalRequired === 0
         ? 'This scholarship does not list required documents.'
@@ -690,7 +692,7 @@ $wizardEligibilityChecks[] = [
             : ($missingRequired > 0
                 ? 'Upload all missing required documents before you continue.'
                 : ($pendingRequired > 0
-                    ? ($pendingRequired . ' required document(s) are still pending review, but you can continue.')
+                    ? ($pendingRequired . ' required document(s) are still pending review, so you cannot submit yet.')
                     : 'All required documents are uploaded.')))
 ];
 $wizardEligibilityChecks[] = [
@@ -1105,7 +1107,7 @@ if ($wizardProfileInitials === '') {
                         <div class="card-header wizard-step-header">
                             <div>
                                 <h3><i class="fas fa-folder-open"></i> Step 2: Documents</h3>
-                                <p>Missing and rejected documents stop submission. Pending documents can still move forward.</p>
+                                <p>Missing, rejected, and pending required documents all stop submission until they are cleared.</p>
                             </div>
                         </div>
                         <div class="card-body">
@@ -1281,6 +1283,7 @@ if ($wizardProfileInitials === '') {
                     <input type="hidden" name="scholarship_id" value="<?php echo (int) $scholarshipId; ?>">
                     <input type="hidden" id="missingDocsCount" value="<?php echo (int) $missingRequired; ?>">
                     <input type="hidden" id="rejectedDocsCount" value="<?php echo (int) $rejectedRequired; ?>">
+                    <input type="hidden" id="pendingDocsCount" value="<?php echo (int) $pendingRequired; ?>">
                     <input type="hidden" id="wizardProfilePendingCount" value="<?php echo (int) ($profileEvaluation['pending'] ?? 0); ?>">
                     <input type="hidden" id="wizardProfileFailedCount" value="<?php echo (int) ($profileEvaluation['failed'] ?? 0); ?>">
                     <input type="hidden" id="wizardGwaRequired" value="<?php echo $gwaRequired ? '1' : '0'; ?>">

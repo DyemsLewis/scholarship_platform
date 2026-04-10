@@ -93,6 +93,9 @@ $filterLabel = $activeFilter === '' ? 'All applications' : ucfirst($activeFilter
 $adminStyleVersion = @filemtime(__DIR__ . '/../public/css/admin_style.css') ?: time();
 $reviewsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/reviews.css') ?: time();
 $manageApplicationsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/manage-applications.css') ?: time();
+$applicationFlashSuccess = isset($_SESSION['success']) ? (string) $_SESSION['success'] : '';
+$applicationFlashError = isset($_SESSION['error']) ? (string) $_SESSION['error'] : '';
+unset($_SESSION['success'], $_SESSION['error']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -101,6 +104,7 @@ $manageApplicationsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/mana
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Applications</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="../public/css/admin_style.css?v=<?php echo urlencode((string) $adminStyleVersion); ?>">
     <link rel="stylesheet" href="../AdminPublic/css/manage-applications.css?v=<?php echo urlencode((string) $manageApplicationsStyleVersion); ?>">
     <link rel="stylesheet" href="../AdminPublic/css/reviews.css?v=<?php echo urlencode((string) $reviewsStyleVersion); ?>">
@@ -127,16 +131,20 @@ $manageApplicationsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/mana
 
             <?php $reviewsCurrentView = 'applications'; include 'layouts/reviews_nav.php'; ?>
 
-            <?php if (isset($_SESSION['success'])): ?>
+            <?php if ($applicationFlashSuccess !== ''): ?>
+                <noscript>
                 <div class="alert alert-success">
-                    <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($_SESSION['success']); unset($_SESSION['success']); ?>
+                    <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($applicationFlashSuccess); ?>
                 </div>
+                </noscript>
             <?php endif; ?>
 
-            <?php if (isset($_SESSION['error'])): ?>
+            <?php if ($applicationFlashError !== ''): ?>
+                <noscript>
                 <div class="alert alert-error">
-                    <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($_SESSION['error']); unset($_SESSION['error']); ?>
+                    <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($applicationFlashError); ?>
                 </div>
+                </noscript>
             <?php endif; ?>
 
             <div class="applications-summary-grid">
@@ -286,6 +294,42 @@ $manageApplicationsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/mana
     </section>
 
     <?php include 'layouts/admin_footer.php'; ?>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const applicationFlashQueue = [];
+        const applicationFlashSuccess = <?php echo json_encode($applicationFlashSuccess); ?>;
+        const applicationFlashError = <?php echo json_encode($applicationFlashError); ?>;
+
+        if (applicationFlashSuccess) {
+            applicationFlashQueue.push({
+                icon: 'success',
+                title: 'Success',
+                text: applicationFlashSuccess,
+                confirmButtonColor: '#2c5aa0'
+            });
+        }
+
+        if (applicationFlashError) {
+            applicationFlashQueue.push({
+                icon: 'error',
+                title: 'Action failed',
+                text: applicationFlashError,
+                confirmButtonColor: '#dc2626'
+            });
+        }
+
+        async function showApplicationFlashQueue() {
+            if (!window.Swal || !applicationFlashQueue.length) {
+                return;
+            }
+
+            for (const flashConfig of applicationFlashQueue) {
+                await Swal.fire(flashConfig);
+            }
+        }
+
+        showApplicationFlashQueue();
+    </script>
 </body>
 </html>
 

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../Config/helpers.php';
 require_once 'AdminData.php';
 require_once 'ProviderData.php';
 require_once 'StaffProfile.php';
@@ -402,7 +403,7 @@ class StaffAccountProfile {
             'contact_person_lastname' => $this->normalizeRequired($data['contact_person_lastname'] ?? ''),
             'contact_person_position' => $this->normalizeRequired($data['contact_person_position'] ?? ''),
             'phone_number' => $this->normalizeRequired($data['phone_number'] ?? ''),
-            'mobile_number' => $this->normalizeNullable($data['mobile_number'] ?? null),
+            'mobile_number' => normalizePhilippineMobileNumber($data['mobile_number'] ?? null),
             'organization_email' => $this->normalizeRequired($data['organization_email'] ?? ($context['email'] ?? '')),
             'website' => $this->normalizeNullable($data['website'] ?? null),
             'organization_type' => $this->normalizeRequired($data['organization_type'] ?? ''),

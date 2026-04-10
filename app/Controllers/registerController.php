@@ -3,6 +3,7 @@
 require_once __DIR__ . '/../Config/session_bootstrap.php';
 require_once __DIR__ . '/../Config/db_config.php';
 require_once __DIR__ . '/../Config/csrf.php';
+require_once __DIR__ . '/../Config/helpers.php';
 require_once __DIR__ . '/../Config/signup_verification.php';
 require_once __DIR__ . '/../Config/password_policy.php';
 require_once __DIR__ . '/../Models/User.php';
@@ -25,26 +26,7 @@ function normalizeNullable($value): ?string {
 }
 
 function normalizeMobileNumber($value): ?string {
-    $trimmed = normalizeInput($value);
-    if ($trimmed === '') {
-        return null;
-    }
-
-    $digits = preg_replace('/\D+/', '', $trimmed) ?? '';
-    if ($digits === '') {
-        return null;
-    }
-
-    if (str_starts_with($digits, '63')) {
-        $digits = substr($digits, 2);
-    }
-
-    if (str_starts_with($digits, '0')) {
-        $digits = substr($digits, 1);
-    }
-
-    $digits = substr($digits, 0, 10);
-    return $digits !== '' ? '+63' . $digits : null;
+    return normalizePhilippineMobileNumber($value);
 }
 
 function normalizeChoice($value, array $allowedValues, ?string $default = null): ?string {

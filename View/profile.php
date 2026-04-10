@@ -90,7 +90,7 @@ if ($isLoggedIn) {
                 $_SESSION['user_barangay'] = $studentData['barangay'] ?? $_SESSION['user_barangay'] ?? '';
                 $_SESSION['user_city'] = $studentData['city'] ?? $_SESSION['user_city'] ?? '';
                 $_SESSION['user_province'] = $studentData['province'] ?? $_SESSION['user_province'] ?? '';
-                $_SESSION['user_mobile_number'] = $studentData['mobile_number'] ?? $_SESSION['user_mobile_number'] ?? '';
+                $_SESSION['user_mobile_number'] = formatPhilippineMobileNumber($studentData['mobile_number'] ?? ($_SESSION['user_mobile_number'] ?? ''));
                 $_SESSION['user_citizenship'] = $studentData['citizenship'] ?? $_SESSION['user_citizenship'] ?? '';
                 $_SESSION['user_household_income_bracket'] = $studentData['household_income_bracket'] ?? $_SESSION['user_household_income_bracket'] ?? '';
                 $_SESSION['user_special_category'] = $studentData['special_category'] ?? $_SESSION['user_special_category'] ?? '';
@@ -130,7 +130,7 @@ $userStreet = $_SESSION['user_street'] ?? '';
 $userBarangay = $_SESSION['user_barangay'] ?? '';
 $userCity = $_SESSION['user_city'] ?? '';
 $userProvince = $_SESSION['user_province'] ?? '';
-$userMobileNumber = $_SESSION['user_mobile_number'] ?? '';
+$userMobileNumber = formatPhilippineMobileNumber($_SESSION['user_mobile_number'] ?? '');
 $userCitizenship = $_SESSION['user_citizenship'] ?? '';
 $userHouseholdIncomeBracket = $_SESSION['user_household_income_bracket'] ?? '';
 $userSpecialCategory = $_SESSION['user_special_category'] ?? '';

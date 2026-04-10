@@ -46,6 +46,11 @@ function displayValue($value, string $fallback = 'Not set'): string {
     return $trimmed !== '' ? $trimmed : $fallback;
 }
 
+function displayMobileValue($value, string $fallback = 'Not set'): string {
+    $formatted = formatPhilippineMobileNumber($value);
+    return $formatted !== '' ? $formatted : $fallback;
+}
+
 function normalizeMiddleInitialInputValue($value): string {
     $lettersOnly = preg_replace('/[^A-Za-z]/', '', trim((string) $value)) ?? '';
     return strtoupper(substr($lettersOnly, 0, 1));
@@ -301,7 +306,7 @@ $profilePageDescription = $isProviderRole
                                     <div class="staff-info-card"><div class="staff-info-label">Contact Person</div><div class="staff-info-value"><?php echo htmlspecialchars($providerContactName); ?></div></div>
                                     <div class="staff-info-card"><div class="staff-info-label">Contact Position</div><div class="staff-info-value"><?php echo htmlspecialchars(displayValue($profile['contact_person_position'] ?? '')); ?></div></div>
                                     <div class="staff-info-card"><div class="staff-info-label">Phone Number</div><div class="staff-info-value"><?php echo htmlspecialchars(displayValue($profile['phone_number'] ?? '')); ?></div></div>
-                                    <div class="staff-info-card"><div class="staff-info-label">Mobile Number</div><div class="staff-info-value"><?php echo htmlspecialchars(displayValue($profile['mobile_number'] ?? '')); ?></div></div>
+                                    <div class="staff-info-card"><div class="staff-info-label">Mobile Number</div><div class="staff-info-value"><?php echo htmlspecialchars(displayMobileValue($profile['mobile_number'] ?? '')); ?></div></div>
                                     <div class="staff-info-card"><div class="staff-info-label">Organization Email</div><div class="staff-info-value"><?php echo htmlspecialchars(displayValue($profile['organization_email'] ?? ($account['email'] ?? ''))); ?></div></div>
                                     <div class="staff-info-card"><div class="staff-info-label">Website</div><div class="staff-info-value"><?php echo !empty($profile['website']) ? '<a href="' . htmlspecialchars($profile['website']) . '" target="_blank" rel="noopener noreferrer">' . htmlspecialchars($profile['website']) . '</a>' : 'Not set'; ?></div></div>
                                 </div>
@@ -386,7 +391,7 @@ $profilePageDescription = $isProviderRole
                                     <div class="staff-form-group"><label for="contact_person_lastname">Contact Last Name *</label><input type="text" id="contact_person_lastname" name="contact_person_lastname" value="<?php echo htmlspecialchars((string) ($profile['contact_person_lastname'] ?? '')); ?>" required></div>
                                     <div class="staff-form-group"><label for="contact_person_position">Contact Position *</label><input type="text" id="contact_person_position" name="contact_person_position" value="<?php echo htmlspecialchars((string) ($profile['contact_person_position'] ?? '')); ?>" required></div>
                                     <div class="staff-form-group"><label for="phone_number">Phone Number *</label><input type="text" id="phone_number" name="phone_number" value="<?php echo htmlspecialchars((string) ($profile['phone_number'] ?? '')); ?>" required></div>
-                                    <div class="staff-form-group"><label for="mobile_number">Mobile Number</label><input type="text" id="mobile_number" name="mobile_number" value="<?php echo htmlspecialchars((string) ($profile['mobile_number'] ?? '')); ?>"></div>
+                                    <div class="staff-form-group"><label for="mobile_number">Mobile Number</label><input type="text" id="mobile_number" name="mobile_number" value="<?php echo htmlspecialchars(formatPhilippineMobileNumber((string) ($profile['mobile_number'] ?? ''))); ?>"></div>
                                     <div class="staff-form-group"><label for="organization_email">Organization Email *</label><input type="email" id="organization_email" name="organization_email" value="<?php echo htmlspecialchars((string) ($profile['organization_email'] ?? ($account['email'] ?? ''))); ?>" required></div>
                                     <div class="staff-form-group"><label for="website">Website</label><input type="url" id="website" name="website" value="<?php echo htmlspecialchars((string) ($profile['website'] ?? '')); ?>" placeholder="https://example.org"></div>
                                     <div class="staff-form-group is-full"><label for="address">Address *</label><input type="text" id="address" name="address" value="<?php echo htmlspecialchars((string) ($profile['address'] ?? '')); ?>" required></div>

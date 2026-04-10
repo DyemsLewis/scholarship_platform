@@ -18,7 +18,12 @@ unset($_SESSION['provider_signup_old'], $_SESSION['provider_signup_errors']);
 
 function providerOldValue(array $oldInput, string $key, string $default = ''): string
 {
-    return array_key_exists($key, $oldInput) ? trim((string) $oldInput[$key]) : $default;
+    $value = array_key_exists($key, $oldInput) ? trim((string) $oldInput[$key]) : $default;
+    if ($key === 'mobile_number') {
+        return formatPhilippineMobileNumber($value);
+    }
+
+    return $value;
 }
 
 function providerSelected(array $oldInput, string $key, string $expectedValue): string

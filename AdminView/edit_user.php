@@ -259,11 +259,13 @@ unset($_SESSION['edit_user_old']);
 function editUserValue(array $oldInput, array $user, string $key, string $default = ''): string
 {
     if (array_key_exists($key, $oldInput)) {
-        return trim((string) $oldInput[$key]);
+        $value = trim((string) $oldInput[$key]);
+        return $key === 'mobile_number' ? formatPhilippineMobileNumber($value) : $value;
     }
 
     if (array_key_exists($key, $user) && $user[$key] !== null) {
-        return trim((string) $user[$key]);
+        $value = trim((string) $user[$key]);
+        return $key === 'mobile_number' ? formatPhilippineMobileNumber($value) : $value;
     }
 
     return $default;
