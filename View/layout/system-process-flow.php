@@ -44,7 +44,7 @@
             <div class="process-step">
                 <div class="step-number">8</div>
                 <div class="step-title">Application</div>
-                <p>Guided wizard for submission</p>
+                <p>Guided application flow</p>
             </div>
         </div>
         

@@ -2092,6 +2092,11 @@ svg {
     box-shadow: 0 8px 18px rgba(239, 68, 68, 0.28);
 }
 
+.student-utility-fab-count.is-hidden,
+.notification-center-mark-form.is-hidden {
+    display: none !important;
+}
+
 .notification-center-modal,
 .report-issue-modal {
     position: fixed;

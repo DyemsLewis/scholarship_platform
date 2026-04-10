@@ -243,23 +243,6 @@ $cityProvinceParts = array_filter([
     trim((string) ($application['province'] ?? ''))
 ]);
 $cityProvinceLabel = !empty($cityProvinceParts) ? implode(', ', $cityProvinceParts) : 'Not set';
-$profileEducationMetaParts = [];
-if ($schoolLabel !== 'School not set') {
-    $profileEducationMetaParts[] = $schoolLabel;
-}
-if ($yearLevelLabel !== 'Not set') {
-    $profileEducationMetaParts[] = $yearLevelLabel;
-}
-$profileResidenceMeta = appHasValue($application['barangay'] ?? null)
-    ? 'Barangay ' . trim((string) $application['barangay'])
-    : 'Address on record';
-$profileApplicantMeta = $admissionStatusLabel !== 'Not set' ? $admissionStatusLabel : 'Screening profile';
-$profileHighlightItems = [
-    ['label' => 'Applicant Type', 'value' => $applicantProgramLabel, 'meta' => $profileApplicantMeta],
-    ['label' => 'Academic Record', 'value' => $currentGwaLabel, 'meta' => $academicStandingLabel],
-    ['label' => 'Current Program', 'value' => $courseLabel, 'meta' => !empty($profileEducationMetaParts) ? implode(' / ', $profileEducationMetaParts) : 'Academic profile'],
-    ['label' => 'Residence', 'value' => $cityProvinceLabel, 'meta' => $profileResidenceMeta],
-];
 $identityFields = [
     ['label' => 'Applicant Name', 'value' => $fullName],
     ['label' => 'Email Address', 'value' => appValue($application['email'] ?? '')],
@@ -373,16 +356,6 @@ $applicationScoreDisplay = $application['probability_score'] !== null
     ? number_format((float) $application['probability_score'], 1) . '%'
     : 'Not calculated';
 $accountStatusLabel = ucfirst((string) ($application['user_status'] ?? 'inactive'));
-$applicantProfileBadges = [
-    ['icon' => 'fa-user-graduate', 'label' => $applicantProgramLabel],
-    ['icon' => 'fa-circle-user', 'label' => $accountStatusLabel . ' account'],
-];
-if ($academicStandingLabel !== 'Not set') {
-    $applicantProfileBadges[] = ['icon' => 'fa-award', 'label' => $academicStandingLabel];
-}
-if ($admissionStatusLabel !== 'Not set') {
-    $applicantProfileBadges[] = ['icon' => 'fa-route', 'label' => $admissionStatusLabel];
-}
 $profileSectionGroups = [
     ['title' => 'Identity and Contact', 'icon' => 'fa-id-card', 'fields' => $identityFields],
     ['title' => 'Current Academic Record', 'icon' => 'fa-graduation-cap', 'fields' => $academicFields],
@@ -627,44 +600,6 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                             </div>
                         </div>
                         <div class="applicant-profile-shell">
-                            <section class="applicant-profile-summary-card">
-                                <div class="applicant-profile-summary-top">
-                                    <div class="applicant-profile-summary-avatar">
-                                        <img src="<?php echo htmlspecialchars($applicantProfileImageUrl); ?>" alt="<?php echo htmlspecialchars($fullName); ?> profile picture">
-                                    </div>
-                                    <div class="applicant-profile-summary-copy">
-                                        <span class="applicant-profile-summary-kicker">Applicant Snapshot</span>
-                                        <h3><?php echo htmlspecialchars($fullName); ?></h3>
-                                        <p><?php echo htmlspecialchars($schoolLabel . ' / ' . $courseLabel); ?></p>
-                                    </div>
-                                </div>
-
-                                <div class="applicant-profile-summary-contact">
-                                    <span><i class="fas fa-envelope"></i> <?php echo htmlspecialchars(appValue($application['email'] ?? '')); ?></span>
-                                    <span><i class="fas fa-phone"></i> <?php echo htmlspecialchars(appValue($application['mobile_number'] ?? '')); ?></span>
-                                    <span><i class="fas fa-location-dot"></i> <?php echo htmlspecialchars($cityProvinceLabel); ?></span>
-                                </div>
-
-                                <div class="applicant-profile-summary-badges">
-                                    <?php foreach ($applicantProfileBadges as $badge): ?>
-                                        <span class="applicant-profile-badge">
-                                            <i class="fas <?php echo htmlspecialchars($badge['icon']); ?>"></i>
-                                            <?php echo htmlspecialchars($badge['label']); ?>
-                                        </span>
-                                    <?php endforeach; ?>
-                                </div>
-
-                                <div class="applicant-profile-summary-stats">
-                                    <?php foreach ($profileHighlightItems as $highlightItem): ?>
-                                        <article class="applicant-profile-stat-card">
-                                            <span class="applicant-profile-stat-label"><?php echo htmlspecialchars($highlightItem['label']); ?></span>
-                                            <strong class="applicant-profile-stat-value"><?php echo htmlspecialchars($highlightItem['value']); ?></strong>
-                                            <span class="applicant-profile-stat-meta"><?php echo htmlspecialchars($highlightItem['meta']); ?></span>
-                                        </article>
-                                    <?php endforeach; ?>
-                                </div>
-                            </section>
-
                             <div class="applicant-profile-block-grid">
                                 <?php foreach ($profileSectionGroups as $group): ?>
                                     <section class="applicant-profile-block<?php echo !empty($group['wide']) ? ' is-wide' : ''; ?>">
@@ -688,6 +623,12 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
                                         </div>
                                     </section>
                                 <?php endforeach; ?>
+                            </div>
+
+                            <div class="app-review-stage-actions">
+                                <button type="button" class="btn btn-primary" data-review-next-target="documents">
+                                    Continue to Required Documents <i class="fas fa-arrow-right"></i>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -964,6 +905,15 @@ $rejectUrl = buildEntityUrl('../app/AdminControllers/application_process.php', '
         reviewStepButtons.forEach((button) => {
             button.addEventListener('click', () => {
                 setActiveReviewStage(button.dataset.reviewTarget || 'profile');
+            });
+        });
+
+        document.querySelectorAll('[data-review-next-target], [data-review-prev-target]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const target = button.getAttribute('data-review-next-target')
+                    || button.getAttribute('data-review-prev-target')
+                    || 'profile';
+                setActiveReviewStage(target);
             });
         });
 

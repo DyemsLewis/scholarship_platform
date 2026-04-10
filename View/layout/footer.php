@@ -72,20 +72,26 @@ if ($showStudentWidgets) {
                 <h3>Quick Links</h3>
                 <ul>
                     <li><a href="index.php">Home</a></li>
-                    <li><a href="profile.php">Profile</a></li>
-                    <li><a href="upload.php">Upload</a></li>
                     <li><a href="scholarships.php">Scholarships</a></li>
-                    <li><a href="wizard.php">Application Wizard</a></li>
+                    <?php if ($showStudentWidgets): ?>
+                    <li><a href="profile.php">Profile</a></li>
+                    <li><a href="documents.php">Documents</a></li>
+                    <li><a href="applications.php">Applications</a></li>
+                    <?php else: ?>
+                    <li><a href="how_it_works.php">How It Works</a></li>
+                    <li><a href="guest_guide.php">Guest Guide</a></li>
+                    <li><a href="faq.php">FAQ</a></li>
+                    <?php endif; ?>
                 </ul>
             </div>
             
             <div class="footer-links">
-                <h3>About Us</h3>
+                <h3>Learn More</h3>
                 <ul>
-                    <li><a href="#">Our Mission</a></li>
-                    <li><a href="#">Who We Help</a></li>
-                    <li><a href="#">How Matching Works</a></li>
-                    <li><a href="#">Platform Updates</a></li>
+                    <li><a href="about.php#mission">Our Mission</a></li>
+                    <li><a href="about.php#who-we-help">Who We Help</a></li>
+                    <li><a href="how_it_works.php">How Matching Works</a></li>
+                    <li><a href="faq.php">Common Questions</a></li>
                 </ul>
             </div>
         </div>
@@ -100,9 +106,7 @@ if ($showStudentWidgets) {
 <div class="student-utility-stack">
     <button type="button" class="student-utility-fab notification-center-fab" id="notificationCenterFab" aria-label="Open notifications">
         <i class="fas fa-bell"></i>
-        <?php if ($unreadNotificationCount > 0): ?>
-        <span class="student-utility-fab-count"><?php echo $unreadNotificationCount > 9 ? '9+' : (int) $unreadNotificationCount; ?></span>
-        <?php endif; ?>
+        <span class="student-utility-fab-count<?php echo $unreadNotificationCount > 0 ? '' : ' is-hidden'; ?>" id="notificationCenterFabCount"><?php echo $unreadNotificationCount > 9 ? '9+' : (int) $unreadNotificationCount; ?></span>
     </button>
 
     <button type="button" class="student-utility-fab report-issue-fab" id="reportIssueFab" aria-label="Report a problem">
@@ -118,27 +122,25 @@ if ($showStudentWidgets) {
                 <p>Recent updates about your applications, documents, and GWA reports.</p>
             </div>
             <div class="notification-center-dialog-actions">
-                <span class="notification-center-badge"><?php echo (int) $unreadNotificationCount; ?> unread</span>
-                <?php if (!empty($userNotifications) && $unreadNotificationCount > 0): ?>
-                <form method="POST" action="../app/Controllers/notification_controller.php" class="notification-center-mark-form">
+                <span class="notification-center-badge" id="notificationCenterUnreadBadge"><?php echo (int) $unreadNotificationCount; ?> unread</span>
+                <form method="POST" action="../app/Controllers/notification_controller.php" class="notification-center-mark-form<?php echo (!empty($userNotifications) && $unreadNotificationCount > 0) ? '' : ' is-hidden'; ?>" id="notificationCenterMarkForm">
                     <input type="hidden" name="action" value="mark_all_read">
                     <?php echo csrfInputField('notification_center'); ?>
                     <input type="hidden" name="redirect" value="" class="notification-center-redirect">
                     <button type="submit" class="btn btn-outline btn-sm">Mark all read</button>
                 </form>
-                <?php endif; ?>
                 <button type="button" class="report-issue-close" id="notificationCenterClose" aria-label="Close notifications dialog">&times;</button>
             </div>
         </div>
 
-        <div class="notification-center-body">
+        <div class="notification-center-body" id="notificationCenterBody">
             <?php if (empty($userNotifications)): ?>
-            <div class="notification-center-empty">
+            <div class="notification-center-empty" id="notificationCenterEmpty">
                 <i class="fas fa-inbox"></i>
                 <p>No notifications yet. Updates will appear here as you use the system.</p>
             </div>
             <?php else: ?>
-            <div class="notification-center-list">
+            <div class="notification-center-list" id="notificationCenterList">
                 <?php foreach ($userNotifications as $notification): ?>
                 <?php
                     $notificationType = (string) ($notification['type'] ?? 'general');
@@ -225,7 +227,7 @@ if ($showStudentWidgets) {
                         name="page_context"
                         id="reportIssuePageContext"
                         maxlength="180"
-                        placeholder="Example: Scholarships, Documents, Wizard"
+                        placeholder="Example: Scholarships, Documents, Applications"
                         value="<?php echo htmlspecialchars((string) ($userIssueOld['page_context'] ?? '')); ?>">
                 </div>
             </div>
@@ -269,6 +271,11 @@ if ($showStudentWidgets) {
     const notificationOpenButton = document.getElementById('notificationCenterFab');
     const notificationCloseButton = document.getElementById('notificationCenterClose');
     const notificationRedirectInputs = document.querySelectorAll('.notification-center-redirect');
+    const notificationFabCount = document.getElementById('notificationCenterFabCount');
+    const notificationUnreadBadge = document.getElementById('notificationCenterUnreadBadge');
+    const notificationMarkForm = document.getElementById('notificationCenterMarkForm');
+    const notificationCenterBody = document.getElementById('notificationCenterBody');
+    const notificationRefreshUrl = <?php echo json_encode(normalizeAppUrl('../app/Controllers/notification_feed.php'), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
 
     const issueModal = document.getElementById('reportIssueModal');
     const issueOpenButton = document.getElementById('reportIssueFab');
@@ -287,6 +294,9 @@ if ($showStudentWidgets) {
 
     const issueErrors = <?php echo json_encode($userIssueErrors, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
     const issueFlash = <?php echo json_encode($userIssueFlash, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE); ?>;
+    let notificationPollTimer = null;
+    let notificationRefreshInFlight = false;
+    let latestNotificationSignature = '';
 
     function syncBodyLock() {
         if (document.querySelector('.notification-center-modal.active, .report-issue-modal.active')) {
@@ -336,6 +346,7 @@ if ($showStudentWidgets) {
     notificationOpenButton.addEventListener('click', function () {
         syncIssueContext();
         openModal(notificationModal);
+        refreshNotifications(true);
     });
 
     issueOpenButton.addEventListener('click', function () {
@@ -412,6 +423,179 @@ if ($showStudentWidgets) {
 
     syncIssueContext();
 
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function notificationIconForType(type) {
+        const normalizedType = String(type || '').toLowerCase();
+        if (normalizedType.includes('approved') || normalizedType.includes('verified') || normalizedType.includes('resolved')) {
+            return 'fa-circle-check';
+        }
+        if (normalizedType.includes('rejected')) {
+            return 'fa-circle-xmark';
+        }
+        if (normalizedType.includes('reviewed')) {
+            return 'fa-clock';
+        }
+        if (normalizedType.includes('submitted')) {
+            return 'fa-paper-plane';
+        }
+        return 'fa-circle-info';
+    }
+
+    function renderNotificationFabCount(unreadCount) {
+        if (!notificationFabCount) {
+            return;
+        }
+
+        if (unreadCount > 0) {
+            notificationFabCount.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+            notificationFabCount.classList.remove('is-hidden');
+        } else {
+            notificationFabCount.textContent = '0';
+            notificationFabCount.classList.add('is-hidden');
+        }
+    }
+
+    function renderNotificationDialogState(payload) {
+        if (!notificationCenterBody || !notificationUnreadBadge || !notificationMarkForm) {
+            return;
+        }
+
+        const unreadCount = Number(payload.unread_count || 0);
+        const notifications = Array.isArray(payload.notifications) ? payload.notifications : [];
+
+        notificationUnreadBadge.textContent = `${unreadCount} unread`;
+        notificationMarkForm.classList.toggle('is-hidden', !(notifications.length > 0 && unreadCount > 0));
+
+        if (notifications.length === 0) {
+            notificationCenterBody.innerHTML = `
+                <div class="notification-center-empty" id="notificationCenterEmpty">
+                    <i class="fas fa-inbox"></i>
+                    <p>No notifications yet. Updates will appear here as you use the system.</p>
+                </div>
+            `;
+            return;
+        }
+
+        const itemsHtml = notifications.map((notification) => {
+            const icon = notificationIconForType(notification.type);
+            const isRead = Boolean(Number(notification.is_read || 0));
+            const itemClass = isRead ? 'is-read' : 'is-unread';
+            const title = escapeHtml(notification.title || 'Notification');
+            const message = escapeHtml(notification.message || '');
+            const createdAtLabel = escapeHtml(notification.created_at_label || 'Recently');
+            const linkUrl = String(notification.link_url || '').trim();
+
+            if (linkUrl !== '') {
+                return `
+                    <a class="notification-center-item ${itemClass}" href="${escapeHtml(linkUrl)}">
+                        <div class="notification-center-icon">
+                            <i class="fas ${icon}"></i>
+                        </div>
+                        <div class="notification-center-content">
+                            <div class="notification-center-meta">
+                                <h4>${title}</h4>
+                                <span>${createdAtLabel}</span>
+                            </div>
+                            <p>${message}</p>
+                        </div>
+                    </a>
+                `;
+            }
+
+            return `
+                <div class="notification-center-item ${itemClass}">
+                    <div class="notification-center-icon">
+                        <i class="fas ${icon}"></i>
+                    </div>
+                    <div class="notification-center-content">
+                        <div class="notification-center-meta">
+                            <h4>${title}</h4>
+                            <span>${createdAtLabel}</span>
+                        </div>
+                        <p>${message}</p>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        notificationCenterBody.innerHTML = `<div class="notification-center-list" id="notificationCenterList">${itemsHtml}</div>`;
+    }
+
+    async function refreshNotifications(force = false) {
+        if (!notificationRefreshUrl || notificationRefreshInFlight) {
+            return;
+        }
+
+        if (!force && document.visibilityState === 'hidden') {
+            return;
+        }
+
+        notificationRefreshInFlight = true;
+
+        try {
+            const response = await fetch(notificationRefreshUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
+                cache: 'no-store'
+            });
+
+            if (!response.ok) {
+                throw new Error(`Notification refresh failed with ${response.status}`);
+            }
+
+            const payload = await response.json();
+            if (!payload || payload.success !== true) {
+                return;
+            }
+
+            const nextSignature = JSON.stringify([
+                payload.unread_count || 0,
+                Array.isArray(payload.notifications) ? payload.notifications.map((item) => [item.id, item.is_read, item.created_at_label]).flat() : []
+            ]);
+
+            if (force || nextSignature !== latestNotificationSignature) {
+                latestNotificationSignature = nextSignature;
+                renderNotificationFabCount(Number(payload.unread_count || 0));
+                renderNotificationDialogState(payload);
+            }
+        } catch (error) {
+            console.error(error);
+        } finally {
+            notificationRefreshInFlight = false;
+        }
+    }
+
+    function startNotificationPolling() {
+        if (notificationPollTimer !== null) {
+            window.clearInterval(notificationPollTimer);
+        }
+
+        notificationPollTimer = window.setInterval(() => {
+            refreshNotifications(false);
+        }, 15000);
+    }
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') {
+            refreshNotifications(true);
+        }
+    });
+
+    renderNotificationFabCount(<?php echo (int) $unreadNotificationCount; ?>);
+    startNotificationPolling();
+
     if (Array.isArray(issueErrors) && issueErrors.length > 0) {
         openModal(issueModal);
         if (window.Swal && typeof window.Swal.fire === 'function') {
@@ -430,6 +614,8 @@ if ($showStudentWidgets) {
             confirmButtonColor: '#2c5aa0'
         });
     }
+
+    refreshNotifications(true);
 })();
 </script>
 <?php endif; ?>

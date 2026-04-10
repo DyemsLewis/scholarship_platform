@@ -4504,6 +4504,7 @@
 .applicant-profile-shell {
     display: grid;
     gap: 18px;
+    padding: 4px 20px 20px;
 }
 
 .applicant-profile-summary-card {
@@ -4648,12 +4649,15 @@
 .applicant-profile-block-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
     gap: 16px;
 }
 
 .applicant-profile-block {
     display: grid;
+    align-content: start;
     gap: 14px;
+    height: 100%;
     min-width: 0;
     padding: 18px;
     border-radius: 18px;
@@ -4693,23 +4697,26 @@
 
 .applicant-profile-row-list {
     display: grid;
-    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
 }
 
 .applicant-profile-row-item {
     display: grid;
-    grid-template-columns: minmax(130px, 180px) minmax(0, 1fr);
-    gap: 12px;
+    gap: 8px;
     align-items: start;
+    align-content: start;
     min-width: 0;
-    padding: 12px 14px;
+    min-height: 92px;
+    padding: 14px;
     border-radius: 14px;
     border: 1px solid #e2e8f0;
     background: #f8fafc;
 }
 
 .applicant-profile-row-item.is-full {
-    grid-template-columns: 1fr;
+    grid-column: 1 / -1;
+    min-height: 0;
 }
 
 .applicant-profile-row-label {
@@ -4732,6 +4739,18 @@
     color: #526176;
 }
 
+.app-review-stage-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.app-review-stage-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
 @media (max-width: 1180px) {
     .applicant-profile-summary-stats,
     .applicant-profile-block-grid {
@@ -4741,8 +4760,7 @@
 
 @media (max-width: 820px) {
     .applicant-profile-summary-top,
-    .applicant-profile-block-head,
-    .applicant-profile-row-item {
+    .applicant-profile-block-head {
         grid-template-columns: 1fr;
     }
 
@@ -4752,12 +4770,17 @@
     }
 
     .applicant-profile-summary-stats,
-    .applicant-profile-block-grid {
+    .applicant-profile-block-grid,
+    .applicant-profile-row-list {
         grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 640px) {
+    .applicant-profile-shell {
+        padding: 4px 15px 15px;
+    }
+
     .applicant-profile-summary-card,
     .applicant-profile-block {
         padding: 15px;
@@ -4772,5 +4795,10 @@
 
     .applicant-profile-summary-copy h3 {
         font-size: 1.14rem;
+    }
+
+    .app-review-stage-actions .btn {
+        width: 100%;
+        justify-content: center;
     }
 }

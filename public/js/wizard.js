@@ -1,5 +1,9 @@
 class ScholarshipWizard {
     constructor() {
+        this.applicationTabs = Array.from(document.querySelectorAll('[data-application-tab-target]'));
+        this.applicationPanels = Array.from(document.querySelectorAll('[data-application-tab-panel]'));
+        this.bindApplicationTabs();
+
         this.form = document.getElementById('applicationForm');
         if (!this.form) {
             return;
@@ -12,6 +16,46 @@ class ScholarshipWizard {
         this.bindStepControls();
         this.bindSubmit();
         this.render();
+    }
+
+    bindApplicationTabs() {
+        if (this.applicationTabs.length === 0 || this.applicationPanels.length === 0) {
+            return;
+        }
+
+        this.applicationTabs.forEach((tab) => {
+            tab.addEventListener('click', () => {
+                const target = tab.getAttribute('data-application-tab-target') || '';
+                if (target === '') {
+                    return;
+                }
+
+                this.renderApplicationTabs(target);
+            });
+        });
+
+        const activeTab = this.applicationTabs.find((tab) => tab.classList.contains('is-active'));
+        const initialTarget = activeTab
+            ? (activeTab.getAttribute('data-application-tab-target') || '')
+            : (this.applicationTabs[0].getAttribute('data-application-tab-target') || '');
+
+        this.renderApplicationTabs(initialTarget);
+    }
+
+    renderApplicationTabs(activeTarget) {
+        this.applicationTabs.forEach((tab) => {
+            const target = tab.getAttribute('data-application-tab-target') || '';
+            const isActive = target === activeTarget;
+            tab.classList.toggle('is-active', isActive);
+            tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        this.applicationPanels.forEach((panel) => {
+            const target = panel.getAttribute('data-application-tab-panel') || '';
+            const isActive = target === activeTarget;
+            panel.classList.toggle('is-active', isActive);
+            panel.hidden = !isActive;
+        });
     }
 
     bindStepControls() {

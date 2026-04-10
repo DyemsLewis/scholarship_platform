@@ -399,8 +399,8 @@ if (!$isLoggedIn) {
     $readinessClass = 'bad';
     $readinessMessage = 'Your current profile or academic record does not yet satisfy this scholarship policy.';
 } elseif ($isEligible && $hasAllRequired) {
-    $primaryActionHref = buildEntityUrl('wizard.php', 'scholarship', $scholarshipId, 'apply', ['scholarship_id' => $scholarshipId]);
-    $primaryActionLabel = 'Apply in Wizard';
+    $primaryActionHref = buildEntityUrl('applications.php', 'scholarship', $scholarshipId, 'apply', ['scholarship_id' => $scholarshipId]);
+    $primaryActionLabel = 'Start Application';
     $primaryActionIcon = 'fa-paper-plane';
     $readinessHeadline = 'Ready to apply';
     $readinessClass = 'good';
@@ -675,7 +675,7 @@ $applicationGuideItems = [
     [
         'label' => 'Application flow',
         'value' => $applicationProcessLabelDisplay,
-        'detail' => 'You will go through the scholarship wizard to check your eligibility, required documents, and final review before submission.',
+        'detail' => 'You will go through the application flow to check your eligibility, required documents, and final review before submission.',
     ],
     [
         'label' => 'Extra step',
@@ -909,7 +909,7 @@ if ($deadlineClass === 'bad') {
     $nextStepTone = 'success';
     $nextStepIcon = 'fa-circle-check';
     $nextStepMessage = 'Your profile and listed requirements are ready for application submission.';
-    $primaryActionHref = buildEntityUrl('wizard.php', 'scholarship', $scholarshipId, 'apply', ['scholarship_id' => $scholarshipId]);
+    $primaryActionHref = buildEntityUrl('applications.php', 'scholarship', $scholarshipId, 'apply', ['scholarship_id' => $scholarshipId]);
     $primaryActionClass = 'btn-primary-modern';
     $primaryActionIcon = 'fa-paper-plane';
     $primaryActionLabel = 'Apply Now';

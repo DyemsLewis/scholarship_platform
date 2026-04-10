@@ -93,7 +93,7 @@ if ($isProviderOrAdmin) {
                         </div>
                         <div class="feature">
                             <i class="fas fa-magic"></i>
-                            <span>Application Wizard</span>
+                            <span>Applications</span>
                         </div>
                     </div>
                 </div>

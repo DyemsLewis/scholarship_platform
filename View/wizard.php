@@ -1,7 +1,9 @@
 <?php
 require_once __DIR__ . '/../app/Config/init.php';
 require_once __DIR__ . '/../app/Config/url_token.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
 require_once __DIR__ . '/../app/Models/UserDocument.php';
+require_once __DIR__ . '/../app/Models/Application.php';
 require_once __DIR__ . '/../app/Controllers/scholarshipResultController.php';
 
 if (!function_exists('tableHasColumn')) {
@@ -38,6 +40,177 @@ if (!function_exists('tableExists')) {
     }
 }
 
+if (!function_exists('applicationTrackingFormatTimelineDate')) {
+    function applicationTrackingFormatTimelineDate(?string $value, string $fallback = 'Not yet available'): string
+    {
+        if (!$value) {
+            return $fallback;
+        }
+
+        try {
+            return (new DateTime($value))->format('M d, Y g:i A');
+        } catch (Throwable $e) {
+            return $fallback;
+        }
+    }
+}
+
+if (!function_exists('applicationTrackingBuildTimelineData')) {
+    function applicationTrackingBuildTimelineData(array $application, array $requirementsSummary): array
+    {
+        $applicationStatus = strtolower(trim((string) ($application['status'] ?? 'pending')));
+        $studentResponseStatus = strtolower(trim((string) ($application['student_response_status'] ?? '')));
+        $studentRespondedAt = !empty($application['student_responded_at'])
+            ? (string) $application['student_responded_at']
+            : '';
+        $studentAccepted = $applicationStatus === 'approved' && $studentResponseStatus === 'accepted';
+        $totalRequired = (int) ($requirementsSummary['total_required'] ?? 0);
+        $verifiedCount = (int) ($requirementsSummary['verified'] ?? 0);
+        $pendingCount = (int) ($requirementsSummary['pending'] ?? 0);
+        $missingCount = count($requirementsSummary['missing'] ?? []);
+        $rejectedCount = 0;
+        $documentNotes = [];
+
+        foreach (($requirementsSummary['requirements'] ?? []) as $requirement) {
+            $requirementStatus = strtolower(trim((string) ($requirement['status'] ?? '')));
+            if ($requirementStatus === 'rejected') {
+                $rejectedCount++;
+            }
+
+            $uploadedDocument = $requirement['document'] ?? null;
+            $adminNote = trim((string) ($uploadedDocument['admin_notes'] ?? ''));
+            if ($adminNote !== '') {
+                $documentNotes[] = [
+                    'name' => (string) ($requirement['name'] ?? 'Required Document'),
+                    'status' => $requirementStatus !== '' ? $requirementStatus : 'pending',
+                    'note' => $adminNote,
+                ];
+            }
+        }
+
+        $documentsNeedAttention = ($missingCount + $rejectedCount) > 0;
+        $documentsCleared = $totalRequired === 0 || (!$documentsNeedAttention && $verifiedCount >= $totalRequired);
+        $updatedAt = !empty($application['updated_at']) ? (string) $application['updated_at'] : (string) ($application['applied_at'] ?? '');
+        $rejectionReason = trim((string) ($application['rejection_reason'] ?? ''));
+
+        if ($studentAccepted) {
+            $currentStageTitle = 'Scholarship accepted';
+            $currentStageNote = 'You confirmed your acceptance on ' . applicationTrackingFormatTimelineDate($studentRespondedAt, 'the latest update') . '.';
+        } elseif ($applicationStatus === 'approved') {
+            $currentStageTitle = 'Approved';
+            $currentStageNote = 'Your application passed review. Confirm your acceptance to complete your scholarship response.';
+        } elseif ($applicationStatus === 'rejected') {
+            $currentStageTitle = 'Not approved';
+            $currentStageNote = $rejectionReason !== ''
+                ? $rejectionReason
+                : 'Your application was reviewed but was not approved this time.';
+        } elseif ($documentsNeedAttention) {
+            $issueParts = [];
+            if ($rejectedCount > 0) {
+                $issueParts[] = $rejectedCount . ' rejected';
+            }
+            if ($missingCount > 0) {
+                $issueParts[] = $missingCount . ' missing';
+            }
+            $currentStageTitle = 'Action needed';
+            $currentStageNote = 'Please update your required documents. ' . ucfirst(implode(' and ', $issueParts)) . ' requirement' . (($rejectedCount + $missingCount) === 1 ? '' : 's') . '.';
+        } elseif (!$documentsCleared) {
+            $currentStageTitle = 'Documents under review';
+            $currentStageNote = $pendingCount > 0
+                ? $pendingCount . ' required document' . ($pendingCount === 1 ? ' is' : 's are') . ' still being verified.'
+                : 'Your required documents are being checked.';
+        } else {
+            $currentStageTitle = 'Under scholarship review';
+            $currentStageNote = "All required documents are on file. Waiting for the reviewer's final decision.";
+        }
+
+        $documentsDetail = 'No required documents configured.';
+        if ($totalRequired > 0) {
+            if ($documentsNeedAttention) {
+                $documentsDetail = $verifiedCount . '/' . $totalRequired . ' verified with ' . ($missingCount + $rejectedCount) . ' item' . (($missingCount + $rejectedCount) === 1 ? '' : 's') . ' needing attention.';
+            } elseif ($documentsCleared) {
+                $documentsDetail = $verifiedCount . '/' . $totalRequired . ' verified and ready for reviewer evaluation.';
+            } else {
+                $documentsDetail = $verifiedCount . '/' . $totalRequired . ' verified with ' . $pendingCount . ' pending verification.';
+            }
+        }
+
+        $reviewDetail = 'Waiting for document checks to finish.';
+        if ($studentAccepted) {
+            $reviewDetail = 'Scholarship review completed and your acceptance has been recorded.';
+        } elseif ($applicationStatus === 'approved' || $applicationStatus === 'rejected') {
+            $reviewDetail = 'Scholarship review completed.';
+        } elseif ($documentsNeedAttention) {
+            $reviewDetail = 'Reviewer is waiting for corrected or complete requirements.';
+        } elseif ($documentsCleared) {
+            $reviewDetail = 'Application is currently being evaluated by the scholarship reviewer.';
+        }
+
+        $decisionDetail = 'Final decision is still pending.';
+        if ($studentAccepted) {
+            $decisionDetail = 'Accepted on ' . applicationTrackingFormatTimelineDate($studentRespondedAt, 'the latest response date') . '.';
+        } elseif ($applicationStatus === 'approved') {
+            $decisionDetail = 'Approved on ' . applicationTrackingFormatTimelineDate($updatedAt, 'the latest review date') . '.';
+        } elseif ($applicationStatus === 'rejected') {
+            $decisionDetail = $rejectionReason !== ''
+                ? $rejectionReason
+                : 'Rejected on ' . applicationTrackingFormatTimelineDate($updatedAt, 'the latest review date') . '.';
+        }
+
+        return [
+            'current_stage_title' => $currentStageTitle,
+            'current_stage_note' => $currentStageNote,
+            'documents_summary' => $documentsDetail,
+            'review_summary' => $reviewDetail,
+            'decision_summary' => $decisionDetail,
+            'documents_verified_count' => $verifiedCount,
+            'documents_total_count' => $totalRequired,
+            'documents_pending_count' => $pendingCount,
+            'documents_missing_count' => $missingCount,
+            'documents_rejected_count' => $rejectedCount,
+            'student_response_status' => $studentResponseStatus,
+            'student_responded_at' => $studentRespondedAt,
+            'document_notes' => $documentNotes,
+            'can_accept' => $applicationStatus === 'approved' && !$studentAccepted,
+            'student_response_note' => $studentAccepted
+                ? 'Accepted on ' . applicationTrackingFormatTimelineDate($studentRespondedAt, 'the latest response date') . '.'
+                : ($applicationStatus === 'approved'
+                    ? 'Waiting for your confirmation.'
+                    : 'No response required yet.'),
+            'timeline_steps' => [
+                [
+                    'label' => 'Submitted',
+                    'detail' => 'Application sent on ' . applicationTrackingFormatTimelineDate($application['applied_at'] ?? null),
+                    'state' => 'complete',
+                    'icon' => 'fa-paper-plane',
+                ],
+                [
+                    'label' => 'Documents Screening',
+                    'detail' => $documentsDetail,
+                    'state' => $documentsNeedAttention ? 'attention' : ($documentsCleared ? 'complete' : 'current'),
+                    'icon' => 'fa-folder-open',
+                ],
+                [
+                    'label' => 'Scholarship Review',
+                    'detail' => $reviewDetail,
+                    'state' => ($applicationStatus === 'approved' || $applicationStatus === 'rejected')
+                        ? 'complete'
+                        : (($documentsNeedAttention || !$documentsCleared) ? 'upcoming' : 'current'),
+                    'icon' => 'fa-clipboard-check',
+                ],
+                [
+                    'label' => 'Final Decision',
+                    'detail' => $decisionDetail,
+                    'state' => ($applicationStatus === 'approved' || $studentAccepted)
+                        ? 'success'
+                        : ($applicationStatus === 'rejected' ? 'rejected' : 'upcoming'),
+                    'icon' => 'fa-flag-checkered',
+                ],
+            ],
+        ];
+    }
+}
+
 $scholarshipId = isset($_GET['scholarship_id']) ? (int) $_GET['scholarship_id'] : 0;
 
 if ($scholarshipId > 0) {
@@ -69,6 +242,33 @@ if (trim((string) ($userSuffix ?? '')) !== '') {
 $applicantDisplayName = trim($applicantDisplayName) !== ''
     ? trim($applicantDisplayName)
     : (string) $userDisplayName;
+
+$applicationStats = ['total' => 0, 'pending' => 0, 'approved' => 0, 'rejected' => 0];
+$applicationTimeline = [];
+
+if ($isLoggedIn) {
+    try {
+        $applicationModel = new Application($pdo);
+        $applicationStatsRaw = $applicationModel->getStats((int) $_SESSION['user_id']) ?: [];
+        $applicationStats = [
+            'total' => (int) ($applicationStatsRaw['total'] ?? 0),
+            'pending' => (int) ($applicationStatsRaw['pending'] ?? 0),
+            'approved' => (int) ($applicationStatsRaw['approved'] ?? 0),
+            'rejected' => (int) ($applicationStatsRaw['rejected'] ?? 0),
+        ];
+
+        $trackingDocumentModel = new UserDocument($pdo);
+        foreach ($applicationModel->getTimelineByUser((int) $_SESSION['user_id'], 5) as $applicationItem) {
+            $requirementsSummary = $trackingDocumentModel->checkScholarshipRequirements((int) $_SESSION['user_id'], (int) ($applicationItem['scholarship_id'] ?? 0));
+            $applicationTimeline[] = array_merge(
+                $applicationItem,
+                applicationTrackingBuildTimelineData($applicationItem, $requirementsSummary)
+            );
+        }
+    } catch (Throwable $e) {
+        error_log("Error loading application timeline: " . $e->getMessage());
+    }
+}
 
 $documentSummary = [
     'total_required' => 0,
@@ -561,7 +761,7 @@ if ($wizardProfileInitials === '') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scholarship Wizard</title>
+    <title>Applications</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/style.css')); ?>">
 <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/wizard-style.css')); ?>">
@@ -574,7 +774,7 @@ if ($wizardProfileInitials === '') {
                 <i class="fas fa-lock"></i>
                 <div>
                     <h3>Login Required</h3>
-                    <p>You need to login to open the application wizard.</p>
+                    <p>You need to login to open your applications page.</p>
                     <a href="login.php" class="btn btn-primary">Login Now</a>
                 </div>
             </div>
@@ -583,13 +783,13 @@ if ($wizardProfileInitials === '') {
                 <div class="wizard-page-header-copy app-page-hero-copy">
                     <h1>
                         <i class="fas fa-file-signature"></i>
-                        Application Wizard
+                        Applications
                         <span class="wizard-role-badge app-page-hero-badge">
                             <i class="fas fa-hourglass-half"></i>
                             Waiting for Selection
                         </span>
                     </h1>
-                    <p>Choose a scholarship first and we will load the full application steps here.</p>
+                    <p>Track your submitted scholarships here or choose a new one to start a fresh application.</p>
                 </div>
                 <div class="app-page-hero-side">
                     <a href="scholarships.php" class="btn btn-white wizard-back-link app-page-hero-action">
@@ -599,66 +799,83 @@ if ($wizardProfileInitials === '') {
                 </div>
             </div>
 
-            <div class="wizard-empty-shell">
-                <div class="form-card-modern wizard-empty-state">
-                    <div class="wizard-empty-illustration">
-                        <i class="fas fa-graduation-cap"></i>
-                    </div>
-                    <span class="wizard-empty-tag">No scholarship selected</span>
-                    <h2>Pick a scholarship to start your application</h2>
-                    <p>
-                        Open the wizard from any active scholarship card. Once you choose one, this page will show
-                        your eligibility check, required documents, and final submission review.
-                    </p>
-                    <div class="wizard-empty-actions">
-                        <a href="scholarships.php" class="btn btn-primary">
-                            <i class="fas fa-compass"></i>
-                            View Scholarships
-                        </a>
-                        <a href="upload.php" class="btn btn-outline">
-                            <i class="fas fa-scroll"></i>
-                            Upload TOR / Grades
-                        </a>
-                    </div>
-                </div>
+            <div class="wizard-app-tabs" role="tablist" aria-label="Applications tabs">
+                <button type="button" class="wizard-app-tab is-active" data-application-tab-target="browse" aria-selected="true">
+                    <i class="fas fa-compass"></i>
+                    Pick a Scholarship
+                </button>
+                <button type="button" class="wizard-app-tab" data-application-tab-target="tracking" aria-selected="false">
+                    <i class="fas fa-route"></i>
+                    Application Tracking
+                </button>
+            </div>
 
-                <div class="form-card-modern wizard-empty-preview">
-                    <div class="card-header">
-                        <h3><i class="fas fa-route"></i> What Happens in the Wizard</h3>
+            <div class="wizard-app-tab-panel is-active" data-application-tab-panel="browse">
+                <div class="wizard-empty-shell">
+                    <div class="form-card-modern wizard-empty-state">
+                        <div class="wizard-empty-illustration">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <span class="wizard-empty-tag">No scholarship selected</span>
+                        <h2>Pick a scholarship to start your application</h2>
+                        <p>
+                            Open this page from any active scholarship card. Once you choose one, this page will show
+                            your eligibility check, required documents, and final submission review.
+                        </p>
+                        <div class="wizard-empty-actions">
+                            <a href="scholarships.php" class="btn btn-primary">
+                                <i class="fas fa-compass"></i>
+                                View Scholarships
+                            </a>
+                            <a href="upload.php" class="btn btn-outline">
+                                <i class="fas fa-scroll"></i>
+                                Upload TOR / Grades
+                            </a>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="wizard-empty-steps">
-                            <div class="wizard-empty-step">
-                                <span class="wizard-empty-step-number">1</span>
-                                <div>
-                                    <h4>Eligibility Check</h4>
-                                    <p>Review your profile, GWA, and scholarship rules before you proceed.</p>
+
+                    <div class="form-card-modern wizard-empty-preview">
+                        <div class="card-header">
+                            <h3><i class="fas fa-route"></i> What Happens in the Application Flow</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="wizard-empty-steps">
+                                <div class="wizard-empty-step">
+                                    <span class="wizard-empty-step-number">1</span>
+                                    <div>
+                                        <h4>Eligibility Check</h4>
+                                        <p>Review your profile, GWA, and scholarship rules before you proceed.</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="wizard-empty-step">
-                                <span class="wizard-empty-step-number">2</span>
-                                <div>
-                                    <h4>Document Review</h4>
-                                    <p>See which required documents are verified, pending, missing, or rejected.</p>
+                                <div class="wizard-empty-step">
+                                    <span class="wizard-empty-step-number">2</span>
+                                    <div>
+                                        <h4>Document Review</h4>
+                                        <p>See which required documents are verified, pending, missing, or rejected.</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="wizard-empty-step">
-                                <span class="wizard-empty-step-number">3</span>
-                                <div>
-                                    <h4>Review and Submit</h4>
-                                    <p>Confirm your details and send your application for verification.</p>
+                                <div class="wizard-empty-step">
+                                    <span class="wizard-empty-step-number">3</span>
+                                    <div>
+                                        <h4>Review and Submit</h4>
+                                        <p>Confirm your details and send your application for verification.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            <div class="wizard-app-tab-panel" data-application-tab-panel="tracking" hidden>
+                <?php include __DIR__ . '/partials/application_tracking_section.php'; ?>
+            </div>
         <?php else: ?>
             <div class="wizard-page-header wizard-page-header-selected app-page-hero">
                 <div class="wizard-page-header-copy app-page-hero-copy">
                     <h1>
                         <i class="fas fa-file-signature"></i>
-                        Application Wizard
+                        Applications
                         <span class="wizard-role-badge app-page-hero-badge">
                             <i class="fas fa-graduation-cap"></i>
                             Scholarship Selected
@@ -681,7 +898,7 @@ if ($wizardProfileInitials === '') {
                             <div class="wizard-selected-kicker">
                                 <span class="wizard-brand-pill">
                                     <i class="fas fa-file-signature"></i>
-                                    Scholarship Wizard
+                                    Applications
                                 </span>
                                 <span class="wizard-selected-status state-<?php echo htmlspecialchars($wizardCardState); ?>">
                                     <i class="fas <?php echo htmlspecialchars($wizardStatusIcon); ?>"></i>
@@ -1078,5 +1295,38 @@ if ($wizardProfileInitials === '') {
 <?php include 'layout/footer.php'; ?>
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/script.js')); ?>"></script>
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/wizard.js')); ?>"></script>
+<script>
+document.querySelectorAll('.application-response-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+        if (form.dataset.confirmed === '1') {
+            return;
+        }
+
+        event.preventDefault();
+
+        const scholarshipName = form.dataset.scholarshipName || 'this scholarship';
+        if (!window.Swal || typeof window.Swal.fire !== 'function') {
+            form.dataset.confirmed = '1';
+            form.submit();
+            return;
+        }
+
+        const result = await window.Swal.fire({
+            title: 'Accept scholarship?',
+            text: `You are about to confirm your acceptance for ${scholarshipName}.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Accept Scholarship',
+            confirmButtonColor: '#2c5aa0',
+            cancelButtonColor: '#64748b'
+        });
+
+        if (result.isConfirmed) {
+            form.dataset.confirmed = '1';
+            form.submit();
+        }
+    });
+});
+</script>
 </body>
 </html>

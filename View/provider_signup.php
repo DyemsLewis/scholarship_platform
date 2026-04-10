@@ -54,6 +54,7 @@ $organizationTypes = [
     'other' => 'Other'
 ];
 $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && providerOldValue($providerOld, 'longitude') !== '';
+$providerSignupCssVersion = @filemtime(__DIR__ . '/../public/css/provider-signup.css') ?: time();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -65,83 +66,50 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/style.css')); ?>">
-    <style>
-        .provider-page { min-height: calc(100vh - 200px); padding: 60px 0; }
-        .provider-shell { max-width: 960px; margin: 0 auto; background: #fff; border-radius: var(--border-radius); box-shadow: var(--shadow); border-top: 5px solid var(--primary); padding: 36px; }
-        .provider-header { text-align: center; margin-bottom: 24px; }
-        .provider-header h1 { color: var(--primary); margin: 10px 0; }
-        .provider-header p { color: var(--gray); max-width: 700px; margin: 0 auto; }
-        .provider-note, .provider-errors { border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; }
-        .provider-note { background: #eef4ff; border: 1px solid #cfe0ff; color: #1d4f91; }
-        .provider-errors { background: #fff4f4; border: 1px solid #f4caca; color: #9b1c1c; }
-        .provider-errors ul { margin: 8px 0 0 18px; }
-        .provider-section { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px; margin-bottom: 18px; }
-        .provider-section h3 { margin-bottom: 16px; color: var(--primary); display: flex; align-items: center; gap: 10px; }
-        .provider-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 18px; }
-        .provider-full { grid-column: 1 / -1; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark); }
-        .input-with-icon { position: relative; display: flex; align-items: center; }
-        .input-with-icon > i { position: absolute; left: 12px; color: var(--primary); z-index: 1; }
-        .input-with-icon input, .input-with-icon select, .input-with-icon textarea { width: 100%; padding: 12px 12px 12px 40px; border: 1px solid var(--light-gray); border-radius: 8px; background: #fff; }
-        .input-with-icon textarea { min-height: 100px; resize: vertical; }
-        .input-with-icon input:focus, .input-with-icon select:focus, .input-with-icon textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1); }
-        .provider-file-input { width: 100%; padding: 12px 14px; border: 1px solid var(--light-gray); border-radius: 8px; background: #fff; }
-        .provider-file-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(44, 90, 160, 0.1); }
-        .verify-row { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; }
-        .verify-status { min-height: 22px; margin-top: 8px; font-size: 0.88rem; font-weight: 600; }
-        .verify-status.pending { color: #9a6700; }
-        .verify-status.verified { color: #0f766e; }
-        .verify-status.error { color: #b91c1c; }
-        .hint { display: block; margin-top: 6px; font-size: 0.8rem; color: #64748b; }
-        .provider-pin-helper { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid #dbe4ee; border-radius: 12px; background: #f8fbff; }
-        .provider-pin-helper small { color: #475569; font-size: 0.84rem; line-height: 1.5; }
-        .provider-confirm-card { display: flex; gap: 14px; align-items: flex-start; padding: 16px 18px; border: 1px solid #dbe4ee; border-radius: 12px; background: #f8fbff; }
-        .provider-confirm-card input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primary); flex-shrink: 0; }
-        .provider-confirm-card label { margin: 0; display: block; cursor: pointer; }
-        .provider-confirm-card strong { display: block; color: var(--dark); margin-bottom: 4px; }
-        .provider-confirm-card span { display: block; color: #475569; line-height: 1.55; font-size: 0.92rem; }
-        .provider-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 24px; }
-        .provider-actions p { margin: 0; color: var(--gray); }
-        .provider-actions a { color: var(--primary); font-weight: 600; text-decoration: none; }
-        @media (max-width: 768px) {
-            .provider-shell { padding: 24px 18px; }
-            .provider-grid, .verify-row { grid-template-columns: 1fr; }
-            .provider-actions { flex-direction: column; align-items: stretch; }
-            .provider-actions .btn { width: 100%; }
-            .provider-pin-helper { flex-direction: column; align-items: stretch; }
-            .provider-pin-helper .btn { width: 100%; justify-content: center; }
-        }
-    </style>
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/signup.css')); ?>">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/provider-signup.css') . '?v=' . rawurlencode((string) $providerSignupCssVersion)); ?>">
 </head>
 <body>
 <?php include 'layout/header.php'; ?>
-<section class="provider-page">
+<section class="signup-page provider-signup-page">
     <div class="container">
-        <div class="provider-shell">
-            <div class="provider-header">
-                <i class="fas fa-building-columns" style="font-size: 3rem; color: var(--primary);"></i>
-                <h1>Provider Registration</h1>
-                <p>Create a scholarship provider account for your institution or organization. New provider accounts are reviewed by an administrator before they can sign in and manage scholarship programs.</p>
-            </div>
-
-            <div class="provider-note">
-                <strong>Review process:</strong> verify your login email first, complete the organization details, and wait for admin approval after account creation.
-            </div>
-
-            <?php if (!$signupVerificationDbReady): ?>
-                <div class="provider-errors">
-                    <strong>Email verification setup is incomplete.</strong>
-                    <div>Run the signup verification migration first, then refresh this page.</div>
+        <div class="signup-container provider-signup-container">
+            <div class="signup-card">
+                <div class="signup-header">
+                    <i class="fas fa-building-columns signup-header-icon"></i>
+                    <h1>Create Provider Account</h1>
+                    <p>Register your institution or organization so it can post scholarships after admin review and approval.</p>
                 </div>
-            <?php endif; ?>
 
-            <form id="providerSignupForm" method="POST" action="../app/Controllers/providerRegisterController.php" enctype="multipart/form-data" novalidate>
-                <?php echo csrfInputField('provider_signup'); ?>
-                <input type="hidden" id="verifiedEmailState" value="<?php echo htmlspecialchars($verifiedEmailStateValue); ?>">
+                <div class="signup-note">
+                    <strong>Provider registration:</strong> verify your login email first, complete your organization and contact details, then wait for admin approval before the account can sign in.
+                </div>
 
-                <div class="provider-section">
+                <?php if (!$signupVerificationDbReady): ?>
+                    <div class="signup-errors">
+                        <strong>Email verification setup is incomplete.</strong>
+                        <div>Run the signup verification migration first, then refresh this page.</div>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($providerErrors)): ?>
+                    <div class="signup-errors">
+                        <strong>Please fix the following issues:</strong>
+                        <ul>
+                            <?php foreach ($providerErrors as $providerError): ?>
+                                <li><?php echo htmlspecialchars((string) $providerError); ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                <?php endif; ?>
+
+                <form id="providerSignupForm" method="POST" action="../app/Controllers/providerRegisterController.php" enctype="multipart/form-data" novalidate>
+                    <?php echo csrfInputField('provider_signup'); ?>
+                    <input type="hidden" id="verifiedEmailState" value="<?php echo htmlspecialchars($verifiedEmailStateValue); ?>">
+
+                <div class="form-section">
                     <h3><i class="fas fa-user-lock"></i> Account Credentials</h3>
-                    <div class="provider-grid">
+                    <div class="signup-grid">
                         <div class="form-group">
                             <label for="providerUsername">Username *</label>
                             <div class="input-with-icon">
@@ -150,24 +118,24 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
                             </div>
                             <small class="hint">4 to 30 characters. Letters, numbers, dots, underscores, and hyphens only.</small>
                         </div>
-                        <div class="form-group">
+                        <div class="form-group signup-full-width">
                             <label for="providerEmail">Login Email *</label>
-                            <div class="input-with-icon">
-                                <i class="fas fa-envelope"></i>
-                                <input type="email" id="providerEmail" name="email" value="<?php echo htmlspecialchars($emailValue); ?>" placeholder="name@organization.org">
+                            <div class="email-verification-group">
+                                <div class="input-with-icon">
+                                    <i class="fas fa-envelope"></i>
+                                    <input type="email" id="providerEmail" name="email" value="<?php echo htmlspecialchars($emailValue); ?>" placeholder="name@organization.org">
+                                </div>
+                                <button type="button" class="btn btn-outline btn-inline" id="sendVerificationCodeBtn" <?php echo $signupVerificationDbReady ? '' : 'disabled'; ?>>Send Code</button>
                             </div>
-                        </div>
-                        <div class="form-group provider-full">
-                            <label>Email Verification *</label>
-                            <div class="verify-row">
+                            <small class="hint">We will send a 6-digit verification code to this email before provider account creation can continue.</small>
+                            <div class="verification-code-row">
                                 <div class="input-with-icon">
                                     <i class="fas fa-key"></i>
                                     <input type="text" id="providerVerificationCode" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit verification code">
                                 </div>
-                                <button type="button" class="btn btn-outline" id="sendVerificationCodeBtn" <?php echo $signupVerificationDbReady ? '' : 'disabled'; ?>>Send Code</button>
-                                <button type="button" class="btn btn-primary" id="verifyEmailCodeBtn" <?php echo $signupVerificationDbReady ? '' : 'disabled'; ?>>Verify Email</button>
+                                <button type="button" class="btn btn-primary btn-inline" id="verifyEmailCodeBtn" <?php echo $signupVerificationDbReady ? '' : 'disabled'; ?>>Verify Email</button>
                             </div>
-                            <div class="verify-status" id="emailVerificationStatus"></div>
+                            <div class="verification-status" id="emailVerificationStatus"></div>
                         </div>
                         <div class="form-group">
                             <label for="providerPassword">Password *</label>
@@ -187,9 +155,9 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
                     </div>
                 </div>
 
-                <div class="provider-section">
+                <div class="form-section">
                     <h3><i class="fas fa-building"></i> Organization Details</h3>
-                    <div class="provider-grid">
+                    <div class="signup-grid">
                         <div class="form-group">
                             <label for="organizationName">Organization Name *</label>
                             <div class="input-with-icon">
@@ -207,6 +175,7 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
                                         <option value="<?php echo htmlspecialchars($value); ?>" <?php echo providerSelected($providerOld, 'organization_type', $value); ?>><?php echo htmlspecialchars($label); ?></option>
                                     <?php endforeach; ?>
                                 </select>
+                                <span class="select-chevron"><i class="fas fa-chevron-down"></i></span>
                             </div>
                         </div>
                         <div class="form-group">
@@ -223,19 +192,20 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
                                 <input type="url" id="organizationWebsite" name="website" value="<?php echo htmlspecialchars(providerOldValue($providerOld, 'website')); ?>" placeholder="https://example.org">
                             </div>
                         </div>
-                        <div class="form-group provider-full">
+                        <div class="form-group signup-full-width">
                             <label for="organizationDescription">Organization Description</label>
                             <div class="input-with-icon">
                                 <i class="fas fa-file-lines"></i>
                                 <textarea id="organizationDescription" name="description" placeholder="Briefly describe the organization and the scholarship programs it manages"><?php echo htmlspecialchars(providerOldValue($providerOld, 'description')); ?></textarea>
                             </div>
+                            <small class="hint">A short background helps admins understand the organization during account review.</small>
                         </div>
                     </div>
                 </div>
 
-                <div class="provider-section">
+                <div class="form-section">
                     <h3><i class="fas fa-user-tie"></i> Contact Person</h3>
-                    <div class="provider-grid">
+                    <div class="signup-grid">
                         <div class="form-group">
                             <label for="contactPersonFirstName">First Name *</label>
                             <div class="input-with-icon">
@@ -270,13 +240,18 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
                                 <i class="fas fa-mobile-screen"></i>
                                 <input type="text" id="providerMobileNumber" name="mobile_number" value="<?php echo htmlspecialchars(providerOldValue($providerOld, 'mobile_number')); ?>" placeholder="e.g., +63 917 123 4567">
                             </div>
+                            <small class="hint">Optional, but helpful for faster follow-up during account review.</small>
                         </div>
                     </div>
                 </div>
 
-                <div class="provider-section">
+                <div class="form-section">
                     <h3><i class="fas fa-location-dot"></i> Address And Verification</h3>
-                    <div class="provider-grid">
+                    <div class="academic-path-note compact-doc-note">
+                        <i class="fas fa-circle-info"></i>
+                        <div>Use the official organization address and set a map pin if you want scholarship locations to point to the exact office or campus.</div>
+                    </div>
+                    <div class="signup-grid">
                         <div class="form-group">
                             <label for="houseNo">House No. / Building</label>
                             <div class="input-with-icon">
@@ -319,28 +294,30 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
                                 <input type="text" id="zipCode" name="zip_code" value="<?php echo htmlspecialchars(providerOldValue($providerOld, 'zip_code')); ?>" placeholder="Zip code">
                             </div>
                         </div>
-                        <div class="form-group provider-full">
-                            <div class="provider-pin-helper">
+                        <div class="form-group signup-full-width">
+                            <div class="pin-helper provider-pin-helper">
                                 <small id="providerPinStatusText"><?php echo $providerHasSavedPin ? 'Pin selected. This map location will be saved with the organization address.' : 'No map pin selected yet. We can still geocode your address automatically, but you can set the exact organization pin here.'; ?></small>
                                 <button type="button" class="btn btn-outline open-provider-location-modal">
                                     <i class="fas fa-map-marker-alt"></i> Set Pin on Map
                                 </button>
                             </div>
                         </div>
-                        <div class="form-group provider-full">
+                        <div class="form-group signup-full-width">
                             <label for="verificationDocument">Business Permit / Verification File</label>
-                            <input type="file" id="verificationDocument" name="verification_document" class="provider-file-input" accept=".pdf,.jpg,.jpeg,.png">
+                            <div class="compact-upload-card provider-upload-card">
+                                <input type="file" id="verificationDocument" name="verification_document" class="compact-file-input" accept=".pdf,.jpg,.jpeg,.png">
+                            </div>
                             <small class="hint">Optional but recommended. Accepted formats: PDF, JPG, PNG. Maximum 5 MB.</small>
                             <?php if (!$providerVerificationUploadReady): ?>
-                                <small class="hint" style="color: #9a6700; font-weight: 600;">
+                                <small class="hint provider-upload-warning">
                                     <?php echo htmlspecialchars($providerVerificationUploadMessage); ?>
                                 </small>
                             <?php endif; ?>
                         </div>
-                        <div class="form-group provider-full">
-                            <div class="provider-confirm-card">
+                        <div class="form-group signup-full-width">
+                            <div class="terms-checkbox provider-confirm-card">
                                 <input type="checkbox" id="providerReviewPolicy" name="agree_terms" value="1" <?php echo providerChecked($providerOld, 'agree_terms'); ?>>
-                                <label for="providerReviewPolicy">
+                                <label for="providerReviewPolicy" class="provider-confirm-copy">
                                     <strong>This organization details are correct</strong>
                                     <span>I confirm that the organization information entered above is accurate and understand that this provider account will require admin review before it can sign in.</span>
                                 </label>
@@ -353,9 +330,14 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
                 <input type="hidden" name="longitude" id="providerLongitude" value="<?php echo htmlspecialchars(providerOldValue($providerOld, 'longitude')); ?>">
                 <input type="hidden" name="location_name" id="providerLocationName" value="<?php echo htmlspecialchars(providerOldValue($providerOld, 'location_name')); ?>">
 
-                <div class="provider-actions">
-                    <p>Already approved and active? <a href="login.php">Go to login</a></p>
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Create Provider Account</button>
+                    <div class="provider-signup-actions">
+                    <button type="submit" class="btn btn-primary btn1"><i class="fas fa-user-plus"></i> Create Provider Account</button>
+
+                    <div class="form-footer">
+                        <p>Already approved and active? <a href="login.php">Go to login</a></p>
+                        <p>Admin review is required before provider accounts can sign in and manage scholarship postings.</p>
+                    </div>
+                    </div>
                 </div>
             </form>
         </div>
@@ -390,7 +372,7 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
 
     function normalizeEmail(value) { return (value || '').trim().toLowerCase(); }
     function validEmail(value) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value); }
-    function setStatus(message, type) { statusEl.textContent = message || ''; statusEl.className = 'verify-status' + (type ? ' ' + type : ''); }
+    function setStatus(message, type) { statusEl.textContent = message || ''; statusEl.className = 'verification-status' + (type ? ' ' + type : ''); }
     function markVerified(email) { verifiedState.value = normalizeEmail(email); codeInput.value = ''; setStatus('Email verified. You can now create the provider account.', 'verified'); }
     function clearVerified(showMessage) { verifiedState.value = ''; codeInput.value = ''; setStatus(showMessage ? 'Please verify your login email before creating a provider account.' : '', showMessage ? 'pending' : ''); }
     function refreshSendButton() {
@@ -495,10 +477,5 @@ $providerHasSavedPin = providerOldValue($providerOld, 'latitude') !== '' && prov
     refreshSendButton();
 })();
 </script>
-<?php if (!empty($providerErrors)): ?>
-    <div data-swal-errors data-swal-title="Provider Registration Error" style="display: none;">
-        <?php echo json_encode(array_values($providerErrors)); ?>
-    </div>
-<?php endif; ?>
 </body>
 </html>

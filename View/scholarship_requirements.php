@@ -52,7 +52,7 @@ $profileEvaluation = $scholarshipService->evaluateProfileRequirements($scholarsh
     'course' => $userCourse
 ]);
 $canProceedToApply = ($missingCount === 0 && $rejectedCount === 0 && !empty($profileEvaluation['eligible']));
-$wizardApplyUrl = buildEntityUrl('wizard.php', 'scholarship', $scholarshipId, 'apply', ['scholarship_id' => $scholarshipId]);
+$wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', $scholarshipId, 'apply', ['scholarship_id' => $scholarshipId]);
 ?>
 <!DOCTYPE html>
 <html lang="en">

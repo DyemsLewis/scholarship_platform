@@ -132,7 +132,7 @@ if ($isLoggedIn && ($userRole ?? 'guest') === 'student') {
                     <a href="profile.php" <?php echo getCurrentPage() === 'profile.php' ? 'class="active"' : ''; ?>>Profile</a>
                     <a href="upload.php" <?php echo getCurrentPage() == 'upload.php' ? 'class="active"' : ''; ?>>Upload</a>
                     <a href="documents.php" class="<?php echo isActivePage('documents.php') ? 'active' : ''; ?>">Documents</a>
-                    <a href="wizard.php" <?php echo getCurrentPage() === 'wizard.php' ? 'class="active"' : ''; ?>>Wizard</a>
+                    <a href="applications.php" <?php echo in_array(getCurrentPage(), ['wizard.php', 'applications.php'], true) ? 'class="active"' : ''; ?>>Applications</a>
                     <?php endif; ?>
                 </div>
 

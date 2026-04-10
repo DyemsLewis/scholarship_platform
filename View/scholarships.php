@@ -380,7 +380,7 @@ $scholarshipsPageCssVersion = @filemtime(__DIR__ . '/../public/css/scholarships-
                         }
 
                         $scholarshipDetailsUrl = buildEntityUrl('scholarship_details.php', 'scholarship', (int) $scholarship['id'], 'view', ['id' => (int) $scholarship['id']]);
-                        $wizardApplyUrl = buildEntityUrl('wizard.php', 'scholarship', (int) $scholarship['id'], 'apply', ['scholarship_id' => (int) $scholarship['id']]);
+$wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $scholarship['id'], 'apply', ['scholarship_id' => (int) $scholarship['id']]);
                         $applicationNotYetOpen = false;
                         $applicationOpenDateLabel = 'Open now';
                         if (!empty($scholarship['application_open_date'])) {

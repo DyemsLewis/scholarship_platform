@@ -1,0 +1,52 @@
+.provider-signup-container {
+    max-width: 980px;
+}
+
+.provider-signup-page .signup-header p {
+    max-width: 620px;
+}
+
+.provider-signup-page textarea {
+    min-height: 110px;
+    resize: vertical;
+}
+
+.provider-signup-page .provider-pin-helper {
+    margin-top: 2px;
+}
+
+.provider-upload-card {
+    padding: 14px;
+}
+
+.provider-upload-warning {
+    color: #9a6700;
+    font-weight: 600;
+}
+
+.provider-confirm-copy strong {
+    display: block;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+
+.provider-confirm-copy span {
+    display: block;
+    color: #475569;
+    line-height: 1.55;
+    font-size: 0.92rem;
+}
+
+.provider-signup-actions {
+    margin-top: 18px;
+}
+
+@media (max-width: 768px) {
+    .provider-signup-container {
+        max-width: 100%;
+    }
+
+    .provider-upload-card {
+        padding: 12px;
+    }
+}
