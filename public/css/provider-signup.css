@@ -24,6 +24,21 @@
     font-weight: 600;
 }
 
+.provider-consent-card {
+    background:
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 30%),
+        linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+}
+
+.provider-consent-card .consent-card-icon {
+    background: #e8f0ff;
+    color: #1d4ed8;
+}
+
+.provider-consent-card .consent-link-card:hover {
+    box-shadow: 0 14px 30px rgba(37, 99, 235, 0.08);
+}
+
 .provider-confirm-copy strong {
     display: block;
     color: #0f172a;

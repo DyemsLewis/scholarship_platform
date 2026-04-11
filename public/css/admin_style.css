@@ -1397,7 +1397,7 @@ footer {
         padding: 12px 14px;
     }
 
-    .admin-mobile-brand span {
+.admin-mobile-brand span {
         font-size: 0.95rem;
     }
 
@@ -1407,5 +1407,76 @@ footer {
 
     .admin-sidebar-profile-actions {
         flex-direction: column;
+    }
+}
+
+.swal2-popup.logout-confirm-popup,
+.swal2-popup.logout-loading-popup {
+    border-radius: 18px;
+    padding: 1.2rem 1.2rem 1rem;
+}
+
+.swal2-container.logout-confirm-container,
+.swal2-container.logout-loading-container {
+    z-index: 2600 !important;
+}
+
+.swal2-popup.logout-confirm-popup .swal2-title,
+.swal2-popup.logout-loading-popup .swal2-title {
+    font-size: 1.2rem;
+}
+
+.swal2-popup.logout-confirm-popup .swal2-html-container,
+.swal2-popup.logout-loading-popup .swal2-html-container {
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.swal2-popup.logout-confirm-popup .swal2-actions {
+    gap: 10px;
+    margin-top: 1rem;
+}
+
+.swal2-popup.logout-confirm-popup .swal2-styled,
+.swal2-popup.logout-loading-popup .swal2-styled {
+    min-height: 42px;
+    padding: 0.7rem 1rem;
+    border-radius: 12px;
+    font-size: 0.92rem;
+}
+
+@media (max-width: 576px) {
+    .swal2-popup.logout-confirm-popup,
+    .swal2-popup.logout-loading-popup {
+        width: calc(100vw - 1rem) !important;
+        max-width: 18.5rem;
+        padding: 1rem 0.9rem 0.9rem;
+    }
+
+    .swal2-popup.logout-confirm-popup .swal2-icon {
+        margin: 0.35rem auto 0.7rem;
+        transform: scale(0.88);
+    }
+
+    .swal2-popup.logout-confirm-popup .swal2-title,
+    .swal2-popup.logout-loading-popup .swal2-title {
+        font-size: 1.05rem;
+    }
+
+    .swal2-popup.logout-confirm-popup .swal2-html-container,
+    .swal2-popup.logout-loading-popup .swal2-html-container {
+        font-size: 0.88rem;
+        margin-top: 0.35rem;
+    }
+
+    .swal2-popup.logout-confirm-popup .swal2-actions {
+        width: 100%;
+        gap: 8px;
+        margin-top: 0.9rem;
+    }
+
+    .swal2-popup.logout-confirm-popup .swal2-styled {
+        flex: 1 1 0;
+        min-width: 0;
     }
 }

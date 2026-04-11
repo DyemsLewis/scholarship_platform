@@ -57,6 +57,19 @@
         }
     }
 
+    function closeAdminSidebar() {
+        const adminSidebar = document.querySelector('[data-admin-sidebar]');
+        if (!adminSidebar) {
+            return;
+        }
+
+        document.body.classList.remove('admin-sidebar-open');
+        const adminToggle = document.querySelector('[data-admin-sidebar-toggle]');
+        if (adminToggle) {
+            adminToggle.setAttribute('aria-expanded', 'false');
+        }
+    }
+
     function confirmLogout(logoutTrigger, event) {
         if (!logoutTrigger) {
             return true;
@@ -77,6 +90,7 @@
 
         // Always close the mobile nav first so it doesn't overlap the dialog.
         closeMobileNav();
+        closeAdminSidebar();
 
         // Use SweetAlert2 on all screen sizes.
         // The old window.confirm() fallback was unreliable on mobile browsers

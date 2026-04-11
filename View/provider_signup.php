@@ -320,11 +320,31 @@ $providerSignupCssVersion = @filemtime(__DIR__ . '/../public/css/provider-signup
                             <?php endif; ?>
                         </div>
                         <div class="form-group signup-full-width">
-                            <div class="terms-checkbox provider-confirm-card">
-                                <input type="checkbox" id="providerReviewPolicy" name="agree_terms" value="1" <?php echo providerChecked($providerOld, 'agree_terms'); ?>>
-                                <label for="providerReviewPolicy" class="provider-confirm-copy">
-                                    <strong>This organization details are correct</strong>
-                                    <span>I confirm that the organization information entered above is accurate and understand that this provider account will require admin review before it can sign in.</span>
+                            <div class="consent-card provider-consent-card">
+                                <div class="consent-card-header">
+                                    <div class="consent-card-icon">
+                                        <i class="fas fa-building-columns"></i>
+                                    </div>
+                                    <div class="consent-card-copy">
+                                        <h3>Review the provider terms before submission</h3>
+                                        <p>This organization account will go through admin review before it can sign in. Please review the provider terms and privacy notice before creating the account.</p>
+                                    </div>
+                                </div>
+
+                                <label class="consent-check provider-confirm-check" for="providerReviewPolicy">
+                                    <input type="checkbox" id="providerReviewPolicy" name="agree_terms" value="1" <?php echo providerChecked($providerOld, 'agree_terms'); ?>>
+                                    <span class="consent-check-indicator" aria-hidden="true">
+                                        <i class="fas fa-check"></i>
+                                    </span>
+                                    <span class="consent-check-copy provider-confirm-copy">
+                                        <strong>
+                                            I have reviewed the
+                                            <a href="#" class="consent-inline-link" onclick="event.preventDefault(); event.stopPropagation(); showProviderTerms();">Provider Terms and Conditions</a>
+                                            and
+                                            <a href="#" class="consent-inline-link" onclick="event.preventDefault(); event.stopPropagation(); showProviderPrivacy();">Privacy Policy</a>.
+                                        </strong>
+                                        <span>I confirm that the organization information entered above is accurate and I understand that this provider account will require admin review before it can sign in.</span>
+                                    </span>
                                 </label>
                             </div>
                         </div>
@@ -353,6 +373,7 @@ $providerSignupCssVersion = @filemtime(__DIR__ . '/../public/css/provider-signup
 <?php include 'partials/provider_location_modal.php'; ?>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/sweetalert.js')); ?>"></script>
+<script src="<?php echo htmlspecialchars(assetUrl('public/js/policy-modal.js')); ?>"></script>
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/password-policy.js')); ?>"></script>
 <script>
 (function () {
@@ -439,10 +460,23 @@ $providerSignupCssVersion = @filemtime(__DIR__ . '/../public/css/provider-signup
         if (orgEmailInput.value.trim() === '') { orgEmailInput.value = email; }
         if (email !== normalizeEmail(verifiedState.value)) { clearVerified(email !== ''); }
     });
+
+    window.showProviderTerms = function () {
+        if (window.PolicyModal) {
+            window.PolicyModal.openProviderTerms();
+        }
+    };
+
+    window.showProviderPrivacy = function () {
+        if (window.PolicyModal) {
+            window.PolicyModal.openProviderPrivacy();
+        }
+    };
+
     form.addEventListener('submit', function (event) {
         if (reviewPolicyCheckbox && !reviewPolicyCheckbox.checked) {
             event.preventDefault();
-            Swal.fire({ icon: 'error', title: 'Confirmation Required', text: 'Please confirm that the organization details are correct before creating the provider account.', confirmButtonColor: '#3085d6' });
+            Swal.fire({ icon: 'error', title: 'Terms Required', text: 'Please review the provider terms and confirm that the organization details are correct before creating the provider account.', confirmButtonColor: '#3085d6' });
             return;
         }
         const email = normalizeEmail(emailInput.value);

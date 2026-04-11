@@ -205,5 +205,6 @@ $adminLogsUrl = normalizeAppUrl('AdminView/activity_logs.php');
         });
     })();
 </script>
+<script src="<?php echo htmlspecialchars(assetUrl('public/js/logout.js')); ?>"></script>
 </div>
 </div>

@@ -1266,9 +1266,39 @@ if ($wizardProfileInitials === '') {
                             </div>
 
                             <div class="terms-box">
-                                <h4>Terms and Confirmation</h4>
-                                <label class="checkbox-line"><input type="checkbox" id="agreeTerms" name="agree_terms" value="1" required><span>I agree to the scholarship terms and verification policy.</span></label>
-                                <label class="checkbox-line"><input type="checkbox" id="confirmInfo" name="confirm_info" value="1" required><span>I confirm all submitted information is true and complete.</span></label>
+                                <div class="terms-box-header">
+                                    <div class="terms-box-icon">
+                                        <i class="fas fa-shield-halved"></i>
+                                    </div>
+                                    <div>
+                                        <h4>Review the terms before submitting your application</h4>
+                                        <p>We only use your submitted profile, documents, and application details for scholarship review and provider decision-making. Please review the agreement before you continue.</p>
+                                    </div>
+                                </div>
+
+                                <label class="checkbox-line checkbox-line-primary">
+                                    <input type="checkbox" id="agreeTerms" name="agree_terms" value="1" required>
+                                    <span>
+                                        <strong>
+                                            I agree to the
+                                            <a href="#" class="checkbox-inline-link" onclick="event.preventDefault(); event.stopPropagation(); showWizardTerms();">scholarship terms and verification policy</a>
+                                            and
+                                            <a href="#" class="checkbox-inline-link" onclick="event.preventDefault(); event.stopPropagation(); showWizardPrivacy();">privacy policy</a>.
+                                        </strong>
+                                        <small>I understand that submitted records may be reviewed, verified, and checked against this scholarship's rules.</small>
+                                    </span>
+                                </label>
+                                <label class="checkbox-line">
+                                    <input type="checkbox" id="confirmInfo" name="confirm_info" value="1" required>
+                                    <span>
+                                        <strong>I confirm all submitted information is true and complete.</strong>
+                                        <small>I understand incomplete or inaccurate information can delay review or affect my application outcome.</small>
+                                    </span>
+                                </label>
+
+                                <p class="terms-box-footnote">
+                                    Click the highlighted policy names in the first checkbox if you want to review them before submitting.
+                                </p>
                             </div>
 
                             <div class="wizard-navigation">
@@ -1301,8 +1331,21 @@ if ($wizardProfileInitials === '') {
 
 <?php include 'layout/footer.php'; ?>
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/script.js')); ?>"></script>
+<script src="<?php echo htmlspecialchars(assetUrl('public/js/policy-modal.js')); ?>"></script>
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/wizard.js')); ?>"></script>
 <script>
+function showWizardTerms() {
+    if (window.PolicyModal) {
+        window.PolicyModal.openScholarshipTerms();
+    }
+}
+
+function showWizardPrivacy() {
+    if (window.PolicyModal) {
+        window.PolicyModal.openScholarshipPrivacy();
+    }
+}
+
 document.querySelectorAll('.application-response-form').forEach((form) => {
     form.addEventListener('submit', async (event) => {
         if (form.dataset.confirmed === '1') {

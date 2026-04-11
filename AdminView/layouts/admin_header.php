@@ -121,7 +121,13 @@ $adminNavItems = [
                 </div>
                 <div class="admin-sidebar-profile-actions">
                     <a href="<?php echo htmlspecialchars($adminProfileUrl); ?>" class="btn btn-outline btn-sm">Open Profile</a>
-                    <a href="<?php echo htmlspecialchars($adminLogoutUrl); ?>" class="btn btn-primary btn-sm">Logout</a>
+                    <a
+                        href="<?php echo htmlspecialchars($adminLogoutUrl); ?>"
+                        class="btn btn-primary btn-sm"
+                        data-logout-trigger="true"
+                        data-mobile-header-logout="true"
+                        onclick="return window.handleLogoutTrigger ? window.handleLogoutTrigger(event, this) : true;"
+                    >Logout</a>
                 </div>
             </div>
         </div>
@@ -138,7 +144,14 @@ $adminNavItems = [
                 <i class="fas fa-lock" aria-hidden="true"></i>
                 <span><?php echo htmlspecialchars($panelLabel); ?></span>
             </a>
-            <a href="<?php echo htmlspecialchars($adminLogoutUrl); ?>" class="admin-mobile-logout" aria-label="Logout">
+            <a
+                href="<?php echo htmlspecialchars($adminLogoutUrl); ?>"
+                class="admin-mobile-logout"
+                aria-label="Logout"
+                data-logout-trigger="true"
+                data-mobile-header-logout="true"
+                onclick="return window.handleLogoutTrigger ? window.handleLogoutTrigger(event, this) : true;"
+            >
                 <i class="fas fa-right-from-bracket" aria-hidden="true"></i>
             </a>
         </div>

@@ -1070,24 +1070,114 @@
 
 .terms-box {
     margin-top: 16px;
-    border: 1px solid #e2e8f0;
-    border-radius: 14px;
-    padding: 16px;
-    background: #fcfdff;
+    padding: 20px;
+    border: 1px solid #dbe4ee;
+    border-radius: 22px;
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.terms-box-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.terms-box-icon {
+    width: 50px;
+    height: 50px;
+    flex-shrink: 0;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e8f0ff;
+    color: #2c5aa0;
+    font-size: 1.2rem;
 }
 
 .terms-box h4 {
-    margin: 0 0 10px;
-    color: #1f365c;
+    margin: 0 0 6px;
+    color: #0f172a;
+    font-size: 1.08rem;
+}
+
+.terms-box-header p {
+    margin: 0;
+    color: #475569;
+    font-size: 0.9rem;
+    line-height: 1.6;
 }
 
 .checkbox-line {
     display: flex;
     align-items: flex-start;
-    gap: 10px;
-    margin: 10px 0;
+    gap: 12px;
+    margin: 12px 0 0;
     color: #334155;
-    font-size: 0.92rem;
+    font-size: 0.93rem;
+    padding: 14px 16px;
+    border: 1px solid #dbe4ee;
+    border-radius: 18px;
+    background: #ffffff;
+    cursor: pointer;
+}
+
+.checkbox-line-primary {
+    margin-top: 0;
+}
+
+.checkbox-line input {
+    margin-top: 4px;
+    accent-color: #2c5aa0;
+}
+
+.checkbox-line span {
+    display: block;
+    line-height: 1.55;
+}
+
+.checkbox-line span strong {
+    display: block;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+
+.checkbox-line span small {
+    display: block;
+    color: #64748b;
+    font-size: 0.82rem;
+    line-height: 1.55;
+}
+
+.checkbox-inline-link {
+    color: #2c5aa0;
+    font-weight: 700;
+    text-decoration: none;
+    position: relative;
+}
+
+.checkbox-inline-link::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -2px;
+    height: 1px;
+    background: currentColor;
+    opacity: 0.45;
+}
+
+.checkbox-inline-link:hover {
+    color: #1d4ed8;
+}
+
+.terms-box-footnote {
+    margin: 12px 2px 0;
+    color: #64748b;
+    font-size: 0.82rem;
+    line-height: 1.55;
 }
 
 .wizard-navigation {
@@ -2682,6 +2772,10 @@
 @media (max-width: 760px) {
     .wizard-app-tabs {
         grid-template-columns: 1fr;
+    }
+
+    .terms-box-header {
+        flex-direction: column;
     }
 
     .wizard-application-tracking {

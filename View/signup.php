@@ -717,11 +717,34 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
                         </div>
                         
                         <!-- Terms and Conditions -->
-                        <div class="terms-checkbox">
-                            <input type="checkbox" id="agreeTerms" name="agree_terms" value="1" <?php echo signupChecked($signupOld, 'agree_terms'); ?> required>
-                            <label for="agreeTerms">
-                                I agree to the <a href="#" onclick="showTerms()">Terms and Conditions</a> and <a href="#" onclick="showPrivacy()">Privacy Policy</a>
+                        <div class="consent-card">
+                                <div class="consent-card-header">
+                                    <div class="consent-card-icon">
+                                        <i class="fas fa-shield-halved"></i>
+                                    </div>
+                                <div class="consent-card-copy">
+                                    <h3>Review the terms before creating your account</h3>
+                                    <p>We only use your details for scholarship matching, account access, and application processing. Please review the agreement and privacy notice before you continue.</p>
+                                </div>
+                            </div>
+
+                            <label class="consent-check" for="agreeTerms">
+                                <input type="checkbox" id="agreeTerms" name="agree_terms" value="1" <?php echo signupChecked($signupOld, 'agree_terms'); ?> required>
+                                <span class="consent-check-indicator" aria-hidden="true">
+                                    <i class="fas fa-check"></i>
+                                </span>
+                                <span class="consent-check-copy">
+                                    I have read the
+                                    <a href="#" class="consent-inline-link" onclick="event.preventDefault(); event.stopPropagation(); showTerms();">Terms and Conditions</a>
+                                    and
+                                    <a href="#" class="consent-inline-link" onclick="event.preventDefault(); event.stopPropagation(); showPrivacy();">Privacy Policy</a>,
+                                    and I agree to continue with account creation.
+                                </span>
                             </label>
+
+                            <p class="consent-footnote">
+                                Click the highlighted policy names in the checkbox if you want to review them before submitting.
+                            </p>
                         </div>
                         
                         <button type="submit" class="btn btn1 btn-primary" id="signupSubmitBtn">
@@ -745,6 +768,7 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
     <?php include 'partials/signup_location_modal.php'; ?>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/sweetalert.js')); ?>"></script>
+    <script src="<?php echo htmlspecialchars(assetUrl('public/js/policy-modal.js')); ?>"></script>
     <script src="<?php echo htmlspecialchars(assetUrl('public/js/password-policy.js')); ?>"></script>
 
     <script>
@@ -2100,47 +2124,15 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
 
     // Terms and conditions modal
     function showTerms() {
-        Swal.fire({
-            title: 'Terms and Conditions',
-            html: `
-                <div style="text-align: left; max-height: 400px; overflow-y: auto; padding: 10px;">
-                    <h4>1. Application Process</h4>
-                    <p>By submitting this scholarship application, you confirm that all information provided is accurate and complete.</p>
-                    
-                    <h4>2. Document Requirements</h4>
-                    <p>All uploaded documents must be clear, legible, and authentic.</p>
-                    
-                    <h4>3. Privacy and Data Protection</h4>
-                    <p>Your personal data will be used solely for scholarship processing in compliance with the Data Privacy Act of 2012.</p>
-                    
-                    <h4>4. Scholarship Awards</h4>
-                    <p>Scholarship decisions are final and at the discretion of the awarding bodies.</p>
-                </div>
-            `,
-            confirmButtonColor: '#3085d6'
-        });
+        if (window.PolicyModal) {
+            window.PolicyModal.openStudentTerms();
+        }
     }
 
     function showPrivacy() {
-        Swal.fire({
-            title: 'Privacy Policy',
-            html: `
-                <div style="text-align: left; max-height: 400px; overflow-y: auto; padding: 10px;">
-                    <h4>Data Collection</h4>
-                    <p>We collect personal information including name, email, school, course, birthdate, and location data.</p>
-                    
-                    <h4>Data Usage</h4>
-                    <p>Your information is used solely for scholarship matching and application processing.</p>
-                    
-                    <h4>Data Protection</h4>
-                    <p>We implement security measures to protect your personal information.</p>
-                    
-                    <h4>Your Rights</h4>
-                    <p>You may request access, correction, or deletion of your personal data.</p>
-                </div>
-            `,
-            confirmButtonColor: '#3085d6'
-        });
+        if (window.PolicyModal) {
+            window.PolicyModal.openStudentPrivacy();
+        }
     }
     </script>
 
