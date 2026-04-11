@@ -891,6 +891,12 @@ unset($_SESSION['success'], $_SESSION['error']);
                                 <h1><?php echo htmlspecialchars($fullName); ?></h1>
                                 <p><?php echo htmlspecialchars($application['scholarship_name']); ?> under <?php echo htmlspecialchars($scholarshipProvider); ?>.</p>
                             </div>
+                            <div class="app-review-shell-head-actions">
+                                <button type="button" class="app-review-match-guide-trigger is-summary-action" data-open-match-guide>
+                                    <i class="fas fa-circle-question"></i>
+                                    <?php echo htmlspecialchars($matchGuideButtonLabel); ?>
+                                </button>
+                            </div>
                         </div>
 
                         <div class="app-review-provider-summary">
@@ -909,10 +915,6 @@ unset($_SESSION['success'], $_SESSION['error']);
                             <article class="app-review-summary-tile">
                                 <span>Score</span>
                                 <strong><?php echo htmlspecialchars($applicationScoreDisplay); ?></strong>
-                                <button type="button" class="app-review-match-guide-trigger" data-open-match-guide>
-                                    <i class="fas fa-circle-question"></i>
-                                    <?php echo htmlspecialchars($matchGuideButtonLabel); ?>
-                                </button>
                             </article>
                             <article class="app-review-summary-tile">
                                 <span>Requirements</span>
@@ -929,13 +931,39 @@ unset($_SESSION['success'], $_SESSION['error']);
                             <span><?php echo htmlspecialchars($decisionReadinessNote); ?></span>
                         </div>
 
-                        <nav class="app-review-stepper" aria-label="Review sections">
-                            <button type="button" class="app-review-step-pill is-active" data-review-target="profile" aria-pressed="true"><span>1</span> Applicant Profile</button>
-                            <button type="button" class="app-review-step-pill" data-review-target="documents" aria-pressed="false"><span>2</span> Required Documents</button>
-                            <button type="button" class="app-review-step-pill" data-review-target="support" aria-pressed="false"><span>3</span> Review Support</button>
-                            <button type="button" class="app-review-step-pill" data-review-target="decision" aria-pressed="false"><span>4</span> Decision</button>
-                        </nav>
                     </div>
+                </div>
+                <div class="app-review-shell-stepper">
+                    <nav class="app-review-stepper" aria-label="Review sections">
+                        <button type="button" class="app-review-step-pill is-active" data-review-target="profile" aria-pressed="true">
+                            <span class="app-review-step-index">1</span>
+                            <span class="app-review-step-copy">
+                                <strong>Applicant Profile</strong>
+                                <small>Identity and academic details</small>
+                            </span>
+                        </button>
+                        <button type="button" class="app-review-step-pill" data-review-target="documents" aria-pressed="false">
+                            <span class="app-review-step-index">2</span>
+                            <span class="app-review-step-copy">
+                                <strong>Required Documents</strong>
+                                <small>Uploads and verification status</small>
+                            </span>
+                        </button>
+                        <button type="button" class="app-review-step-pill" data-review-target="support" aria-pressed="false">
+                            <span class="app-review-step-index">3</span>
+                            <span class="app-review-step-copy">
+                                <strong>Review Support</strong>
+                                <small>Timeline, notes, and context</small>
+                            </span>
+                        </button>
+                        <button type="button" class="app-review-step-pill" data-review-target="decision" aria-pressed="false">
+                            <span class="app-review-step-index">4</span>
+                            <span class="app-review-step-copy">
+                                <strong>Decision</strong>
+                                <small>Final approval or rejection</small>
+                            </span>
+                        </button>
+                    </nav>
                 </div>
             </section>
 
@@ -1027,6 +1055,11 @@ unset($_SESSION['success'], $_SESSION['error']);
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </section>
+                            <div class="app-review-stage-actions">
+                                <button type="button" class="btn btn-outline" data-review-prev-target="support">
+                                    <i class="fas fa-arrow-left"></i> Back to Review Support
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -1199,6 +1232,14 @@ unset($_SESSION['success'], $_SESSION['error']);
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
+                        <div class="app-review-stage-actions">
+                            <button type="button" class="btn btn-outline" data-review-prev-target="profile">
+                                <i class="fas fa-arrow-left"></i> Back to Applicant Profile
+                            </button>
+                            <button type="button" class="btn btn-primary" data-review-next-target="support">
+                                Continue to Review Support <i class="fas fa-arrow-right"></i>
+                            </button>
+                        </div>
                     </div>
                 </section>
 
@@ -1261,6 +1302,14 @@ unset($_SESSION['success'], $_SESSION['error']);
                             <div class="meta-item"><span class="label">Program Notes</span><span class="value"><?php echo nl2br(htmlspecialchars(appValue($application['scholarship_description'] ?? '', 'No scholarship description available.'))); ?></span></div>
                         </div>
                     </div>
+                    </div>
+                    <div class="app-review-stage-actions">
+                        <button type="button" class="btn btn-outline" data-review-prev-target="documents">
+                            <i class="fas fa-arrow-left"></i> Back to Required Documents
+                        </button>
+                        <button type="button" class="btn btn-primary" data-review-next-target="decision">
+                            Continue to Decision <i class="fas fa-arrow-right"></i>
+                        </button>
                     </div>
                 </section>
             </div>
@@ -1454,10 +1503,18 @@ unset($_SESSION['success'], $_SESSION['error']);
                 return;
             }
 
+            const reviewStageOrder = ['profile', 'documents', 'support', 'decision'];
+            const activeIndex = reviewStageOrder.indexOf(target);
+
             reviewStepButtons.forEach((button) => {
-                const isActive = button.dataset.reviewTarget === target;
+                const buttonTarget = button.dataset.reviewTarget || '';
+                const buttonIndex = reviewStageOrder.indexOf(buttonTarget);
+                const isActive = buttonTarget === target;
+                const isComplete = activeIndex > -1 && buttonIndex > -1 && buttonIndex < activeIndex;
                 button.classList.toggle('is-active', isActive);
+                button.classList.toggle('is-complete', isComplete);
                 button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                button.setAttribute('aria-current', isActive ? 'step' : 'false');
             });
 
             reviewStagePanels.forEach((panel) => {

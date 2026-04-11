@@ -78,7 +78,7 @@ if ($expectedKey !== '') {
     if ($requestKey === '' || !hash_equals($expectedKey, $requestKey)) {
         ocrApiJsonResponse(401, [
             'success' => false,
-            'message' => 'Unauthorized OCR request.'
+            'message' => 'Unauthorized scanner request.'
         ]);
     }
 } else {
@@ -87,7 +87,7 @@ if ($expectedKey !== '') {
     if (!$isLocalRequest) {
         ocrApiJsonResponse(503, [
             'success' => false,
-            'message' => 'Set endpoint_api_key in Config/ocr_config.php before exposing the OCR API publicly.'
+            'message' => 'Set endpoint_api_key in Config/ocr_config.php before exposing the scanner API publicly.'
         ]);
     }
 }
@@ -140,7 +140,7 @@ $workingFile = ocrApiSafeTempFile($extension);
 if (!move_uploaded_file((string) $file['tmp_name'], $workingFile)) {
     ocrApiJsonResponse(500, [
         'success' => false,
-        'message' => 'Failed to prepare the document for OCR.'
+        'message' => 'Failed to prepare the document for scanning.'
     ]);
 }
 
@@ -153,7 +153,7 @@ try {
     @unlink($workingFile);
     ocrApiJsonResponse(500, [
         'success' => false,
-        'message' => 'OCR processing failed unexpectedly.'
+        'message' => 'Scanner processing failed unexpectedly.'
     ]);
 }
 
@@ -162,14 +162,14 @@ try {
 if (!($result['success'] ?? false)) {
     ocrApiJsonResponse(503, [
         'success' => false,
-        'message' => (string) ($result['message'] ?? $result['scanner_message'] ?? 'OCR processing failed.')
+        'message' => (string) ($result['message'] ?? $result['scanner_message'] ?? 'Scanner processing failed.')
     ]);
 }
 
 $text = trim((string) ($result['text'] ?? ''));
 $textPreview = $text;
 if (strlen($textPreview) > 6000) {
-    $textPreview = substr($textPreview, 0, 6000) . "\n...[OCR preview truncated]";
+    $textPreview = substr($textPreview, 0, 6000) . "\n...[Scanner preview truncated]";
 }
 
 ocrApiJsonResponse(200, [

@@ -65,6 +65,17 @@ require_once __DIR__ . '/../app/Config/init.php';
         return substr($initials, 0, 2);
     }
 
+    if (!function_exists('normalizeScannerNoticeCopy')) {
+        function normalizeScannerNoticeCopy(string $value): string
+        {
+            return str_replace(
+                ['Remote OCR API', 'OCR.space', 'OCR API', 'OCR'],
+                ['remote scanner service', 'scanner service', 'scanner API', 'scanner'],
+                $value
+            );
+        }
+    }
+
 
 
 
@@ -83,6 +94,9 @@ require_once __DIR__ . '/../app/Config/init.php';
         $uploadNoticeMessage = (string) $_SESSION['upload_error'];
         unset($_SESSION['upload_error'], $_SESSION['upload_notice_title']);
     }
+
+    $uploadNoticeTitle = normalizeScannerNoticeCopy($uploadNoticeTitle);
+    $uploadNoticeMessage = normalizeScannerNoticeCopy($uploadNoticeMessage);
     ?>
 
     <section class="dashboard user-page-shell">
@@ -114,6 +128,11 @@ require_once __DIR__ . '/../app/Config/init.php';
                 </div>
                 </div>
                 <?php endif; ?>
+            </div>
+
+            <div style="margin: 0 0 20px 0; padding: 12px 14px; border-radius: 12px; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; font-size: 0.9rem;">
+                <i class="fas fa-circle-info" style="color: #2c5aa0;"></i>
+                GWA scale reminder: <strong>1.00 is the highest grade</strong> and <strong>5.00 is the lowest grade</strong>.
             </div>
             
             <?php if(!$isLoggedIn): ?>
@@ -297,6 +316,9 @@ require_once __DIR__ . '/../app/Config/init.php';
                                     placeholder="Example: 1.75"
                                     style="width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 10px;"
                                 >
+                                <p style="margin: 6px 0 0 0; font-size: 0.74rem; color: var(--gray);">
+                                    Use the Philippine GWA scale: 1.00 is highest, 5.00 is lowest.
+                                </p>
                             </div>
                         </div>
 

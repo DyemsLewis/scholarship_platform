@@ -93,11 +93,11 @@ class OcrService
     public function processDocument(string $inputPath, string $mimeType, ?string $originalFilename = null): array
     {
         if (!file_exists($inputPath)) {
-            return $this->errorResult('OCR could not start because the uploaded file was not found.');
+            return $this->errorResult('Scanner could not start because the uploaded file was not found.');
         }
 
         if (!in_array($mimeType, self::ALLOWED_MIME_TYPES, true)) {
-            return $this->errorResult('OCR only supports PDF, JPG, and PNG files.');
+            return $this->errorResult('Scanner only supports PDF, JPG, and PNG files.');
         }
 
         $mode = $this->getEffectiveMode();
@@ -116,7 +116,7 @@ class OcrService
     {
         $tesseractPath = $this->detectTesseractPath();
         if ($tesseractPath === null) {
-            return $this->errorResult('Local Tesseract OCR was not found on this server.');
+            return $this->errorResult('Local scanner service was not found on this server.');
         }
 
         $ocrInputPath = $inputPath;
@@ -125,7 +125,7 @@ class OcrService
         if ($mimeType === 'application/pdf') {
             $convertedImage = $this->convertPdfFirstPageToImage($inputPath);
             if ($convertedImage === null) {
-                return $this->errorResult('PDF OCR needs Imagick on the OCR server. Use OCR.space or the remote OCR API if Imagick is unavailable.');
+                return $this->errorResult('PDF scanning needs Imagick on the scan server. Use the hosted scanner service or the remote scanner service if Imagick is unavailable.');
             }
             $ocrInputPath = $convertedImage;
             $temporaryFiles[] = $convertedImage;
@@ -153,18 +153,18 @@ class OcrService
     {
         $apiKey = trim((string) ($this->config['ocr_space_api_key'] ?? ''));
         if ($apiKey === '') {
-            return $this->errorResult('OCR.space mode is enabled, but no OCR.space API key is configured.', 'ocr_space');
+            return $this->errorResult('The hosted scanner service is enabled, but no API key is configured.', 'ocr_space');
         }
 
         if (!function_exists('curl_init') || !class_exists('CURLFile')) {
-            return $this->errorResult('OCR.space mode needs the PHP cURL extension.', 'ocr_space');
+            return $this->errorResult('The hosted scanner service needs the PHP cURL extension.', 'ocr_space');
         }
 
         $maxUploadBytes = (int) ($this->config['ocr_space_max_upload_bytes'] ?? 0);
         if ($maxUploadBytes > 0 && filesize($inputPath) > $maxUploadBytes) {
             return $this->errorResult(
-                'The current OCR.space plan limit is ' . number_format($maxUploadBytes / 1048576, 2) .
-                ' MB per file. Compress the TOR file or increase ocr_space_max_upload_bytes if you are using a larger OCR.space plan.',
+                'The current scanner service limit is ' . number_format($maxUploadBytes / 1048576, 2) .
+                ' MB per file. Compress the TOR file or contact the administrator to increase the scanner upload limit.',
                 'ocr_space'
             );
         }
@@ -199,7 +199,7 @@ class OcrService
         curl_close($ch);
 
         if ($responseBody === false || $responseBody === '' || $curlError !== '') {
-            $message = 'OCR.space request failed.';
+            $message = 'Scanner service request failed.';
             if ($curlError !== '') {
                 $message .= ' ' . $curlError;
             }
@@ -208,7 +208,7 @@ class OcrService
 
         $decoded = json_decode($responseBody, true);
         if (!is_array($decoded)) {
-            return $this->errorResult('OCR.space returned an invalid response.', 'ocr_space');
+            return $this->errorResult('Scanner service returned an invalid response.', 'ocr_space');
         }
 
         if (!empty($decoded['IsErroredOnProcessing'])) {
@@ -261,15 +261,15 @@ class OcrService
         }
 
         if (empty($messages) && isset($decoded['OCRExitCode'])) {
-            $messages[] = 'OCR.space processing failed with exit code ' . (string) $decoded['OCRExitCode'] . '.';
+            $messages[] = 'Scanner service failed with exit code ' . (string) $decoded['OCRExitCode'] . '.';
         }
 
         $message = empty($messages)
-            ? 'OCR.space could not process the document.'
+            ? 'Scanner service could not process the document.'
             : implode(' ', array_unique($messages));
 
         if ($httpCode >= 400) {
-            $message = 'OCR.space error (' . $httpCode . '): ' . $message;
+            $message = 'Scanner service error (' . $httpCode . '): ' . $message;
         }
 
         return $message;
@@ -279,11 +279,11 @@ class OcrService
     {
         $remoteUrl = trim((string) ($this->config['remote_url'] ?? ''));
         if ($remoteUrl === '') {
-            return $this->errorResult('Remote OCR API mode is enabled, but no remote_url is configured.', 'remote_api');
+            return $this->errorResult('The remote scanner service is enabled, but it is not configured yet.', 'remote_api');
         }
 
         if (!function_exists('curl_init') || !class_exists('CURLFile')) {
-            return $this->errorResult('Remote OCR API mode needs the PHP cURL extension.', 'remote_api');
+            return $this->errorResult('The remote scanner service needs the PHP cURL extension.', 'remote_api');
         }
 
         $postFields = [
@@ -313,7 +313,7 @@ class OcrService
         curl_close($ch);
 
         if ($responseBody === false || $responseBody === '' || $curlError !== '') {
-            $message = 'Remote OCR API request failed.';
+            $message = 'Remote scanner service request failed.';
             if ($curlError !== '') {
                 $message .= ' ' . $curlError;
             }
@@ -322,13 +322,13 @@ class OcrService
 
         $decoded = json_decode($responseBody, true);
         if (!is_array($decoded)) {
-            return $this->errorResult('Remote OCR API returned an invalid response.', 'remote_api');
+            return $this->errorResult('Remote scanner service returned an invalid response.', 'remote_api');
         }
 
         if (!($decoded['success'] ?? false)) {
-            $remoteMessage = trim((string) ($decoded['message'] ?? 'Remote OCR API could not process the document.'));
+            $remoteMessage = trim((string) ($decoded['message'] ?? 'Remote scanner service could not process the document.'));
             if ($httpCode >= 400) {
-                $remoteMessage = 'Remote OCR API error (' . $httpCode . '): ' . $remoteMessage;
+                $remoteMessage = 'Remote scanner service error (' . $httpCode . '): ' . $remoteMessage;
             }
             return $this->errorResult($remoteMessage, 'remote_api');
         }

@@ -829,8 +829,15 @@
     grid-auto-rows: minmax(42px, auto);
     gap: 10px;
     align-content: start;
+    justify-self: end;
+    align-self: start;
     width: 220px;
     min-width: 220px;
+    padding: 6px;
+    box-sizing: border-box;
+    border-radius: 16px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
 }
 
 .requirement-review-actions .btn {
@@ -1224,8 +1231,13 @@
     }
 
     .requirement-review-actions {
+        width: 100%;
         min-width: 0;
-        justify-content: flex-start;
+        justify-self: stretch;
+        padding: 0;
+        background: transparent;
+        border: 0;
+        border-radius: 0;
     }
 }
 
@@ -2597,6 +2609,11 @@
     gap: 14px;
 }
 
+.app-review-shell-stepper {
+    padding: 0 18px 18px;
+    background: #ffffff;
+}
+
 .app-review-shell-head {
     display: flex;
     align-items: flex-start;
@@ -2734,34 +2751,81 @@
 }
 
 .app-review-stepper {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #dbe5f3;
+    border-radius: 22px;
+    background: linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
 }
 
 .app-review-step-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 14px;
-    border-radius: 14px;
-    border: 1px solid #dbe5f3;
-    background: #f8fbff;
-    color: #1f365c;
-    font-weight: 700;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    min-height: 74px;
+    padding: 14px 16px;
+    border-radius: 18px;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.74);
+    color: #50627b;
+    font-weight: 600;
     text-decoration: none;
+    text-align: left;
+    box-shadow: inset 0 0 0 1px rgba(213, 223, 236, 0.78);
+    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
 }
 
-.app-review-step-pill span {
-    width: 26px;
-    height: 26px;
+.app-review-step-pill::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 58%);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.app-review-step-index {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 999px;
-    background: #eaf2ff;
-    color: #1d4e89;
-    font-size: 0.82rem;
+    border-radius: 14px;
+    border: 1px solid #d5e0ee;
+    background: #ffffff;
+    color: #2c5aa0;
+    font-size: 0.92rem;
+    font-weight: 800;
+    box-shadow: 0 6px 14px rgba(148, 163, 184, 0.12);
+}
+
+.app-review-step-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.app-review-step-copy strong {
+    display: block;
+    color: inherit;
+    font-size: 0.98rem;
+    line-height: 1.2;
+}
+
+.app-review-step-copy small {
+    display: block;
+    color: #7a879a;
+    font-size: 0.74rem;
+    line-height: 1.35;
 }
 
 .app-review-step-pill:hover {
@@ -4231,26 +4295,34 @@
 
 .app-review-header-back:hover,
 .app-review-step-pill:hover {
-    color: #2c5aa0;
-    background: #eef5ff;
-    border-color: #c9d9f4;
+    color: #1f365c;
+    background: #ffffff;
+    border-color: #cad7ea;
+    transform: translateY(-1px);
+    box-shadow: 0 10px 18px rgba(44, 90, 160, 0.08), inset 0 0 0 1px rgba(213, 223, 236, 0.7);
 }
 
 .app-review-summary-strip {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
     margin-bottom: 0;
 }
 
 .app-review-summary-tile,
 .app-review-progress-card,
 .app-review-mini-card {
-    padding: 12px 13px;
+    padding: 10px 12px;
     background: #f8fafc;
     border: 1px solid #e2e8f0;
-    border-radius: 14px;
+    border-radius: 12px;
     box-shadow: none;
+}
+
+.app-review-summary-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin: 8px 0 0;
 }
 
 .app-review-next-step-banner {
@@ -4470,15 +4542,73 @@
     font: inherit;
 }
 
-.app-review-step-pill.is-active {
-    background: #eff6ff;
-    border-color: #bfdbfe;
-    color: #1d4ed8;
+.app-review-step-pill .app-review-step-index {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14px;
+    border: 1px solid #d5e0ee;
+    background: #ffffff;
+    color: #2c5aa0;
+    font-size: 0.92rem;
+    font-weight: 800;
+    box-shadow: 0 6px 14px rgba(148, 163, 184, 0.12);
 }
 
-.app-review-step-pill.is-active span {
+.app-review-step-pill .app-review-step-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    width: auto;
+    height: auto;
+    align-items: initial;
+    justify-content: initial;
+    border-radius: 0;
+    background: transparent;
+    color: inherit;
+    font-size: inherit;
+}
+
+.app-review-step-pill.is-complete {
+    background: linear-gradient(180deg, #f2f8ff 0%, #edf5ff 100%);
+    border-color: #bfd3ef;
+    color: #21406d;
+}
+
+.app-review-step-pill.is-complete .app-review-step-index {
+    background: #2c5aa0;
+    border-color: #2c5aa0;
+    color: #ffffff;
+    box-shadow: none;
+}
+
+.app-review-step-pill.is-complete .app-review-step-copy small {
+    color: #5d7390;
+}
+
+.app-review-step-pill.is-active {
+    background: linear-gradient(135deg, #2c5aa0 0%, #3f72be 100%);
+    border-color: #2c5aa0;
+    color: #ffffff;
+    box-shadow: 0 14px 28px rgba(44, 90, 160, 0.24);
+}
+
+.app-review-step-pill.is-active::after {
+    opacity: 1;
+}
+
+.app-review-step-pill.is-active .app-review-step-index {
     background: #ffffff;
-    color: #1d4ed8;
+    border-color: rgba(255, 255, 255, 0.72);
+    color: #21406d;
+    box-shadow: none;
+}
+
+.app-review-step-pill.is-active .app-review-step-copy small {
+    color: rgba(255, 255, 255, 0.82);
 }
 
 .app-review-stage-panels {
@@ -4492,6 +4622,40 @@
 
 .app-review-stage-panel.is-active {
     display: block;
+}
+
+@media (max-width: 1100px) {
+    .app-review-stepper {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .app-review-shell-stepper {
+        padding: 0 10px 10px;
+    }
+
+    .app-review-stepper {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 10px;
+    }
+
+    .app-review-step-pill {
+        min-height: 0;
+        padding: 12px 14px;
+    }
+
+    .app-review-step-index {
+        width: 34px;
+        height: 34px;
+        border-radius: 12px;
+        font-size: 0.88rem;
+    }
+
+    .app-review-step-copy strong {
+        font-size: 0.93rem;
+    }
 }
 
 .app-review-stage-surface {
@@ -4772,13 +4936,30 @@
 .app-review-stage-actions {
     display: flex;
     justify-content: flex-end;
-    margin-top: 4px;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e7eef7;
 }
 
 .app-review-stage-actions .btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+}
+
+.app-review-panel > .app-review-stage-actions {
+    margin: 18px 20px 20px;
+}
+
+.applicant-profile-shell > .app-review-stage-actions,
+.app-review-stage-body > .app-review-stage-actions {
+    margin-top: 6px;
+}
+
+.app-review-stage-panel > .app-review-stage-actions {
+    margin: 18px 20px 0;
 }
 
 .app-review-match-guide-trigger {
@@ -4805,6 +4986,24 @@
 
 .app-review-match-guide-trigger.is-inline {
     margin-top: 10px;
+}
+
+.app-review-shell-head-actions {
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.app-review-shell-head-actions .app-review-match-guide-trigger {
+    margin-top: 0;
+}
+
+.app-review-match-guide-trigger.is-summary-action {
+    margin-top: 0;
+    padding: 7px 10px;
+    font-size: 0.78rem;
 }
 
 .app-modal-wide .app-modal-content,
@@ -5032,6 +5231,12 @@
         justify-content: center;
     }
 
+    .app-review-panel > .app-review-stage-actions,
+    .app-review-stage-panel > .app-review-stage-actions {
+        margin-left: 15px;
+        margin-right: 15px;
+    }
+
     .match-guide-modal-content {
         width: 100%;
         max-height: calc(100vh - 24px);
@@ -5048,5 +5253,90 @@
     .match-guide-reason-card {
         padding: 14px;
         border-radius: 16px;
+    }
+}
+
+/* Final stepper override */
+.app-review-shell-stepper {
+    padding: 12px 16px 16px;
+    border-top: 1px solid #edf2f7;
+    background: linear-gradient(180deg, #fbfdff 0%, #f4f8fd 100%);
+}
+
+.app-review-shell-stepper .app-review-stepper {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.app-review-shell-stepper .app-review-step-pill {
+    width: auto;
+    min-height: 56px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.88);
+}
+
+.app-review-shell-stepper .app-review-step-pill.is-complete {
+    background: linear-gradient(180deg, #f2f8ff 0%, #edf5ff 100%);
+    border-color: #bfd3ef;
+    color: #21406d;
+}
+
+.app-review-shell-stepper .app-review-step-pill.is-active {
+    background: linear-gradient(135deg, #2c5aa0 0%, #3f72be 100%);
+    border-color: #2c5aa0;
+    color: #ffffff;
+    box-shadow: 0 14px 28px rgba(44, 90, 160, 0.24);
+}
+
+.app-review-shell-stepper .app-review-step-pill.is-active .app-review-step-copy strong,
+.app-review-shell-stepper .app-review-step-pill.is-active .app-review-step-copy small {
+    color: inherit;
+}
+
+.app-review-shell-stepper .app-review-step-pill:hover {
+    background: #ffffff;
+}
+
+.app-review-shell-stepper .app-review-step-index {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+}
+
+.app-review-shell-stepper .app-review-step-copy strong {
+    font-size: 0.9rem;
+}
+
+.app-review-shell-stepper .app-review-step-copy small {
+    font-size: 0.68rem;
+}
+
+@media (max-width: 1180px) {
+    .app-review-shell-stepper .app-review-stepper {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .app-review-shell-stepper {
+        padding: 10px 10px 10px;
+    }
+
+    .app-review-shell-stepper .app-review-stepper {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+
+    .app-review-shell-stepper .app-review-step-pill {
+        min-height: 0;
+        padding: 10px 11px;
     }
 }

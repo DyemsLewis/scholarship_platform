@@ -4,14 +4,446 @@ require_once __DIR__ . '/../app/Config/db_config.php';
 require_once __DIR__ . '/../app/Config/access_control.php';
 require_once __DIR__ . '/../app/Config/provider_scope.php';
 require_once __DIR__ . '/../app/Config/url_token.php';
+require_once __DIR__ . '/../app/Controllers/scholarshipResultController.php';
 
 requireRoles(['provider', 'admin', 'super_admin'], '../View/index.php', 'You do not have permission to view applications.');
+
+function queueHasValue($value): bool
+{
+    return trim((string) ($value ?? '')) !== '';
+}
+
+function queueTableHasColumn(PDO $pdo, string $tableName, string $columnName): bool
+{
+    static $cache = [];
+    $key = $tableName . '.' . $columnName;
+    if (array_key_exists($key, $cache)) {
+        return $cache[$key];
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = :table_name
+          AND COLUMN_NAME = :column_name
+    ");
+    $stmt->execute([
+        ':table_name' => $tableName,
+        ':column_name' => $columnName,
+    ]);
+
+    $cache[$key] = ((int) $stmt->fetchColumn()) > 0;
+    return $cache[$key];
+}
+
+function queueOptionalColumnSelect(PDO $pdo, string $tableAlias, string $tableName, string $columnName, ?string $alias = null): string
+{
+    $selectAlias = $alias ?? $columnName;
+    if (!queueTableHasColumn($pdo, $tableName, $columnName)) {
+        return 'NULL AS ' . $selectAlias . ',';
+    }
+
+    return $tableAlias . '.' . $columnName . ' AS ' . $selectAlias . ',';
+}
+
+function queueBuildFallbackMatchGuidePayload(array $application): array
+{
+    $score = isset($application['probability_score']) && $application['probability_score'] !== null
+        ? (int) round((float) $application['probability_score'])
+        : null;
+
+    return [
+        'buttonLabel' => $score !== null ? ('Why ' . $score . '% match?') : 'How match works',
+        'title' => $score !== null ? ('Why this shows as ' . $score . '% match') : 'How the match score works',
+        'summary' => 'This score comes from the DSS profile matching model using the applicant information available in the system.',
+        'note' => 'Open the full review workspace if you need the complete applicant profile, documents, and final decision context.',
+        'factors' => [],
+        'positive' => ['The DSS found enough information to produce a review score for this application.'],
+        'limiting' => ['Open the full review page for deeper score context and applicant details.'],
+    ];
+}
+
+function queueBuildMatchGuidePayload(array $application, ScholarshipService $scholarshipService): array
+{
+    $applicantProfile = [
+        'applicant_type' => $application['applicant_type'] ?? '',
+        'year_level' => $application['year_level'] ?? '',
+        'admission_status' => $application['admission_status'] ?? '',
+        'shs_strand' => $application['shs_strand'] ?? '',
+        'course' => $application['course'] ?? '',
+        'target_course' => $application['target_course'] ?? '',
+        'school' => $application['school'] ?? '',
+        'target_college' => $application['target_college'] ?? '',
+        'enrollment_status' => $application['enrollment_status'] ?? '',
+        'academic_standing' => $application['academic_standing'] ?? '',
+        'city' => $application['city'] ?? '',
+        'province' => $application['province'] ?? '',
+        'citizenship' => $application['citizenship'] ?? '',
+        'household_income_bracket' => $application['household_income_bracket'] ?? '',
+        'special_category' => $application['special_category'] ?? '',
+    ];
+
+    $scholarshipContext = [
+        'id' => (int) ($application['scholarship_id'] ?? 0),
+        'name' => (string) ($application['scholarship_name'] ?? ''),
+        'description' => (string) ($application['scholarship_description'] ?? ''),
+        'eligibility' => (string) ($application['scholarship_eligibility'] ?? ''),
+        'provider' => (string) ($application['provider'] ?? ''),
+        'deadline' => $application['deadline'] ?? null,
+        'application_open_date' => $application['scholarship_application_open_date'] ?? null,
+        'min_gwa' => $application['scholarship_min_gwa'] ?? null,
+        'max_gwa' => $application['scholarship_max_gwa'] ?? null,
+        'address' => (string) ($application['scholarship_address'] ?? ''),
+        'city' => (string) ($application['scholarship_city'] ?? ''),
+        'province' => (string) ($application['scholarship_province'] ?? ''),
+        'target_applicant_type' => (string) ($application['target_applicant_type'] ?? ''),
+        'target_year_level' => (string) ($application['target_year_level'] ?? ''),
+        'required_admission_status' => (string) ($application['required_admission_status'] ?? ''),
+        'target_strand' => (string) ($application['target_strand'] ?? ''),
+        'target_citizenship' => (string) ($application['target_citizenship'] ?? ''),
+        'target_income_bracket' => (string) ($application['target_income_bracket'] ?? ''),
+        'target_special_category' => (string) ($application['target_special_category'] ?? ''),
+    ];
+
+    if (!empty($scholarshipContext['deadline'])) {
+        try {
+            $deadlineDate = new DateTime((string) $scholarshipContext['deadline']);
+            $now = new DateTime();
+            $interval = $now->diff($deadlineDate);
+            $daysRemaining = (int) $interval->days;
+            if ($deadlineDate < $now) {
+                $daysRemaining *= -1;
+            }
+            $scholarshipContext['days_remaining'] = $daysRemaining;
+        } catch (Throwable $e) {
+            $scholarshipContext['days_remaining'] = null;
+        }
+    } else {
+        $scholarshipContext['days_remaining'] = null;
+    }
+
+    $applicantGwaValue = queueHasValue($application['gwa'] ?? null) && is_numeric($application['gwa'])
+        ? (float) $application['gwa']
+        : null;
+    $applicantCourseValue = trim((string) ($application['course'] ?? ''));
+    $matchAssessment = $scholarshipService->getMatchAssessmentForScholarship(
+        $scholarshipContext,
+        $applicantGwaValue,
+        $applicantCourseValue,
+        $applicantProfile
+    );
+
+    $matchGuideScore = $application['probability_score'] !== null
+        ? (int) round((float) $application['probability_score'])
+        : (isset($matchAssessment['percentage']) ? (int) $matchAssessment['percentage'] : null);
+    $matchProfileTotal = (int) ($matchAssessment['profile_requirement_total'] ?? 0);
+    $matchProfileMet = (int) ($matchAssessment['profile_requirement_met'] ?? 0);
+    $matchProfilePending = (int) ($matchAssessment['profile_requirement_pending'] ?? 0);
+    $matchProfileFailed = (int) ($matchAssessment['profile_requirement_failed'] ?? 0);
+    $matchCurrentInfoChecks = is_array($matchAssessment['current_info_checks'] ?? null) ? $matchAssessment['current_info_checks'] : [];
+    $matchCurrentInfoTotal = (int) ($matchAssessment['current_info_total'] ?? 0);
+    $matchCurrentInfoMet = (int) ($matchAssessment['current_info_met'] ?? 0);
+    $matchCurrentInfoPending = (int) ($matchAssessment['current_info_pending'] ?? 0);
+    $matchCurrentInfoWarn = (int) ($matchAssessment['current_info_warn'] ?? 0);
+    $matchRequiresGwa = !empty($matchAssessment['requires_gwa']);
+
+    $matchRequiredGwa = null;
+    if ($scholarshipContext['min_gwa'] !== null && $scholarshipContext['min_gwa'] !== '') {
+        $matchRequiredGwa = (float) $scholarshipContext['min_gwa'];
+    } elseif ($scholarshipContext['max_gwa'] !== null && $scholarshipContext['max_gwa'] !== '') {
+        $matchRequiredGwa = (float) $scholarshipContext['max_gwa'];
+    }
+
+    $pushReason = static function (array &$reasons, string $reason, int $limit = 4): void {
+        $normalized = trim(preg_replace('/\s+/', ' ', $reason) ?? $reason);
+        if ($normalized === '' || in_array($normalized, $reasons, true) || count($reasons) >= $limit) {
+            return;
+        }
+        $reasons[] = $normalized;
+    };
+
+    $matchAcademicDecision = 'No GWA requirement';
+    $matchAcademicClass = 'info';
+    if ($matchRequiredGwa !== null) {
+        if ($applicantGwaValue === null) {
+            $matchAcademicDecision = 'Pending: upload grades';
+            $matchAcademicClass = 'warn';
+        } elseif ($applicantGwaValue <= $matchRequiredGwa) {
+            $matchAcademicDecision = 'Passed';
+            $matchAcademicClass = 'good';
+        } else {
+            $matchAcademicDecision = 'Above limit';
+            $matchAcademicClass = 'bad';
+        }
+    }
+    $matchAcademicDetail = $matchRequiredGwa !== null
+        ? ('Required GWA: ' . number_format($matchRequiredGwa, 2) . ' or better.')
+        : 'No fixed academic cutoff is configured for this scholarship.';
+
+    $matchCoursePathwayCheck = null;
+    foreach ($matchCurrentInfoChecks as $currentInfoCheck) {
+        if (strtolower(trim((string) ($currentInfoCheck['key'] ?? ''))) === 'course_pathway') {
+            $matchCoursePathwayCheck = $currentInfoCheck;
+            break;
+        }
+    }
+
+    $matchCourseValue = 'Course details still needed';
+    $matchCourseDetail = 'Add the applicant current or target course so the DSS can compare it with the scholarship focus.';
+    $matchCourseClass = 'info';
+    if (is_array($matchCoursePathwayCheck)) {
+        $matchCourseStatus = strtolower(trim((string) ($matchCoursePathwayCheck['status'] ?? 'pending')));
+        $matchCourseDetail = trim((string) ($matchCoursePathwayCheck['detail'] ?? $matchCourseDetail));
+        if ($matchCourseStatus === 'met') {
+            $matchCourseValue = 'Strong course alignment';
+            $matchCourseClass = 'good';
+        } elseif ($matchCourseStatus === 'warn') {
+            $matchCourseValue = 'Partial course alignment';
+            $matchCourseClass = 'warn';
+        }
+    } elseif (queueHasValue($application['course'] ?? null) || queueHasValue($application['target_course'] ?? null)) {
+        $matchCourseValue = 'Course information on file';
+        $matchCourseDetail = 'The DSS compares the applicant current or target course with the scholarship focus.';
+    }
+
+    $matchProfileClass = 'info';
+    if ($matchProfileTotal > 0) {
+        if ($matchProfileFailed > 0) {
+            $matchProfileClass = 'bad';
+        } elseif ($matchProfilePending > 0) {
+            $matchProfileClass = 'warn';
+        } else {
+            $matchProfileClass = 'good';
+        }
+    }
+    $matchProfileValue = $matchProfileTotal > 0
+        ? ($matchProfileMet . '/' . $matchProfileTotal . ' audience rules aligned')
+        : 'No extra audience filters';
+    $matchProfileDetail = $matchProfileTotal > 0
+        ? ($matchProfileMet . '/' . $matchProfileTotal . ' configured profile filters are aligned.')
+        : 'This scholarship does not require extra profile filters.';
+
+    $matchStudentContextClass = 'info';
+    if ($matchCurrentInfoTotal > 0) {
+        if ($matchCurrentInfoPending > 0 || $matchCurrentInfoWarn > 0) {
+            $matchStudentContextClass = 'warn';
+        } elseif ($matchCurrentInfoMet > 0) {
+            $matchStudentContextClass = 'good';
+        }
+    }
+    $matchStudentContextValue = $matchCurrentInfoTotal > 0
+        ? ($matchCurrentInfoMet . '/' . $matchCurrentInfoTotal . ' support signals aligned')
+        : 'No extra context checks';
+    $matchStudentContextDetail = $matchCurrentInfoTotal > 0
+        ? ($matchCurrentInfoMet . '/' . $matchCurrentInfoTotal . ' current student signals are aligned.')
+        : 'No additional current-information checks are required.';
+
+    $matchApplicationNotYetOpen = false;
+    $matchApplicationOpenDateDisplay = 'Open now';
+    if (!empty($scholarshipContext['application_open_date'])) {
+        try {
+            $applicationOpenDate = new DateTime((string) $scholarshipContext['application_open_date']);
+            $applicationOpenDate->setTime(0, 0, 0);
+            $matchApplicationOpenDateDisplay = $applicationOpenDate->format('M d, Y');
+            if ($applicationOpenDate > new DateTime()) {
+                $matchApplicationNotYetOpen = true;
+            }
+        } catch (Throwable $e) {
+            $matchApplicationNotYetOpen = false;
+            $matchApplicationOpenDateDisplay = 'Open now';
+        }
+    }
+
+    $matchDeadlineClass = 'info';
+    $matchDeadlineDecision = 'Open / no deadline';
+    $matchDeadlineDetail = 'This scholarship is open without a fixed closing date.';
+    if (!empty($scholarshipContext['deadline'])) {
+        $matchDeadlineDateDisplay = date('M d, Y', strtotime((string) $scholarshipContext['deadline']));
+        try {
+            $deadlineDate = new DateTime((string) $scholarshipContext['deadline']);
+            $now = new DateTime();
+            if ($deadlineDate < $now) {
+                $matchDeadlineDecision = 'Closed';
+                $matchDeadlineClass = 'bad';
+            } else {
+                $daysLeft = (int) $now->diff($deadlineDate)->days;
+                if ($daysLeft <= 7) {
+                    $matchDeadlineDecision = 'Urgent (' . $daysLeft . ' day' . ($daysLeft === 1 ? '' : 's') . ' left)';
+                    $matchDeadlineClass = 'warn';
+                } else {
+                    $matchDeadlineDecision = 'Open';
+                    $matchDeadlineClass = 'good';
+                }
+            }
+            $matchDeadlineDetail = 'Submission deadline: ' . $matchDeadlineDateDisplay . '.';
+        } catch (Throwable $e) {
+            $matchDeadlineDetail = 'This scholarship has a stored deadline, but it could not be parsed for the guide.';
+        }
+    }
+
+    $matchTimingValue = $matchApplicationNotYetOpen ? ('Opens ' . $matchApplicationOpenDateDisplay) : $matchDeadlineDecision;
+    $matchTimingDetail = $matchApplicationNotYetOpen
+        ? ('Applications open on ' . $matchApplicationOpenDateDisplay . '.')
+        : $matchDeadlineDetail;
+    $matchTimingClass = $matchApplicationNotYetOpen
+        ? 'warn'
+        : ($matchDeadlineClass === 'bad' ? 'bad' : ($matchDeadlineClass === 'warn' ? 'warn' : 'good'));
+
+    $matchProviderValue = 'Standard provider signal';
+    $matchProviderDetail = 'Provider profile contributes a smaller general ranking signal in the DSS.';
+    $matchProviderClass = 'info';
+    $recognizedProviders = ['CHED', 'DOST', 'University of the Philippines', 'SM Foundation', 'Ayala Foundation'];
+    $recognizedProviderMatch = false;
+    foreach ($recognizedProviders as $recognizedProvider) {
+        if ($scholarshipContext['provider'] !== '' && stripos($scholarshipContext['provider'], $recognizedProvider) !== false) {
+            $recognizedProviderMatch = true;
+            break;
+        }
+    }
+    if ($recognizedProviderMatch) {
+        $matchProviderValue = 'Established provider signal';
+        $matchProviderDetail = 'Recognized providers receive a slightly stronger ranking signal in the DSS.';
+        $matchProviderClass = 'good';
+    } elseif (
+        $scholarshipContext['provider'] !== ''
+        && (
+            stripos($scholarshipContext['provider'], 'university') !== false
+            || stripos($scholarshipContext['provider'], 'college') !== false
+        )
+    ) {
+        $matchProviderValue = 'Academic institution signal';
+        $matchProviderDetail = 'College and university providers receive a moderate ranking signal in the DSS.';
+        $matchProviderClass = 'good';
+    }
+
+    if ($matchRequiresGwa) {
+        $matchGuideSummary = 'This score is still partly estimated because the applicant academic record is missing. The DSS is using the other profile signals for now.';
+    } elseif ($matchGuideScore !== null && $matchGuideScore >= 80) {
+        $matchGuideSummary = 'This is a strong fit score because several major DSS signals line up well with this scholarship.';
+    } elseif ($matchGuideScore !== null && $matchGuideScore >= 60) {
+        $matchGuideSummary = 'This is a moderate fit score. Some major DSS signals line up, but a few areas are weaker or still incomplete.';
+    } elseif ($matchGuideScore !== null) {
+        $matchGuideSummary = 'This is a lower fit score right now because the scholarship and the applicant record are not aligning strongly yet.';
+    } else {
+        $matchGuideSummary = 'The DSS uses the applicant academic and profile details to build a fit score for each scholarship.';
+    }
+
+    $matchGuideNote = 'This percentage ranks fit only. Required documents affect approval readiness, and the final decision still depends on provider review.';
+    $matchPositiveReasons = [];
+    $matchLimitingReasons = [];
+
+    if ($matchRequiredGwa !== null) {
+        if ($applicantGwaValue === null) {
+            $pushReason($matchLimitingReasons, 'The academic record is missing, so the score is only partly estimated right now.');
+        } elseif ($applicantGwaValue <= $matchRequiredGwa) {
+            $pushReason($matchPositiveReasons, 'The applicant GWA is within the required range for this scholarship.');
+        } else {
+            $pushReason($matchLimitingReasons, 'The current GWA is above the scholarship limit.');
+        }
+    } else {
+        $pushReason($matchPositiveReasons, 'This scholarship does not require a fixed GWA cutoff.');
+    }
+
+    if (is_array($matchCoursePathwayCheck)) {
+        $matchCourseReasonText = trim((string) ($matchCoursePathwayCheck['detail'] ?? ''));
+        $matchCourseStatus = strtolower(trim((string) ($matchCoursePathwayCheck['status'] ?? 'pending')));
+        if ($matchCourseStatus === 'met') {
+            $pushReason($matchPositiveReasons, $matchCourseReasonText);
+        } elseif (in_array($matchCourseStatus, ['warn', 'pending'], true)) {
+            $pushReason($matchLimitingReasons, $matchCourseReasonText);
+        }
+    }
+
+    if ($matchProfileTotal > 0) {
+        if ($matchProfileFailed > 0) {
+            $pushReason($matchLimitingReasons, 'Some applicant profile rules do not match this scholarship audience yet.');
+        } elseif ($matchProfilePending > 0) {
+            $pushReason($matchLimitingReasons, 'Some audience-fit details are still missing from the applicant profile.');
+        } else {
+            $pushReason($matchPositiveReasons, 'The applicant profile matches the target audience rules.');
+        }
+    } else {
+        $pushReason($matchPositiveReasons, 'The scholarship is open to a broader set of applicants, which helps the fit score.');
+    }
+
+    if ($matchCurrentInfoTotal > 0) {
+        if ($matchCurrentInfoPending > 0) {
+            $pushReason($matchLimitingReasons, 'Some current student details are still missing, so the DSS cannot use the full context yet.');
+        } elseif ($matchCurrentInfoWarn > 0) {
+            $pushReason($matchLimitingReasons, 'Some current student signals only partially support this scholarship focus.');
+        } elseif ($matchCurrentInfoMet > 0) {
+            $pushReason($matchPositiveReasons, 'The current student details support this scholarship focus.');
+        }
+    }
+
+    if ($matchApplicationNotYetOpen) {
+        $pushReason($matchLimitingReasons, 'Applications have not opened yet, so the timing signal is weaker right now.');
+    } elseif ($matchDeadlineClass === 'bad') {
+        $pushReason($matchLimitingReasons, 'The application period has already closed.');
+    } elseif ($matchDeadlineClass === 'warn') {
+        $pushReason($matchLimitingReasons, 'The deadline is close, so the timing signal is smaller.');
+    } else {
+        $pushReason($matchPositiveReasons, 'The application window timing supports this recommendation.');
+    }
+
+    if ($recognizedProviderMatch) {
+        $pushReason($matchPositiveReasons, 'The provider is recognized in the DSS as an established scholarship source.');
+    } elseif ($matchProviderClass === 'good') {
+        $pushReason($matchPositiveReasons, 'The provider receives an academic-institution ranking signal in the DSS.');
+    }
+
+    return [
+        'buttonLabel' => $matchGuideScore !== null ? ('Why ' . $matchGuideScore . '% match?') : 'How match works',
+        'title' => $matchGuideScore !== null ? ('Why this shows as ' . $matchGuideScore . '% match') : 'How the match score works',
+        'summary' => $matchGuideSummary,
+        'note' => $matchGuideNote,
+        'factors' => [
+            ['label' => 'Academic fit', 'value' => $matchAcademicDecision, 'detail' => $matchAcademicDetail, 'class' => $matchAcademicClass, 'icon' => 'fa-chart-line'],
+            ['label' => 'Course focus', 'value' => $matchCourseValue, 'detail' => $matchCourseDetail, 'class' => $matchCourseClass, 'icon' => 'fa-graduation-cap'],
+            ['label' => 'Audience fit', 'value' => $matchProfileValue, 'detail' => $matchProfileDetail, 'class' => $matchProfileClass, 'icon' => 'fa-user-check'],
+            ['label' => 'Student context', 'value' => $matchStudentContextValue, 'detail' => $matchStudentContextDetail, 'class' => $matchStudentContextClass, 'icon' => 'fa-id-card'],
+            ['label' => 'Application timing', 'value' => $matchTimingValue, 'detail' => $matchTimingDetail, 'class' => $matchTimingClass, 'icon' => 'fa-calendar-days'],
+            ['label' => 'Provider signal', 'value' => $matchProviderValue, 'detail' => $matchProviderDetail, 'class' => $matchProviderClass, 'icon' => 'fa-building-columns'],
+        ],
+        'positive' => !empty($matchPositiveReasons) ? array_slice($matchPositiveReasons, 0, 4) : ['The DSS has not found strong positive scoring signals yet.'],
+        'limiting' => !empty($matchLimitingReasons) ? array_slice($matchLimitingReasons, 0, 4) : ['No major factor is pulling the match score down right now.'],
+    ];
+}
 
 $statusFilter = $_GET['status'] ?? '';
 $validStatuses = ['pending', 'approved', 'rejected'];
 $activeFilter = in_array($statusFilter, $validStatuses, true) ? $statusFilter : '';
 $providerScope = getCurrentProviderScope($pdo);
 $providerApplicationScope = getProviderScholarshipScopeClause($pdo, 'sd2.provider');
+$studentGwaSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'gwa');
+$studentApplicantTypeSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'applicant_type');
+$studentYearLevelSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'year_level');
+$studentAdmissionStatusSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'admission_status');
+$studentShsStrandSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'shs_strand');
+$studentTargetCourseSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'target_course');
+$studentTargetCollegeSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'target_college');
+$studentEnrollmentStatusSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'enrollment_status');
+$studentAcademicStandingSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'academic_standing');
+$studentCitySelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'city');
+$studentProvinceSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'province');
+$studentCitizenshipSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'citizenship');
+$studentIncomeBracketSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'household_income_bracket');
+$studentSpecialCategorySelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'special_category');
+$scholarshipEligibilitySelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'eligibility', 'scholarship_eligibility');
+$scholarshipMinGwaSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'min_gwa', 'scholarship_min_gwa');
+$scholarshipMaxGwaSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'max_gwa', 'scholarship_max_gwa');
+$scholarshipAddressSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'address', 'scholarship_address');
+$scholarshipCitySelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'city', 'scholarship_city');
+$scholarshipProvinceSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'province', 'scholarship_province');
+$scholarshipApplicationOpenDateSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'application_open_date', 'scholarship_application_open_date');
+$scholarshipTargetApplicantTypeSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_applicant_type');
+$scholarshipTargetYearLevelSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_year_level');
+$scholarshipRequiredAdmissionStatusSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'required_admission_status');
+$scholarshipTargetStrandSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_strand');
+$scholarshipTargetCitizenshipSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_citizenship');
+$scholarshipTargetIncomeBracketSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_income_bracket');
+$scholarshipTargetSpecialCategorySelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_special_category');
 
 $stats = [
     'total' => 0,
@@ -52,10 +484,42 @@ try {
             u.email,
             sd.firstname,
             sd.lastname,
+            {$studentGwaSelect}
+            {$studentApplicantTypeSelect}
+            {$studentYearLevelSelect}
+            {$studentAdmissionStatusSelect}
+            {$studentShsStrandSelect}
             sd.school,
             sd.course,
+            {$studentTargetCourseSelect}
+            {$studentTargetCollegeSelect}
+            {$studentEnrollmentStatusSelect}
+            {$studentAcademicStandingSelect}
+            {$studentCitySelect}
+            {$studentProvinceSelect}
+            {$studentCitizenshipSelect}
+            {$studentIncomeBracketSelect}
+            {$studentSpecialCategorySelect}
+            s.id AS scholarship_id,
             s.name AS scholarship_name,
-            COALESCE(sd2.provider, 'Not specified') AS provider
+            s.description AS scholarship_description,
+            {$scholarshipEligibilitySelect}
+            {$scholarshipMinGwaSelect}
+            {$scholarshipMaxGwaSelect}
+            COALESCE(sd2.provider, 'Not specified') AS provider,
+            sd2.deadline,
+            {$scholarshipAddressSelect}
+            {$scholarshipCitySelect}
+            {$scholarshipProvinceSelect}
+            {$scholarshipApplicationOpenDateSelect}
+            {$scholarshipTargetApplicantTypeSelect}
+            {$scholarshipTargetYearLevelSelect}
+            {$scholarshipRequiredAdmissionStatusSelect}
+            {$scholarshipTargetStrandSelect}
+            {$scholarshipTargetCitizenshipSelect}
+            {$scholarshipTargetIncomeBracketSelect}
+            {$scholarshipTargetSpecialCategorySelect}
+            NULL AS queue_match_guide_ready
         FROM applications a
         JOIN users u ON a.user_id = u.id
         LEFT JOIN student_data sd ON u.id = sd.student_id
@@ -80,6 +544,21 @@ try {
 } catch (PDOException $e) {
     $applications = [];
     $_SESSION['error'] = 'Unable to load applications.';
+}
+
+$applicationMatchGuides = [];
+if (!empty($applications)) {
+    try {
+        $scholarshipService = new ScholarshipService($pdo);
+        foreach ($applications as $applicationRow) {
+            $applicationMatchGuides[(string) ((int) ($applicationRow['id'] ?? 0))] = queueBuildMatchGuidePayload($applicationRow, $scholarshipService);
+        }
+    } catch (Throwable $matchGuideError) {
+        error_log('manage_applications match guide error: ' . $matchGuideError->getMessage());
+        foreach ($applications as $applicationRow) {
+            $applicationMatchGuides[(string) ((int) ($applicationRow['id'] ?? 0))] = queueBuildFallbackMatchGuidePayload($applicationRow);
+        }
+    }
 }
 
 $filterOptions = [
@@ -211,6 +690,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                     <?php foreach ($applications as $application): ?>
                         <?php
                         $applicationId = (int) $application['id'];
+                        $matchGuidePayload = $applicationMatchGuides[(string) $applicationId] ?? queueBuildFallbackMatchGuidePayload($application);
                         $fullName = trim(($application['firstname'] ?? '') . ' ' . ($application['lastname'] ?? ''));
                         if ($fullName === '') {
                             $fullName = $application['username'];
@@ -282,6 +762,15 @@ unset($_SESSION['success'], $_SESSION['error']);
                             </div>
 
                             <div class="application-record-actions">
+                                <button
+                                    type="button"
+                                    class="btn btn-outline application-match-trigger"
+                                    data-open-application-match-guide="<?php echo (int) $applicationId; ?>"
+                                    aria-haspopup="dialog"
+                                    aria-controls="applicationMatchModal"
+                                >
+                                    <i class="fas fa-circle-question"></i> <?php echo htmlspecialchars((string) ($matchGuidePayload['buttonLabel'] ?? 'How match works')); ?>
+                                </button>
                                 <a href="<?php echo htmlspecialchars($viewApplicationUrl); ?>" class="btn btn-primary">
                                     <i class="fas fa-eye"></i> Open Review
                                 </a>
@@ -293,12 +782,53 @@ unset($_SESSION['success'], $_SESSION['error']);
         </div>
     </section>
 
+    <div class="queue-match-modal" id="applicationMatchModal" hidden>
+        <div class="queue-match-backdrop" data-close-application-match-guide></div>
+        <div class="queue-match-dialog" role="dialog" aria-modal="true" aria-labelledby="applicationMatchModalTitle">
+            <div class="queue-match-header">
+                <div>
+                    <span class="queue-match-eyebrow">Match Guide</span>
+                    <h2 id="applicationMatchModalTitle">How the match score works</h2>
+                </div>
+                <button
+                    type="button"
+                    class="queue-match-close"
+                    data-close-application-match-guide
+                    aria-label="Close match guide"
+                >
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <p id="applicationMatchModalSummary" class="queue-match-copy"></p>
+
+            <div class="queue-match-note">
+                <p id="applicationMatchModalNote"></p>
+            </div>
+
+            <div id="applicationMatchModalFactors" class="queue-match-factor-grid"></div>
+
+            <div class="queue-match-reason-grid">
+                <section class="queue-match-reason-card">
+                    <h3>Main reasons helping this score</h3>
+                    <ul id="applicationMatchModalPositive" class="queue-match-list tone-positive"></ul>
+                </section>
+
+                <section class="queue-match-reason-card queue-match-reason-card-warning">
+                    <h3>What is limiting the score right now</h3>
+                    <ul id="applicationMatchModalLimiting" class="queue-match-list tone-warning"></ul>
+                </section>
+            </div>
+        </div>
+    </div>
+
     <?php include 'layouts/admin_footer.php'; ?>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         const applicationFlashQueue = [];
         const applicationFlashSuccess = <?php echo json_encode($applicationFlashSuccess); ?>;
         const applicationFlashError = <?php echo json_encode($applicationFlashError); ?>;
+        const applicationMatchGuides = <?php echo json_encode($applicationMatchGuides, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 
         if (applicationFlashSuccess) {
             applicationFlashQueue.push({
@@ -329,6 +859,115 @@ unset($_SESSION['success'], $_SESSION['error']);
         }
 
         showApplicationFlashQueue();
+
+        function escapeHtml(value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        const applicationMatchModal = document.getElementById('applicationMatchModal');
+        const applicationMatchModalTitle = document.getElementById('applicationMatchModalTitle');
+        const applicationMatchModalSummary = document.getElementById('applicationMatchModalSummary');
+        const applicationMatchModalNote = document.getElementById('applicationMatchModalNote');
+        const applicationMatchModalFactors = document.getElementById('applicationMatchModalFactors');
+        const applicationMatchModalPositive = document.getElementById('applicationMatchModalPositive');
+        const applicationMatchModalLimiting = document.getElementById('applicationMatchModalLimiting');
+        const applicationMatchModalCloseElements = applicationMatchModal
+            ? applicationMatchModal.querySelectorAll('[data-close-application-match-guide]')
+            : [];
+        let lastApplicationMatchTrigger = null;
+
+        function renderMatchFactors(factors) {
+            if (!applicationMatchModalFactors) {
+                return;
+            }
+
+            if (!Array.isArray(factors) || !factors.length) {
+                applicationMatchModalFactors.innerHTML = '';
+                return;
+            }
+
+            applicationMatchModalFactors.innerHTML = factors.map((factor) => {
+                const tone = escapeHtml(String(factor.class || 'info').toLowerCase());
+                const icon = escapeHtml(String(factor.icon || 'fa-circle-info'));
+                return `
+                    <article class="queue-match-factor-card state-${tone}">
+                        <div class="queue-match-factor-icon">
+                            <i class="fas ${icon}"></i>
+                        </div>
+                        <div class="queue-match-factor-copy">
+                            <span>${escapeHtml(factor.label || 'Factor')}</span>
+                            <strong>${escapeHtml(factor.value || 'Not available')}</strong>
+                            <p>${escapeHtml(factor.detail || '')}</p>
+                        </div>
+                    </article>
+                `;
+            }).join('');
+        }
+
+        function renderMatchReasonList(targetElement, items) {
+            if (!targetElement) {
+                return;
+            }
+
+            targetElement.innerHTML = (Array.isArray(items) ? items : []).map((item) => `
+                <li>${escapeHtml(item)}</li>
+            `).join('');
+        }
+
+        function closeApplicationMatchGuide() {
+            if (!applicationMatchModal) {
+                return;
+            }
+
+            applicationMatchModal.hidden = true;
+            document.body.classList.remove('queue-match-modal-open');
+
+            if (lastApplicationMatchTrigger && typeof lastApplicationMatchTrigger.focus === 'function') {
+                lastApplicationMatchTrigger.focus();
+            }
+        }
+
+        function openApplicationMatchGuide(applicationId, triggerElement) {
+            const payload = applicationMatchGuides[String(applicationId)] || applicationMatchGuides[applicationId];
+            if (!payload || !applicationMatchModal) {
+                return;
+            }
+
+            lastApplicationMatchTrigger = triggerElement || null;
+            applicationMatchModalTitle.textContent = payload.title || 'How the match score works';
+            applicationMatchModalSummary.textContent = payload.summary || 'This score comes from the DSS profile matching model.';
+            applicationMatchModalNote.textContent = payload.note || '';
+            renderMatchFactors(payload.factors);
+            renderMatchReasonList(applicationMatchModalPositive, payload.positive);
+            renderMatchReasonList(applicationMatchModalLimiting, payload.limiting);
+
+            applicationMatchModal.hidden = false;
+            document.body.classList.add('queue-match-modal-open');
+        }
+
+        document.querySelectorAll('[data-open-application-match-guide]').forEach((button) => {
+            button.addEventListener('click', function () {
+                openApplicationMatchGuide(
+                    this.getAttribute('data-open-application-match-guide') || '',
+                    this
+                );
+            });
+        });
+
+        applicationMatchModalCloseElements.forEach((element) => {
+            element.addEventListener('click', closeApplicationMatchGuide);
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape' && applicationMatchModal && !applicationMatchModal.hidden) {
+                closeApplicationMatchGuide();
+            }
+        });
     </script>
 </body>
 </html>

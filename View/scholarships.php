@@ -6,6 +6,17 @@ require_once __DIR__ . '/../app/Controllers/scholarshipResultController.php';
 require_once __DIR__ . '/../app/Models/UserDocument.php';
 
 $scholarshipsPageCssVersion = @filemtime(__DIR__ . '/../public/css/scholarships-page.css') ?: time();
+
+if (!function_exists('normalizeScannerNoticeCopy')) {
+    function normalizeScannerNoticeCopy(string $value): string
+    {
+        return str_replace(
+            ['Remote OCR API', 'OCR.space', 'OCR API', 'OCR'],
+            ['remote scanner service', 'scanner service', 'scanner API', 'scanner'],
+            $value
+        );
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -65,6 +76,9 @@ $scholarshipsPageCssVersion = @filemtime(__DIR__ . '/../public/css/scholarships-
         $uploadNoticeMessage = (string) $_SESSION['upload_error'];
         unset($_SESSION['upload_error'], $_SESSION['upload_notice_title']);
     }
+
+    $uploadNoticeTitle = normalizeScannerNoticeCopy($uploadNoticeTitle);
+    $uploadNoticeMessage = normalizeScannerNoticeCopy($uploadNoticeMessage);
 
     if ($isLoggedIn) {
         $matchedScholarships = $scholarshipService->getMatchedScholarships(

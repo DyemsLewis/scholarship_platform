@@ -326,7 +326,7 @@ if (!($ocrResult['success'] ?? false)) {
         ]
     ]);
 
-    $_SESSION['upload_error'] = ucfirst($documentLabel) . ' uploaded and saved to documents, but OCR could not be completed. ' . $scannerStatusMessage;
+    $_SESSION['upload_error'] = ucfirst($documentLabel) . ' uploaded and saved to documents, but the scanner could not complete the scan. ' . $scannerStatusMessage;
     $_SESSION['upload_notice_title'] = 'Grade Document Scan Result';
     header('Location: ' . normalizeAppUrl('../View/upload.php'));
     exit();
