@@ -338,6 +338,7 @@ if ($isLoggedIn && $scholarship) {
         'year_level' => $userYearLevel,
         'admission_status' => $userAdmissionStatus,
         'shs_strand' => $userShsStrand,
+        'shs_average' => $userShsAverage,
         'course' => $userCourse
     ]);
 
@@ -403,14 +404,15 @@ $requiredGwa = null;
 if ($scholarship) {
     if (isset($scholarship['min_gwa']) && $scholarship['min_gwa'] !== null && $scholarship['min_gwa'] !== '') {
         $requiredGwa = (float) $scholarship['min_gwa'];
-    } elseif (isset($scholarship['max_gwa']) && $scholarship['max_gwa'] !== null && $scholarship['max_gwa'] !== '') {
-        $requiredGwa = (float) $scholarship['max_gwa'];
     }
 }
+$academicMetricLabel = $userAcademicMetricLabel;
+$academicDocumentLabel = $userAcademicDocumentLabel;
+$minimumAcademicLabel = $academicMetricLabel === 'GWA' ? 'Minimum GWA' : 'Minimum Academic Score';
 
-$profileHasGwa = ($userGWA !== null && $userGWA !== '');
+$profileHasGwa = ($userAcademicScore !== null && $userAcademicScore !== '');
 $gwaRequired = ($requiredGwa !== null);
-$gwaWithinRequirement = !$gwaRequired || ($profileHasGwa && (float) $userGWA <= (float) $requiredGwa);
+$gwaWithinRequirement = !$gwaRequired || ($profileHasGwa && (float) $userAcademicScore <= (float) $requiredGwa);
 $showShsDetails = !in_array((string) ($userEnrollmentStatus ?? ''), ['currently_enrolled', 'regular', 'irregular'], true);
 
 $deadlinePassed = false;
@@ -475,9 +477,9 @@ if (!$isLoggedIn) {
 } elseif (($profileEvaluation['failed'] ?? 0) > 0) {
     $blockReason = 'Your profile does not match this scholarship policy.';
 } elseif ($gwaRequired && !$profileHasGwa) {
-    $blockReason = 'Upload your TOR/grades first to set your GWA.';
+    $blockReason = 'Upload your ' . $academicDocumentLabel . ' first to set your ' . strtolower($academicMetricLabel) . '.';
 } elseif ($gwaRequired && !$gwaWithinRequirement) {
-    $blockReason = 'Your GWA is above the required limit.';
+    $blockReason = 'Your ' . strtolower($academicMetricLabel) . ' is above the required limit.';
 }
 
 $assessmentRaw = 'none';
@@ -540,7 +542,7 @@ $formattedRequiredGwa = $requiredGwa !== null
     : '';
 $gwaDisplayValue = $gwaRequired && $formattedRequiredGwa !== ''
     ? $formattedRequiredGwa . ' or better'
-    : 'No minimum GWA';
+    : 'No minimum ' . $academicMetricLabel;
 
 $documentsSummaryText = $totalRequired > 0
     ? ($uploadedRequired . '/' . $totalRequired . ' uploaded')
@@ -660,16 +662,16 @@ $assessmentDetails = trim((string) ($scholarship['assessment_details'] ?? ''));
 
 $wizardEligibilityChecks = [];
 $wizardEligibilityChecks[] = [
-    'title' => 'GWA requirement',
+    'title' => $academicMetricLabel . ' requirement',
     'state' => !$gwaRequired ? 'ok' : (!$profileHasGwa ? 'attention' : ($gwaWithinRequirement ? 'ok' : 'blocked')),
     'icon' => !$gwaRequired ? 'fa-circle-check' : (!$profileHasGwa ? 'fa-chart-line' : ($gwaWithinRequirement ? 'fa-circle-check' : 'fa-ban')),
     'detail' => !$gwaRequired
-        ? 'This scholarship does not set a fixed minimum GWA.'
+        ? ('This scholarship does not set a fixed minimum ' . strtolower($academicMetricLabel) . '.')
         : (!$profileHasGwa
-            ? 'Upload your academic record so the system can read your GWA.'
+            ? ('Upload your ' . $academicDocumentLabel . ' so the system can read your ' . strtolower($academicMetricLabel) . '.')
             : ($gwaWithinRequirement
-                ? ('Your current GWA of ' . number_format((float) $userGWA, 2) . ' meets the required ' . $formattedRequiredGwa . ' or better.')
-                : ('Your current GWA of ' . number_format((float) $userGWA, 2) . ' is above the required ' . $formattedRequiredGwa . '.')))
+                ? ('Your current ' . strtolower($academicMetricLabel) . ' of ' . number_format((float) $userAcademicScore, 2) . ' meets the required ' . $formattedRequiredGwa . ' or better.')
+                : ('Your current ' . strtolower($academicMetricLabel) . ' of ' . number_format((float) $userAcademicScore, 2) . ' is above the required ' . $formattedRequiredGwa . '.')))
 ];
 $wizardEligibilityChecks[] = [
     'title' => 'Applicant profile',
@@ -846,7 +848,7 @@ if ($wizardProfileInitials === '') {
                                     <span class="wizard-empty-step-number">1</span>
                                     <div>
                                         <h4>Eligibility Check</h4>
-                                        <p>Review your profile, GWA, and scholarship rules before you proceed.</p>
+                                        <p>Review your profile, <?php echo htmlspecialchars(strtolower($academicMetricLabel)); ?>, and scholarship rules before you proceed.</p>
                                     </div>
                                 </div>
                                 <div class="wizard-empty-step">
@@ -949,7 +951,7 @@ if ($wizardProfileInitials === '') {
 
                             <div class="wizard-selected-facts">
                                 <div class="wizard-selected-fact">
-                                    <span class="wizard-selected-fact-label">Minimum GWA</span>
+                                    <span class="wizard-selected-fact-label"><?php echo htmlspecialchars($minimumAcademicLabel); ?></span>
                                     <strong><?php echo htmlspecialchars($gwaDisplayValue); ?></strong>
                                 </div>
                                 <div class="wizard-selected-fact">
@@ -1036,8 +1038,8 @@ if ($wizardProfileInitials === '') {
                                                 <strong><?php echo htmlspecialchars(formatYearLevelLabel($userYearLevel ?: '')); ?></strong>
                                             </div>
                                             <div class="wizard-profile-meta-item">
-                                                <span>GWA</span>
-                                                <strong><?php echo $profileHasGwa ? htmlspecialchars(number_format((float) $userGWA, 2)) : 'Not uploaded'; ?></strong>
+                                                <span><?php echo htmlspecialchars($academicMetricLabel); ?></span>
+                                                <strong><?php echo $profileHasGwa ? htmlspecialchars(number_format((float) $userAcademicScore, 2)) : 'Not uploaded'; ?></strong>
                                             </div>
                                             <div class="wizard-profile-meta-item wizard-profile-meta-item-wide">
                                                 <span>School</span>
@@ -1289,6 +1291,8 @@ if ($wizardProfileInitials === '') {
                     <input type="hidden" id="wizardGwaRequired" value="<?php echo $gwaRequired ? '1' : '0'; ?>">
                     <input type="hidden" id="wizardHasGwa" value="<?php echo $profileHasGwa ? '1' : '0'; ?>">
                     <input type="hidden" id="wizardGwaWithinRequirement" value="<?php echo $gwaWithinRequirement ? '1' : '0'; ?>">
+                    <input type="hidden" id="wizardAcademicMetricLabel" value="<?php echo htmlspecialchars($academicMetricLabel); ?>">
+                    <input type="hidden" id="wizardAcademicDocumentLabel" value="<?php echo htmlspecialchars($academicDocumentLabel); ?>">
                 </form>
             </div>
         <?php endif; ?>

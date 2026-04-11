@@ -176,7 +176,7 @@ $sampleScholarships = [
                     <div class="scholarship-item" style="border:1px solid #ddd; padding:15px; border-radius:5px;">
                         <h4><?php echo htmlspecialchars($scholarship['name']); ?></h4>
                         <p><strong>Provider:</strong> <?php echo htmlspecialchars($scholarship['provider']); ?></p>
-                        <p><strong>Eligibility:</strong> <?php echo (isset($scholarship['min_gwa']) && $scholarship['min_gwa'] !== null && $scholarship['min_gwa'] !== '') ? ('GWA <= ' . number_format((float) $scholarship['min_gwa'], 2)) : ((isset($scholarship['max_gwa']) && $scholarship['max_gwa'] !== null && $scholarship['max_gwa'] !== '') ? ('GWA <= ' . number_format((float) $scholarship['max_gwa'], 2)) : 'See criteria'); ?></p>
+                        <p><strong>Eligibility:</strong> <?php echo (isset($scholarship['min_gwa']) && $scholarship['min_gwa'] !== null && $scholarship['min_gwa'] !== '') ? ('GWA <= ' . number_format((float) $scholarship['min_gwa'], 2)) : 'See criteria'; ?></p>
                         <p><strong>Deadline:</strong> <?php echo !empty($scholarship['deadline']) ? date('M d, Y', strtotime((string) $scholarship['deadline'])) : 'No deadline set'; ?></p>
                         <span class="popup-badge">Active</span>
                     </div>
@@ -207,7 +207,7 @@ const dbScholarships = [
     provider: "<?php echo addslashes($scholarship['provider']); ?>",
     lat: <?php echo $scholarship['latitude']; ?>,
     lng: <?php echo $scholarship['longitude']; ?>,
-    eligibility: "<?php echo addslashes($scholarship['eligibility'] ?: ((isset($scholarship['min_gwa']) && $scholarship['min_gwa'] !== null && $scholarship['min_gwa'] !== '') ? ('GWA <= ' . number_format((float) $scholarship['min_gwa'], 2)) : ((isset($scholarship['max_gwa']) && $scholarship['max_gwa'] !== null && $scholarship['max_gwa'] !== '') ? ('GWA <= ' . number_format((float) $scholarship['max_gwa'], 2)) : 'See criteria'))); ?>",
+    eligibility: "<?php echo addslashes($scholarship['eligibility'] ?: ((isset($scholarship['min_gwa']) && $scholarship['min_gwa'] !== null && $scholarship['min_gwa'] !== '') ? ('GWA <= ' . number_format((float) $scholarship['min_gwa'], 2)) : 'See criteria')); ?>",
     benefits: "<?php echo addslashes($scholarship['benefits'] ?: 'Various benefits available'); ?>",
     deadline: "<?php echo $scholarship['deadline']; ?>"
 },

@@ -328,7 +328,13 @@ class UserProfileController {
             $allowedIncomeBrackets = ['below_10000', '10000_20000', '20001_40000', '40001_80000', 'above_80000', 'prefer_not_to_say'];
             $allowedSpecialCategories = ['none', 'pwd', 'indigenous_peoples', 'solo_parent_dependent', 'working_student', 'child_of_ofw', 'four_ps_beneficiary', 'orphan'];
 
-            $applicantType = $this->normalizeChoice($data['applicant_type'] ?? null, $allowedApplicantTypes);
+            $lockedApplicantType = $this->normalizeChoice(
+                $existingData['applicant_type'] ?? ($_SESSION['user_applicant_type'] ?? null),
+                $allowedApplicantTypes
+            );
+            $applicantType = $lockedApplicantType ?? $this->normalizeChoice($data['applicant_type'] ?? null, $allowedApplicantTypes);
+            $isIncomingApplicant = $applicantType === 'incoming_freshman';
+            $isCollegeApplicant = $this->isCollegeApplicantType($applicantType);
             $admissionStatus = $this->normalizeChoice($data['admission_status'] ?? null, $allowedAdmissionStatuses);
             $yearLevel = $this->normalizeChoice($data['year_level'] ?? null, $allowedYearLevels);
             $enrollmentStatus = $this->normalizeChoice($data['enrollment_status'] ?? null, $allowedEnrollmentStatuses);
@@ -339,8 +345,8 @@ class UserProfileController {
             $specialCategory = $this->normalizeChoice($data['special_category'] ?? null, $allowedSpecialCategories);
             $mobileNumber = normalizePhilippineMobileNumber($data['mobile_number'] ?? null);
 
-            if ($admissionStatus === null && $this->isCollegeApplicantType($applicantType)) {
-                $admissionStatus = 'enrolled';
+            if ($admissionStatus === null && $isCollegeApplicant) {
+                $admissionStatus = $this->normalizeChoice($existingData['admission_status'] ?? null, $allowedAdmissionStatuses, 'enrolled');
             }
 
             // Preserve existing address if no address components were submitted.
@@ -354,20 +360,40 @@ class UserProfileController {
                 'middleinitial' => trim((string) ($data['middleinitial'] ?? '')),
                 'gender' => $gender,
                 'applicant_type' => $applicantType,
-                'school' => trim((string) ($data['school'] ?? '')),
+                'school' => $isCollegeApplicant
+                    ? trim((string) ($data['school'] ?? ($existingData['school'] ?? '')))
+                    : null,
                 'course' => trim((string) ($data['course'] ?? '')),
-                'shs_school' => $this->normalizeNullable($data['shs_school'] ?? null),
-                'shs_strand' => $this->normalizeNullable($data['shs_strand'] ?? null),
-                'shs_graduation_year' => $this->normalizeNullable($data['shs_graduation_year'] ?? null),
+                'shs_school' => $isIncomingApplicant
+                    ? $this->normalizeNullable($data['shs_school'] ?? ($existingData['shs_school'] ?? null))
+                    : ($existingData['shs_school'] ?? null),
+                'shs_strand' => $isIncomingApplicant
+                    ? $this->normalizeNullable($data['shs_strand'] ?? ($existingData['shs_strand'] ?? null))
+                    : ($existingData['shs_strand'] ?? null),
+                'shs_graduation_year' => $isIncomingApplicant
+                    ? $this->normalizeNullable($data['shs_graduation_year'] ?? ($existingData['shs_graduation_year'] ?? null))
+                    : ($existingData['shs_graduation_year'] ?? null),
                 'shs_average' => array_key_exists('shs_average', $data)
                     ? $this->normalizeNullable($data['shs_average'] ?? null)
                     : ($existingData['shs_average'] ?? null),
-                'admission_status' => $admissionStatus,
-                'target_college' => $this->normalizeNullable($data['target_college'] ?? null),
-                'target_course' => $this->normalizeNullable($data['target_course'] ?? null),
-                'year_level' => $yearLevel,
-                'enrollment_status' => $enrollmentStatus,
-                'academic_standing' => $academicStanding,
+                'admission_status' => $isIncomingApplicant
+                    ? $admissionStatus
+                    : ($existingData['admission_status'] ?? $admissionStatus),
+                'target_college' => $isIncomingApplicant
+                    ? $this->normalizeNullable($data['target_college'] ?? ($existingData['target_college'] ?? null))
+                    : ($existingData['target_college'] ?? null),
+                'target_course' => $isIncomingApplicant
+                    ? $this->normalizeNullable($data['target_course'] ?? ($existingData['target_course'] ?? null))
+                    : ($existingData['target_course'] ?? null),
+                'year_level' => $isCollegeApplicant
+                    ? $yearLevel
+                    : ($existingData['year_level'] ?? null),
+                'enrollment_status' => $isCollegeApplicant
+                    ? $enrollmentStatus
+                    : ($existingData['enrollment_status'] ?? null),
+                'academic_standing' => $isCollegeApplicant
+                    ? $academicStanding
+                    : ($existingData['academic_standing'] ?? null),
                 'mobile_number' => $mobileNumber,
                 'citizenship' => $citizenship,
                 'household_income_bracket' => $householdIncomeBracket,
@@ -575,7 +601,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $allowedIncomeBrackets = ['below_10000', '10000_20000', '20001_40000', '40001_80000', 'above_80000', 'prefer_not_to_say'];
             $allowedSpecialCategories = ['none', 'pwd', 'indigenous_peoples', 'solo_parent_dependent', 'working_student', 'child_of_ofw', 'four_ps_beneficiary', 'orphan'];
 
-            $applicantType = $normalizeChoice($_POST['applicant_type'] ?? '', $allowedApplicantTypes);
+            $existingStudentDataModel = new StudentData($pdo);
+            $existingStudentData = $existingStudentDataModel->getByUserId((int) $_SESSION['user_id']);
+            $lockedApplicantType = $normalizeChoice(
+                $existingStudentData['applicant_type'] ?? ($_SESSION['user_applicant_type'] ?? ''),
+                $allowedApplicantTypes
+            );
+            $applicantType = $lockedApplicantType ?? $normalizeChoice($_POST['applicant_type'] ?? '', $allowedApplicantTypes);
+            $isIncomingApplicant = $applicantType === 'incoming_freshman';
+            $isCollegeApplicant = $isCollegeApplicantType($applicantType);
             $admissionStatus = $normalizeChoice($_POST['admission_status'] ?? '', $allowedAdmissionStatuses);
             $yearLevel = $normalizeChoice($_POST['year_level'] ?? '', $allowedYearLevels);
             $enrollmentStatus = $normalizeChoice($_POST['enrollment_status'] ?? '', $allowedEnrollmentStatuses);
@@ -594,7 +628,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $mobileNumberInput = trim((string) ($_POST['mobile_number'] ?? ''));
             $mobileNumber = normalizePhilippineMobileNumber($mobileNumberInput);
 
-            if ($admissionStatus === null && $isCollegeApplicantType($applicantType)) {
+            if ($admissionStatus === null && $isCollegeApplicant) {
                 $admissionStatus = 'enrolled';
             }
 
@@ -602,7 +636,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $errors[] = 'Applicant type is required';
             }
 
-            if (empty(trim($_POST['school'] ?? ''))) {
+            if ($isCollegeApplicant && empty(trim($_POST['school'] ?? ''))) {
                 $errors[] = 'School information is required';
             }
 
@@ -610,7 +644,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $errors[] = 'Course/Program is required';
             }
 
-            if ($applicantType === 'incoming_freshman') {
+            if ($isIncomingApplicant) {
                 if ($shsSchool === '') {
                     $errors[] = 'Senior high school name is required for incoming freshmen';
                 }
@@ -678,7 +712,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
 
             foreach ([
-                'school information' => trim((string) ($_POST['school'] ?? '')),
+                'school information' => $isCollegeApplicant ? trim((string) ($_POST['school'] ?? '')) : '',
                 'course/program' => trim((string) ($_POST['course'] ?? '')),
                 'senior high school' => $shsSchool,
                 'senior high school strand' => $shsStrand,
@@ -756,17 +790,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 'middleinitial' => $middleInitial,
                 'gender' => $gender,
                 'applicant_type' => $applicantType,
-                'school' => trim($_POST['school']),
+                'school' => $isCollegeApplicant ? trim((string) ($_POST['school'] ?? '')) : '',
                 'course' => trim($_POST['course']),
-                'shs_school' => $shsSchool,
-                'shs_strand' => $shsStrand,
-                'shs_graduation_year' => $shsGraduationYear,
-                'admission_status' => $admissionStatus,
-                'target_college' => $targetCollege,
-                'target_course' => $targetCourse,
-                'year_level' => $yearLevel,
-                'enrollment_status' => $enrollmentStatus,
-                'academic_standing' => $academicStanding,
+                'shs_school' => $isIncomingApplicant ? $shsSchool : ($existingStudentData['shs_school'] ?? ''),
+                'shs_strand' => $isIncomingApplicant ? $shsStrand : ($existingStudentData['shs_strand'] ?? ''),
+                'shs_graduation_year' => $isIncomingApplicant ? $shsGraduationYear : ($existingStudentData['shs_graduation_year'] ?? ''),
+                'admission_status' => $isIncomingApplicant ? $admissionStatus : ($existingStudentData['admission_status'] ?? ''),
+                'target_college' => $isIncomingApplicant ? $targetCollege : ($existingStudentData['target_college'] ?? ''),
+                'target_course' => $isIncomingApplicant ? $targetCourse : ($existingStudentData['target_course'] ?? ''),
+                'year_level' => $isCollegeApplicant ? $yearLevel : ($existingStudentData['year_level'] ?? ''),
+                'enrollment_status' => $isCollegeApplicant ? $enrollmentStatus : ($existingStudentData['enrollment_status'] ?? ''),
+                'academic_standing' => $isCollegeApplicant ? $academicStanding : ($existingStudentData['academic_standing'] ?? ''),
                 'mobile_number' => $mobileNumber,
                 'citizenship' => $citizenship,
                 'household_income_bracket' => $householdIncomeBracket,

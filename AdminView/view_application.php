@@ -105,7 +105,6 @@ $applicationStudentRespondedAtSelect = appTableHasColumn($pdo, 'applications', '
     : 'NULL AS student_responded_at,';
 $scholarshipEligibilitySelect = appOptionalColumnSelect($pdo, 's', 'scholarships', 'eligibility', 'scholarship_eligibility');
 $scholarshipMinGwaSelect = appOptionalColumnSelect($pdo, 's', 'scholarships', 'min_gwa', 'scholarship_min_gwa');
-$scholarshipMaxGwaSelect = appOptionalColumnSelect($pdo, 's', 'scholarships', 'max_gwa', 'scholarship_max_gwa');
 $scholarshipAddressSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'address', 'scholarship_address');
 $scholarshipCitySelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'city', 'scholarship_city');
 $scholarshipProvinceSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'province', 'scholarship_province');
@@ -138,7 +137,6 @@ try {
             s.name AS scholarship_name,
             {$scholarshipEligibilitySelect}
             {$scholarshipMinGwaSelect}
-            {$scholarshipMaxGwaSelect}
             sd2.provider,
             sd2.deadline,
             sd2.benefits,
@@ -247,6 +245,7 @@ $scholarshipProvider = appValue($application['provider'] ?? '');
 $reviewReadinessLabel = $requirementsTotalCount > 0
     ? $requirementsVerifiedCount . '/' . $requirementsTotalCount . ' verified'
     : 'No required documents';
+$isIncomingFreshmanApplicant = strtolower(trim((string) ($application['applicant_type'] ?? ''))) === 'incoming_freshman';
 $applicantProgramLabel = formatApplicantTypeLabel($application['applicant_type'] ?? '');
 $courseLabel = appValue($application['course'] ?? '', 'Course not set');
 $schoolLabel = appValue($application['school'] ?? '', 'School not set');
@@ -295,12 +294,17 @@ $identityFields = [
 ];
 $academicFields = [
     ['label' => 'Current GWA', 'value' => $currentGwaLabel],
-    ['label' => 'School / Institution', 'value' => $schoolLabel],
     ['label' => 'Course / Program', 'value' => $courseLabel],
     ['label' => 'Year Level', 'value' => $yearLevelLabel],
     ['label' => 'Enrollment Status', 'value' => $enrollmentStatusLabel],
     ['label' => 'Academic Standing', 'value' => $academicStandingLabel],
 ];
+if (!$isIncomingFreshmanApplicant) {
+    array_splice($academicFields, 1, 0, [[
+        'label' => 'School / Institution',
+        'value' => $schoolLabel,
+    ]]);
+}
 $admissionsFields = [];
 if (appHasValue($application['admission_status'] ?? null)) {
     $admissionsFields[] = ['label' => 'Admission Status', 'value' => $admissionStatusLabel];
@@ -397,7 +401,6 @@ $scoreScholarshipContext = [
     'deadline' => $application['deadline'] ?? null,
     'application_open_date' => $application['scholarship_application_open_date'] ?? null,
     'min_gwa' => $application['scholarship_min_gwa'] ?? null,
-    'max_gwa' => $application['scholarship_max_gwa'] ?? null,
     'address' => (string) ($application['scholarship_address'] ?? ''),
     'city' => (string) ($application['scholarship_city'] ?? ''),
     'province' => (string) ($application['scholarship_province'] ?? ''),
@@ -454,8 +457,6 @@ $matchRequiresGwa = !empty($matchAssessment['requires_gwa']);
 $matchRequiredGwa = null;
 if ($scoreScholarshipContext['min_gwa'] !== null && $scoreScholarshipContext['min_gwa'] !== '') {
     $matchRequiredGwa = (float) $scoreScholarshipContext['min_gwa'];
-} elseif ($scoreScholarshipContext['max_gwa'] !== null && $scoreScholarshipContext['max_gwa'] !== '') {
-    $matchRequiredGwa = (float) $scoreScholarshipContext['max_gwa'];
 }
 
 $matchPushReason = static function (array &$reasons, string $reason, int $limit = 4): void {
@@ -799,11 +800,16 @@ $profileSectionGroups[] = ['title' => 'Residence and Household Context', 'icon' 
 $reviewHeaderDescription = 'Review the applicant profile, supporting documents, and decision status for ' . $application['scholarship_name'] . '.';
 $reviewSpotlightTags = [
     ['icon' => 'fa-user-graduate', 'label' => $applicantProgramLabel],
-    ['icon' => 'fa-school', 'label' => $schoolLabel],
     ['icon' => 'fa-book-open', 'label' => $courseLabel],
     ['icon' => 'fa-layer-group', 'label' => formatYearLevelLabel($application['year_level'] ?? '')],
     ['icon' => 'fa-user-check', 'label' => formatEnrollmentStatusLabel($application['enrollment_status'] ?? '')],
 ];
+if (!$isIncomingFreshmanApplicant) {
+    array_splice($reviewSpotlightTags, 1, 0, [[
+        'icon' => 'fa-school',
+        'label' => $schoolLabel,
+    ]]);
+}
 $adminStyleVersion = @filemtime(__DIR__ . '/../public/css/admin_style.css') ?: time();
 $reviewsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/reviews.css') ?: time();
 $viewApplicationStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/view-application.css') ?: time();
@@ -1712,8 +1718,23 @@ unset($_SESSION['success'], $_SESSION['error']);
         function openRejectModal(docId, userId) {
             currentDocumentId = docId;
             currentUserId = userId;
-            document.getElementById('rejectionReason').value = '';
-            document.getElementById('rejectModal').classList.add('active');
+            const rejectionReasonInput = document.getElementById('rejectionReason');
+            const rejectModal = document.getElementById('rejectModal');
+
+            if (window.Swal && typeof Swal.isVisible === 'function' && Swal.isVisible()) {
+                Swal.close();
+            }
+
+            if (rejectionReasonInput) {
+                rejectionReasonInput.value = '';
+            }
+            if (rejectModal) {
+                rejectModal.classList.add('active');
+            }
+
+            if (rejectionReasonInput && typeof rejectionReasonInput.focus === 'function') {
+                rejectionReasonInput.focus();
+            }
         }
 
         function openMatchGuideModal() {

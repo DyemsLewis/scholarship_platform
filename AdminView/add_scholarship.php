@@ -680,8 +680,6 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
                                         <small class="helper-text">Optional: leave blank if there is no GWA requirement</small>
                                     </div>
                                 </div>
-                                <input type="hidden" name="max_gwa" value="">
-
                                 <div class="form-card-modern" style="margin-top: 24px; border: 1px solid var(--gray-200);">
                                     <div class="card-header">
                                         <h3><i class="fas fa-user-graduate"></i> Target Applicants</h3>

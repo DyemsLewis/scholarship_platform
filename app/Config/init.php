@@ -64,6 +64,11 @@ $userSpecialCategory = '';
 $userLocationName = '';
 $userProfileImagePath = '';
 $userCreatedAt = null;
+$userAcademicScore = null;
+$userAcademicMetricLabel = 'GWA';
+$userAcademicSourceLabel = 'GWA';
+$userAcademicRequirementLabel = 'minimum GWA';
+$userAcademicDocumentLabel = 'TOR/grades';
 
 if (isset($_SESSION['user_id'])) {
     $isLoggedIn = true;
@@ -118,6 +123,11 @@ if (isset($_SESSION['user_id'])) {
     
     // Account creation date
     $userCreatedAt = $_SESSION['user_created_at'] ?? null;
+    $userAcademicScore = resolveApplicantAcademicScore($userApplicantType, $userGWA, $userShsAverage);
+    $userAcademicMetricLabel = getApplicantAcademicMetricLabel($userApplicantType);
+    $userAcademicSourceLabel = getApplicantAcademicSourceLabel($userApplicantType);
+    $userAcademicRequirementLabel = getApplicantAcademicRequirementLabel($userApplicantType);
+    $userAcademicDocumentLabel = getApplicantAcademicDocumentLabel($userApplicantType);
 
     if ($userRole === 'student') {
         try {
@@ -212,6 +222,11 @@ if (isset($_SESSION['user_id'])) {
             $userLatitude = $_SESSION['user_latitude'] ?? null;
             $userLongitude = $_SESSION['user_longitude'] ?? null;
             $userLocationName = $_SESSION['user_location_name'] ?? '';
+            $userAcademicScore = resolveApplicantAcademicScore($userApplicantType, $userGWA, $userShsAverage);
+            $userAcademicMetricLabel = getApplicantAcademicMetricLabel($userApplicantType);
+            $userAcademicSourceLabel = getApplicantAcademicSourceLabel($userApplicantType);
+            $userAcademicRequirementLabel = getApplicantAcademicRequirementLabel($userApplicantType);
+            $userAcademicDocumentLabel = getApplicantAcademicDocumentLabel($userApplicantType);
 
             $resolvedDisplayName = trim($userFirstName . ' ' . $userLastName);
             if ($resolvedDisplayName !== '') {

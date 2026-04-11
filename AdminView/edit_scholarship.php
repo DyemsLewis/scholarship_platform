@@ -806,12 +806,10 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
                                 <div class="form-row-modern">
                                     <div class="form-group-modern">
                                         <label><i class="fas fa-chart-line"></i> Minimum GWA (1.00 is highest)</label>
-                                        <input type="number" name="min_gwa" step="0.01" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'min_gwa', (string) (isset($scholarship['min_gwa']) && $scholarship['min_gwa'] !== null ? $scholarship['min_gwa'] : ($scholarship['max_gwa'] ?? '')))); ?>" min="1.00" max="5.00" placeholder="e.g., 2.00">
+                                        <input type="number" name="min_gwa" step="0.01" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'min_gwa', (string) ($scholarship['min_gwa'] ?? ''))); ?>" min="1.00" max="5.00" placeholder="e.g., 2.00">
                                         <small class="helper-text">Optional: leave blank if there is no GWA requirement</small>
                                     </div>
                                 </div>
-                                <input type="hidden" name="max_gwa" value="">
-
                                 <div class="form-card-modern" style="margin-top: 24px; border: 1px solid var(--gray-200); box-shadow: none;">
                                     <div class="card-header">
                                         <h3><i class="fas fa-user-graduate"></i> Target Applicants</h3>

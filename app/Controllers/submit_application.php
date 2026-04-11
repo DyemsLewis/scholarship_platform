@@ -249,15 +249,22 @@ try {
 
     $probabilityScore = null;
     try {
-        $userGwa = isset($_SESSION['user_gwa']) && $_SESSION['user_gwa'] !== '' ? (float) $_SESSION['user_gwa'] : null;
+        $applicantType = (string) ($_SESSION['user_applicant_type'] ?? '');
+        $rawUserGwa = isset($_SESSION['user_gwa']) && $_SESSION['user_gwa'] !== '' ? (float) $_SESSION['user_gwa'] : null;
+        $userShsAverage = $_SESSION['user_shs_average'] ?? null;
+        $userGwa = resolveApplicantAcademicScore($applicantType, $rawUserGwa, $userShsAverage);
+        $academicMetricLabel = getApplicantAcademicMetricLabel($applicantType);
+        $academicDocumentLabel = getApplicantAcademicDocumentLabel($applicantType);
         $userCourse = (string) ($_SESSION['user_course'] ?? '');
+        $matchCourse = $userCourse !== '' ? $userCourse : (string) ($_SESSION['user_target_course'] ?? '');
         $userLat = isset($_SESSION['user_latitude']) && $_SESSION['user_latitude'] !== '' ? (float) $_SESSION['user_latitude'] : null;
         $userLng = isset($_SESSION['user_longitude']) && $_SESSION['user_longitude'] !== '' ? (float) $_SESSION['user_longitude'] : null;
         $userProfile = [
-            'applicant_type' => (string) ($_SESSION['user_applicant_type'] ?? ''),
+            'applicant_type' => $applicantType,
             'year_level' => (string) ($_SESSION['user_year_level'] ?? ''),
             'admission_status' => (string) ($_SESSION['user_admission_status'] ?? ''),
             'shs_strand' => (string) ($_SESSION['user_shs_strand'] ?? ''),
+            'shs_average' => (string) ($_SESSION['user_shs_average'] ?? ''),
             'course' => $userCourse,
             'target_course' => (string) ($_SESSION['user_target_course'] ?? ''),
             'school' => (string) ($_SESSION['user_school'] ?? ''),
@@ -272,7 +279,7 @@ try {
         ];
 
         $scholarshipService = new ScholarshipService($pdo);
-        $matched = $scholarshipService->getMatchedScholarships($userGwa, $userCourse, $userLat, $userLng, $userProfile);
+        $matched = $scholarshipService->getMatchedScholarships($userGwa, $matchCourse, $userLat, $userLng, $userProfile);
         foreach ($matched as $item) {
             if ((int) ($item['id'] ?? 0) === $scholarshipId) {
                 if (empty($item['is_eligible'])) {
@@ -280,9 +287,9 @@ try {
                     $requiredGwaValue = isset($item['required_gwa']) && $item['required_gwa'] !== null ? (float) $item['required_gwa'] : null;
                     $message = 'Your current profile does not meet this scholarship policy yet.';
                     if (!empty($item['requires_gwa'])) {
-                        $message = 'Upload your TOR/grades first to confirm your GWA.';
+                        $message = 'Upload your ' . $academicDocumentLabel . ' first to confirm your ' . strtolower($academicMetricLabel) . '.';
                     } elseif ($requiredGwaValue !== null && $userGwa !== null && $userGwa > $requiredGwaValue) {
-                        $message = 'Your GWA is above the required limit for this scholarship.';
+                        $message = 'Your ' . strtolower($academicMetricLabel) . ' is above the required limit for this scholarship.';
                     } elseif ($profileRuleLabel !== '') {
                         $message = $profileRuleLabel . '.';
                     }

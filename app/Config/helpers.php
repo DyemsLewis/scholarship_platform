@@ -171,6 +171,111 @@ if (!function_exists('formatGWAWithStatus')) {
     }
 }
 
+if (!function_exists('isIncomingFreshmanApplicantType')) {
+    function isIncomingFreshmanApplicantType($applicantType): bool
+    {
+        return strtolower(trim((string) $applicantType)) === 'incoming_freshman';
+    }
+}
+
+if (!function_exists('convertPercentageToPhilippineGwa')) {
+    function convertPercentageToPhilippineGwa(float $percentage): float
+    {
+        if ($percentage >= 98) {
+            return 1.00;
+        }
+        if ($percentage >= 95) {
+            return 1.25;
+        }
+        if ($percentage >= 92) {
+            return 1.50;
+        }
+        if ($percentage >= 89) {
+            return 1.75;
+        }
+        if ($percentage >= 86) {
+            return 2.00;
+        }
+        if ($percentage >= 83) {
+            return 2.25;
+        }
+        if ($percentage >= 80) {
+            return 2.50;
+        }
+        if ($percentage >= 77) {
+            return 2.75;
+        }
+        if ($percentage >= 75) {
+            return 3.00;
+        }
+
+        return 5.00;
+    }
+}
+
+if (!function_exists('normalizeAcademicScoreForEligibility')) {
+    function normalizeAcademicScoreForEligibility($value): ?float
+    {
+        $trimmed = trim((string) ($value ?? ''));
+        if ($trimmed === '' || !is_numeric($trimmed)) {
+            return null;
+        }
+
+        $numericValue = (float) $trimmed;
+        if ($numericValue >= 1.0 && $numericValue <= 5.0) {
+            return round($numericValue, 2);
+        }
+
+        if ($numericValue >= 60.0 && $numericValue <= 100.0) {
+            return convertPercentageToPhilippineGwa($numericValue);
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('resolveApplicantAcademicScore')) {
+    function resolveApplicantAcademicScore($applicantType, $gwa = null, $shsAverage = null): ?float
+    {
+        $normalizedGwa = normalizeAcademicScoreForEligibility($gwa);
+        $normalizedShsAverage = normalizeAcademicScoreForEligibility($shsAverage);
+
+        if (isIncomingFreshmanApplicantType($applicantType)) {
+            return $normalizedShsAverage ?? $normalizedGwa;
+        }
+
+        return $normalizedGwa ?? $normalizedShsAverage;
+    }
+}
+
+if (!function_exists('getApplicantAcademicMetricLabel')) {
+    function getApplicantAcademicMetricLabel($applicantType): string
+    {
+        return isIncomingFreshmanApplicantType($applicantType) ? 'Academic Score' : 'GWA';
+    }
+}
+
+if (!function_exists('getApplicantAcademicSourceLabel')) {
+    function getApplicantAcademicSourceLabel($applicantType): string
+    {
+        return isIncomingFreshmanApplicantType($applicantType) ? 'SHS Average' : 'GWA';
+    }
+}
+
+if (!function_exists('getApplicantAcademicRequirementLabel')) {
+    function getApplicantAcademicRequirementLabel($applicantType): string
+    {
+        return isIncomingFreshmanApplicantType($applicantType) ? 'minimum academic score' : 'minimum GWA';
+    }
+}
+
+if (!function_exists('getApplicantAcademicDocumentLabel')) {
+    function getApplicantAcademicDocumentLabel($applicantType): string
+    {
+        return isIncomingFreshmanApplicantType($applicantType) ? 'Form 138' : 'TOR/grades';
+    }
+}
+
 if (!function_exists('formatDateJoined')) {
     function formatDateJoined($dateString) {
         if (!$dateString) return 'N/A';

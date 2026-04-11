@@ -82,8 +82,8 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
 
     if ($isLoggedIn) {
         $matchedScholarships = $scholarshipService->getMatchedScholarships(
-            $userGWA,
-            $userCourse,
+            $userAcademicScore,
+            $userCourse ?: $userTargetCourse,
             $userLatitude,
             $userLongitude,
             [
@@ -91,6 +91,7 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
                 'year_level' => $userYearLevel,
                 'admission_status' => $userAdmissionStatus,
                 'shs_strand' => $userShsStrand,
+                'shs_average' => $userShsAverage,
                 'course' => $userCourse,
                 'target_course' => $userTargetCourse,
                 'school' => $userSchool,
@@ -203,16 +204,16 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
             <?php else: ?>
             <?php /* Profile Ready section intentionally hidden per current UI request. */ ?>
             
-            <!-- No GWA Banner (but still show scholarships) -->
-            <?php if(!$userGWA): ?>
+            <!-- No academic score banner (but still show scholarships) -->
+            <?php if(!$userAcademicScore): ?>
             <div class="no-gwa-banner scholarship-panel" style="display: flex; align-items: center; gap: 16px; border-top: 5px solid #ed6c02;">
                 <i class="fas fa-chart-line"></i>
                 <div style="flex: 1;">
-                    <strong style="color: #ed6c02;">GWA Not Set</strong>
-                    <p style="margin: 5px 0 0 0; font-size: 0.85rem;">Your GWA has not been uploaded yet. Scholarships are still shown, but the requirements check will stay incomplete until you upload your grades.</p>
+                    <strong style="color: #ed6c02;"><?php echo htmlspecialchars($userAcademicSourceLabel); ?> Not Set</strong>
+                    <p style="margin: 5px 0 0 0; font-size: 0.85rem;">Your <?php echo htmlspecialchars(strtolower($userAcademicSourceLabel)); ?> has not been uploaded yet. Scholarships are still shown, but the requirements check will stay incomplete until you upload your <?php echo htmlspecialchars($userAcademicDocumentLabel); ?>.</p>
                 </div>
                 <a href="upload.php" class="btn btn-primary" style="padding: 8px 20px;">
-                    <i class="fas fa-upload"></i> Upload Grades
+                    <i class="fas fa-upload"></i> Upload <?php echo htmlspecialchars($userAcademicDocumentLabel); ?>
                 </a>
             </div>
             <?php endif; ?>
@@ -262,9 +263,6 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
                     foreach ($matchedScholarships as $scholarship): 
                         $requiresGwa = !empty($scholarship['requires_gwa']);
                         $requiredGwa = $scholarship['required_gwa'] ?? null;
-                        if ($requiredGwa === null && isset($scholarship['max_gwa']) && $scholarship['max_gwa'] !== null && $scholarship['max_gwa'] !== '') {
-                            $requiredGwa = (float) $scholarship['max_gwa'];
-                        }
                         $assessmentRequirement = strtolower(trim((string)($scholarship['assessment_requirement'] ?? 'none')));
                         $hasAssessment = $assessmentRequirement !== '' && $assessmentRequirement !== 'none';
                         $remoteExamLocations = is_array($scholarship['remote_exam_locations'] ?? null) ? $scholarship['remote_exam_locations'] : [];
@@ -303,13 +301,16 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
                         $targetYearLevel = strtolower(trim((string) ($scholarship['target_year_level'] ?? 'any')));
                         $requiredAdmissionStatus = strtolower(trim((string) ($scholarship['required_admission_status'] ?? 'any')));
                         $targetStrand = trim((string) ($scholarship['target_strand'] ?? ''));
+                        $academicMetricLabel = (string) ($scholarship['academic_metric_label'] ?? $userAcademicMetricLabel);
+                        $academicDocumentLabel = (string) ($scholarship['academic_document_label'] ?? $userAcademicDocumentLabel);
+                        $minimumAcademicLabel = $academicMetricLabel === 'GWA' ? 'Minimum GWA' : 'Minimum Academic Score';
 
                         $academicRequirementMet = true;
                         $academicRequirementPending = false;
                         $academicRequirementFailed = false;
                         if ($requiredGwa !== null) {
-                            if (!empty($userGWA)) {
-                                $academicRequirementMet = ((float) $userGWA <= (float) $requiredGwa);
+                            if (!empty($userAcademicScore)) {
+                                $academicRequirementMet = ((float) $userAcademicScore <= (float) $requiredGwa);
                                 $academicRequirementFailed = !$academicRequirementMet;
                             } else {
                                 $academicRequirementMet = false;
@@ -415,7 +416,7 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                             $cardStatusLabel = 'Opens Soon';
                         } elseif ($requiresGwa) {
                             $cardStatusClass = 'estimated';
-                            $cardStatusLabel = 'Needs GWA';
+                            $cardStatusLabel = 'Needs ' . $academicMetricLabel;
                         } elseif ($readyToApplyNow) {
                             $cardStatusClass = 'ready';
                             $cardStatusLabel = 'Ready to Apply';
@@ -468,19 +469,19 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                             $requirementsSummary = 'No required docs listed';
                         }
 
-                        $academicFactorLabel = 'No GWA requirement';
+                        $academicFactorLabel = 'No ' . $academicMetricLabel . ' requirement';
                         $academicFactorClass = 'info';
                         if ($requiredGwa !== null) {
-                            if (!empty($userGWA)) {
-                                if ((float) $userGWA <= (float) $requiredGwa) {
-                                    $academicFactorLabel = 'Pass (' . number_format((float) $userGWA, 2) . ' <= ' . number_format((float) $requiredGwa, 2) . ')';
+                            if (!empty($userAcademicScore)) {
+                                if ((float) $userAcademicScore <= (float) $requiredGwa) {
+                                    $academicFactorLabel = 'Pass (' . number_format((float) $userAcademicScore, 2) . ' <= ' . number_format((float) $requiredGwa, 2) . ')';
                                     $academicFactorClass = 'good';
                                 } else {
-                                    $academicFactorLabel = 'Above limit (' . number_format((float) $userGWA, 2) . ' > ' . number_format((float) $requiredGwa, 2) . ')';
+                                    $academicFactorLabel = 'Above limit (' . number_format((float) $userAcademicScore, 2) . ' > ' . number_format((float) $requiredGwa, 2) . ')';
                                     $academicFactorClass = 'bad';
                                 }
                             } else {
-                                $academicFactorLabel = 'Pending: upload GWA';
+                                $academicFactorLabel = 'Pending: upload ' . strtolower($academicMetricLabel);
                                 $academicFactorClass = 'warn';
                             }
                         }
@@ -708,14 +709,14 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                     $profileChecks = is_array($scholarship['profile_checks'] ?? null) ? $scholarship['profile_checks'] : [];
 
                                     if ($requiredGwa !== null) {
-                                        if (!empty($userGWA)) {
-                                            if ((float) $userGWA <= (float) $requiredGwa) {
-                                                $pushReason($matchedReasons, 'GWA meets the required limit');
+                                        if (!empty($userAcademicScore)) {
+                                            if ((float) $userAcademicScore <= (float) $requiredGwa) {
+                                                $pushReason($matchedReasons, $academicMetricLabel . ' meets the required limit');
                                             } else {
-                                                $pushReason($attentionReasons, 'GWA is above the required limit');
+                                                $pushReason($attentionReasons, $academicMetricLabel . ' is above the required limit');
                                             }
                                         } else {
-                                            $pushReason($attentionReasons, 'Upload TOR or Form 138 to verify GWA');
+                                            $pushReason($attentionReasons, 'Upload ' . $academicDocumentLabel . ' to verify ' . strtolower($academicMetricLabel));
                                         }
                                     }
 
@@ -783,11 +784,11 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                         $primaryActionLabel = 'Closed';
                                     } elseif ($requiresGwa) {
                                         $nextStepIcon = 'fa-chart-line';
-                                        $nextStepMessage = $openingDatePrepPrefix . 'Upload your grades to complete the academic requirement check.';
+                                        $nextStepMessage = $openingDatePrepPrefix . 'Upload your ' . $academicDocumentLabel . ' to complete the academic requirement check.';
                                         $primaryActionHref = 'upload.php';
                                         $primaryActionClass = 'btn-warning-modern';
                                         $primaryActionIcon = 'fa-upload';
-                                        $primaryActionLabel = 'Upload Grades';
+                                        $primaryActionLabel = 'Upload ' . $academicDocumentLabel;
                                     } elseif ($profileRequirementPending > 0) {
                                         $nextStepIcon = 'fa-user-gear';
                                         $nextStepMessage = $openingDatePrepPrefix . 'Complete your applicant profile so the system can finish the scholarship policy check.';
@@ -826,10 +827,10 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                         $primaryActionClass = 'btn-warning-modern';
                                         $primaryActionIcon = 'fa-upload';
                                         $primaryActionLabel = 'Upload Documents';
-                                    } elseif ($userGWA && $requiredGwa !== null && $userGWA > $requiredGwa) {
+                                    } elseif ($userAcademicScore && $requiredGwa !== null && $userAcademicScore > $requiredGwa) {
                                         $nextStepTone = 'warning';
                                         $nextStepIcon = 'fa-triangle-exclamation';
-                                        $nextStepMessage = 'Your current GWA is above the scholarship minimum requirement.';
+                                        $nextStepMessage = 'Your current ' . strtolower($academicMetricLabel) . ' is above the scholarship minimum requirement.';
                                         $primaryActionType = 'button';
                                         $primaryActionClass = 'btn-disabled-modern';
                                         $primaryActionIcon = 'fa-ban';
@@ -841,7 +842,7 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
 
                                     <div class="scholarship-info-grid scholarship-info-grid-essentials">
                                         <div class="info-chip-modern">
-                                            <span class="label">Minimum GWA</span>
+                                            <span class="label"><?php echo htmlspecialchars($minimumAcademicLabel); ?></span>
                                             <span class="value"><?php echo htmlspecialchars($gwaDisplay); ?></span>
                                         </div>
 

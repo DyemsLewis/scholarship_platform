@@ -9,12 +9,12 @@ require_once __DIR__ . '/../app/Models/StudentData.php';
 
 // Get matches count
 $matchesCount = 0;
-if ($isLoggedIn && $userGWA && $userCourse) {
+if ($isLoggedIn && $userAcademicScore && ($userCourse || $userTargetCourse)) {
     try {
         $scholarshipService = new ScholarshipService($pdo);
         $matches = $scholarshipService->getMatchedScholarships(
-            $userGWA, 
-            $userCourse,
+            $userAcademicScore,
+            $userCourse ?: $userTargetCourse,
             $userLatitude,
             $userLongitude,
             [
@@ -22,6 +22,7 @@ if ($isLoggedIn && $userGWA && $userCourse) {
                 'year_level' => $userYearLevel,
                 'admission_status' => $userAdmissionStatus,
                 'shs_strand' => $userShsStrand,
+                'shs_average' => $userShsAverage,
                 'course' => $userCourse,
                 'target_course' => $userTargetCourse,
                 'school' => $userSchool,

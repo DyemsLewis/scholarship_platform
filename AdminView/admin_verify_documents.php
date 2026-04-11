@@ -864,8 +864,8 @@ $supportVerificationConfigs = [
                 <textarea id="rejectionReason" class="rejection-reason" placeholder="Enter rejection reason (e.g., Document is blurry, Missing signature, Wrong document type, etc.)"></textarea>
             </div>
             <div class="modal-footer" style="padding: 10px;">
-                <button onclick="confirmReject()" class="btn btn-danger">Confirm Rejection</button>
-                <button onclick="closeRejectModal()" class="btn btn-outline">Cancel</button>
+                <button type="button" onclick="confirmReject()" class="btn btn-danger">Confirm Rejection</button>
+                <button type="button" onclick="closeRejectModal()" class="btn btn-outline">Cancel</button>
             </div>
         </div>
     </div>
@@ -1330,8 +1330,23 @@ $supportVerificationConfigs = [
         function openRejectModal(docId, userId) {
             currentDocumentId = docId;
             currentUserId = userId;
-            document.getElementById('rejectionReason').value = '';
-            document.getElementById('rejectModal').style.display = 'flex';
+            const rejectionReasonInput = document.getElementById('rejectionReason');
+            const rejectModal = document.getElementById('rejectModal');
+
+            if (window.Swal && typeof Swal.isVisible === 'function' && Swal.isVisible()) {
+                Swal.close();
+            }
+
+            if (rejectionReasonInput) {
+                rejectionReasonInput.value = '';
+            }
+            if (rejectModal) {
+                rejectModal.style.display = 'flex';
+            }
+
+            if (rejectionReasonInput && typeof rejectionReasonInput.focus === 'function') {
+                rejectionReasonInput.focus();
+            }
         }
 
         function closeRejectModal() {
@@ -1354,67 +1369,54 @@ $supportVerificationConfigs = [
                 return;
             }
             
-            Swal.fire({
-                title: 'Reject Document',
-                text: 'Are you sure you want to reject this document?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Yes, reject it!',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    closeRejectModal();
+            closeRejectModal();
 
-                    // Show loading
+            // Show loading
+            Swal.fire({
+                title: 'Rejecting...',
+                text: 'Please wait',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            
+            // Submit rejection
+            fetch('../app/AdminControllers/verify_document_process.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'csrf_token=' + encodeURIComponent(documentReviewCsrfToken) + '&action=reject&document_id=' + encodeURIComponent(targetDocumentId) + '&user_id=' + encodeURIComponent(targetUserId) + '&reason=' + encodeURIComponent(reason)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
                     Swal.fire({
-                        title: 'Rejecting...',
-                        text: 'Please wait',
-                        allowOutsideClick: false,
-                        showConfirmButton: false,
-                        didOpen: () => {
-                            Swal.showLoading();
-                        }
+                        icon: 'success',
+                        title: 'Rejected!',
+                        text: data.message,
+                        timer: 2000,
+                        showConfirmButton: false
+                    }).then(() => {
+                        location.reload();
                     });
-                    
-                    // Submit rejection
-                    fetch('../app/AdminControllers/verify_document_process.php', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: 'csrf_token=' + encodeURIComponent(documentReviewCsrfToken) + '&action=reject&document_id=' + encodeURIComponent(targetDocumentId) + '&user_id=' + encodeURIComponent(targetUserId) + '&reason=' + encodeURIComponent(reason)
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Rejected!',
-                                text: data.message,
-                                timer: 2000,
-                                showConfirmButton: false
-                            }).then(() => {
-                                location.reload();
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error!',
-                                text: data.message
-                            });
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error!',
-                            text: 'An error occurred while rejecting the document.'
-                        });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: data.message
                     });
                 }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'An error occurred while rejecting the document.'
+                });
             });
         }
 

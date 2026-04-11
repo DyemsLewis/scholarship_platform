@@ -43,8 +43,6 @@ try {
     $requiredGwa = null;
     if (isset($scholarship['min_gwa']) && $scholarship['min_gwa'] !== null && $scholarship['min_gwa'] !== '') {
         $requiredGwa = (float) $scholarship['min_gwa'];
-    } elseif (isset($scholarship['max_gwa']) && $scholarship['max_gwa'] !== null && $scholarship['max_gwa'] !== '') {
-        $requiredGwa = (float) $scholarship['max_gwa'];
     }
     
     $response = [
@@ -55,8 +53,7 @@ try {
         'eligibility' => htmlspecialchars($scholarship['eligibility'] ?? 'No eligibility requirements specified'),
         'benefits' => $scholarship['benefits'] ?? 'No benefits specified',
         'required_gwa' => $requiredGwa,
-        'max_gwa' => $scholarship['max_gwa'],
-        'min_gwa' => $scholarship['min_gwa'] ?? 1.00,
+        'min_gwa' => $scholarship['min_gwa'] ?? null,
         'assessment_requirement' => $scholarship['assessment_requirement'] ?? 'none',
         'assessment_link' => $scholarship['assessment_link'] ?? '',
         'assessment_details' => $scholarship['assessment_details'] ?? '',

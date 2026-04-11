@@ -320,6 +320,18 @@ function signupStudentDataHasGwaColumn(PDO $pdo): bool {
     return ((int) $stmt->fetchColumn()) > 0;
 }
 
+function signupStudentDataHasShsAverageColumn(PDO $pdo): bool {
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'student_data'
+          AND COLUMN_NAME = 'shs_average'
+    ");
+    $stmt->execute();
+    return ((int) $stmt->fetchColumn()) > 0;
+}
+
 function saveSignupUserGwa(PDO $pdo, int $userId, float $gwa): bool {
     if (!signupStudentDataHasGwaColumn($pdo)) {
         return false;
@@ -336,6 +348,29 @@ function saveSignupUserGwa(PDO $pdo, int $userId, float $gwa): bool {
 
     $insert = $pdo->prepare('INSERT INTO student_data (student_id, gwa) VALUES (?, ?)');
     return $insert->execute([$userId, $gwa]);
+}
+
+function saveSignupUserShsAverage(PDO $pdo, int $userId, float $shsAverage): bool {
+    if (!signupStudentDataHasShsAverageColumn($pdo)) {
+        return false;
+    }
+
+    if ($shsAverage <= 0 || $shsAverage > 100) {
+        return false;
+    }
+
+    $formattedAverage = number_format($shsAverage, 2, '.', '');
+    $check = $pdo->prepare('SELECT student_id FROM student_data WHERE student_id = ? LIMIT 1');
+    $check->execute([$userId]);
+    $exists = $check->fetch(PDO::FETCH_ASSOC);
+
+    if ($exists) {
+        $update = $pdo->prepare('UPDATE student_data SET shs_average = ? WHERE student_id = ?');
+        return $update->execute([$formattedAverage, $userId]);
+    }
+
+    $insert = $pdo->prepare('INSERT INTO student_data (student_id, shs_average) VALUES (?, ?)');
+    return $insert->execute([$userId, $formattedAverage]);
 }
 
 function saveSignupDocumentUpload(
@@ -431,6 +466,9 @@ $allowedSpecialCategories = ['none', 'pwd', 'indigenous_peoples', 'solo_parent_d
 $applicantType = normalizeChoice($_POST['applicant_type'] ?? '', $allowedApplicantTypes);
 $gender = normalizeChoice($_POST['gender'] ?? '', $allowedGenders);
 $school = normalizeInput($_POST['school'] ?? '');
+if ($applicantType === 'incoming_freshman') {
+    $school = null;
+}
 
 $courseInput = normalizeInput($_POST['course'] ?? '');
 $courseOther = normalizeInput($_POST['course_other'] ?? '');
@@ -518,7 +556,7 @@ if ($gender === null) {
 if ($applicantType === null) {
     $errors[] = 'Please select your applicant type';
 }
-if ($school === '') {
+if ($applicantType !== 'incoming_freshman' && ($school === null || $school === '')) {
     $errors[] = 'School information is required';
 }
 if ($course === '') {
@@ -862,6 +900,43 @@ if (!empty($torUpload) || !empty($form138Upload) || !empty($citizenshipProofUplo
 
         if (!($form138SaveResult['success'] ?? false)) {
             $signupUploadWarnings[] = (string) ($form138SaveResult['message'] ?? 'Form 138 could not be saved right now.');
+        } elseif (!empty($form138SaveResult['absolute_path'])) {
+            try {
+                $ocrService = new OcrService();
+                $ocrResult = $ocrService->processDocument(
+                    (string) $form138SaveResult['absolute_path'],
+                    (string) $form138Upload['mime_type'],
+                    (string) $form138Upload['original_name']
+                );
+
+                if (($ocrResult['success'] ?? false) && isset($ocrResult['final_gwa']) && is_numeric($ocrResult['final_gwa'])) {
+                    $finalGwa = (float) $ocrResult['final_gwa'];
+                    $rawAcademicValue = isset($ocrResult['raw_gwa']) && is_numeric($ocrResult['raw_gwa'])
+                        ? (float) $ocrResult['raw_gwa']
+                        : $finalGwa;
+
+                    if (saveSignupUserGwa($pdo, $user_id, $finalGwa)) {
+                        if ($rawAcademicValue > 0 && $rawAcademicValue <= 100) {
+                            saveSignupUserShsAverage($pdo, $user_id, $rawAcademicValue);
+                        }
+
+                        if ($rawAcademicValue >= 60) {
+                            $signupUploadWarnings[] = 'Detected SHS average: ' . number_format($rawAcademicValue, 2) . ' (normalized to ' . number_format($finalGwa, 2) . ' for scholarship eligibility).';
+                        } else {
+                            $signupUploadWarnings[] = 'Detected academic score from Form 138: ' . number_format($finalGwa, 2) . '.';
+                        }
+                    } else {
+                        $signupUploadWarnings[] = 'The uploaded Form 138 was scanned, but the detected academic score could not be saved yet.';
+                    }
+                } elseif ($ocrResult['success'] ?? false) {
+                    $signupUploadWarnings[] = 'No academic score was detected from the uploaded Form 138. You can upload a clearer copy later.';
+                } else {
+                    $signupUploadWarnings[] = 'Scanner could not be completed for the uploaded Form 138 right now.';
+                }
+            } catch (Throwable $e) {
+                error_log('Signup Form 138 scan failed: ' . $e->getMessage());
+                $signupUploadWarnings[] = 'Scanner could not be completed for the uploaded Form 138 right now.';
+            }
         }
     }
 

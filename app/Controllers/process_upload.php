@@ -169,6 +169,19 @@ function studentDataHasGwaColumn(PDO $pdo): bool
     return ((int) $stmt->fetchColumn()) > 0;
 }
 
+function studentDataHasShsAverageColumn(PDO $pdo): bool
+{
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'student_data'
+          AND COLUMN_NAME = 'shs_average'
+    ");
+    $stmt->execute();
+    return ((int) $stmt->fetchColumn()) > 0;
+}
+
 function saveUserGwa(PDO $pdo, int $userId, float $gwa): bool
 {
     if (!studentDataHasGwaColumn($pdo)) {
@@ -186,6 +199,30 @@ function saveUserGwa(PDO $pdo, int $userId, float $gwa): bool
 
     $insert = $pdo->prepare('INSERT INTO student_data (student_id, gwa) VALUES (?, ?)');
     return $insert->execute([$userId, $gwa]);
+}
+
+function saveUserShsAverage(PDO $pdo, int $userId, float $shsAverage): bool
+{
+    if (!studentDataHasShsAverageColumn($pdo)) {
+        return false;
+    }
+
+    if ($shsAverage <= 0 || $shsAverage > 100) {
+        return false;
+    }
+
+    $formattedAverage = number_format($shsAverage, 2, '.', '');
+    $check = $pdo->prepare('SELECT student_id FROM student_data WHERE student_id = ? LIMIT 1');
+    $check->execute([$userId]);
+    $exists = $check->fetch(PDO::FETCH_ASSOC);
+
+    if ($exists) {
+        $update = $pdo->prepare('UPDATE student_data SET shs_average = ? WHERE student_id = ?');
+        return $update->execute([$formattedAverage, $userId]);
+    }
+
+    $insert = $pdo->prepare('INSERT INTO student_data (student_id, shs_average) VALUES (?, ?)');
+    return $insert->execute([$userId, $formattedAverage]);
 }
 
 function resolveSavedDocumentId(UserDocument $docModel, int $userId, string $documentType, $savedDocument): int
@@ -360,6 +397,15 @@ $activityLog->log('upload_academic_record', 'document', $activityDescription, [
 ]);
 
 if ($finalGwa !== null) {
+    if (strtolower($documentType) === 'form_138') {
+        $rawAcademicValue = $rawGwaValue ?? $finalGwa;
+        if ($rawAcademicValue !== null) {
+            if (saveUserShsAverage($pdo, $userId, (float) $rawAcademicValue)) {
+                $_SESSION['user_shs_average'] = number_format((float) $rawAcademicValue, 2, '.', '');
+            }
+        }
+    }
+
     $gwaSaved = saveUserGwa($pdo, $userId, $finalGwa);
     if ($gwaSaved) {
         $_SESSION['upload_success'] = true;

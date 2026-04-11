@@ -29,8 +29,6 @@
                                 $requiredGwa = null;
                                 if (isset($scholarship['min_gwa']) && $scholarship['min_gwa'] !== null && $scholarship['min_gwa'] !== '') {
                                     $requiredGwa = (float) $scholarship['min_gwa'];
-                                } elseif (isset($scholarship['max_gwa']) && $scholarship['max_gwa'] !== null && $scholarship['max_gwa'] !== '') {
-                                    $requiredGwa = (float) $scholarship['max_gwa'];
                                 }
                                 if ($requiredGwa !== null) {
                                     echo ' (Required GWA: &le; ' . number_format($requiredGwa, 2) . ')';

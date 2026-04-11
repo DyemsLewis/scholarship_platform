@@ -143,7 +143,6 @@ function storeScholarshipOldInput(array $input): void {
         'description',
         'eligibility',
         'min_gwa',
-        'max_gwa',
         'provider',
         'benefits',
         'application_open_date',
@@ -1074,14 +1073,14 @@ try {
     if ($isUpdate) {
         $stmt = $pdo->prepare("
             UPDATE scholarships
-            SET name = ?, description = ?, eligibility = ?, max_gwa = NULL, min_gwa = ?, status = ?
+            SET name = ?, description = ?, eligibility = ?, min_gwa = ?, status = ?
             WHERE id = ?
         ");
         $stmt->execute([$name, $description, $eligibility, $minGwa, $status, $scholarshipId]);
     } else {
         $stmt = $pdo->prepare("
-            INSERT INTO scholarships (name, description, eligibility, max_gwa, min_gwa, status)
-            VALUES (?, ?, ?, NULL, ?, ?)
+            INSERT INTO scholarships (name, description, eligibility, min_gwa, status)
+            VALUES (?, ?, ?, ?, ?)
         ");
         $stmt->execute([$name, $description, $eligibility, $minGwa, $status]);
         $scholarshipId = (int) $pdo->lastInsertId();

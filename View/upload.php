@@ -23,6 +23,8 @@ require_once __DIR__ . '/../app/Config/init.php';
     $userSchool = $_SESSION['user_school'] ?? '';
     $userCourse = $_SESSION['user_course'] ?? '';
     $userGWA = $_SESSION['user_gwa'] ?? null;
+    $userApplicantType = $_SESSION['user_applicant_type'] ?? '';
+    $userShsAverage = $_SESSION['user_shs_average'] ?? '';
     $userFirstName = $_SESSION['user_firstname'] ?? '';
     $userLastName = $_SESSION['user_lastname'] ?? '';
     $userMiddleInitial = $_SESSION['user_middleinitial'] ?? '';
@@ -34,6 +36,10 @@ require_once __DIR__ . '/../app/Config/init.php';
     if ($lastExtractedGwa === null && $userGWA !== null && is_numeric($userGWA)) {
         $lastExtractedGwa = (float) $userGWA;
     }
+    $academicMetricLabel = getApplicantAcademicMetricLabel($userApplicantType);
+    $academicSourceLabel = getApplicantAcademicSourceLabel($userApplicantType);
+    $academicDocumentLabel = getApplicantAcademicDocumentLabel($userApplicantType);
+    $currentAcademicScore = resolveApplicantAcademicScore($userApplicantType, $userGWA, $userShsAverage);
     $lastTorDocumentId = isset($_SESSION['last_uploaded_tor_document_id']) && is_numeric($_SESSION['last_uploaded_tor_document_id'])
         ? (int) $_SESSION['last_uploaded_tor_document_id']
         : 0;
@@ -111,14 +117,14 @@ require_once __DIR__ . '/../app/Config/init.php';
             <?php if ($cameFromDocuments): ?>
                 <div style="margin-bottom: 16px; padding: 12px 14px; border-radius: 10px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; font-size: 0.9rem;">
                     <i class="fas fa-circle-info"></i>
-                    Academic documents are processed here so the system can scan your file and extract your GWA automatically.
+                    Academic documents are processed here so the system can scan your file and extract your <?php echo htmlspecialchars(strtolower($academicMetricLabel)); ?> automatically.
                 </div>
             <?php endif; ?>
 
             <div class="upload-page-hero app-page-hero">
                 <div class="app-page-hero-copy">
                     <h2><i class="fas fa-cloud-arrow-up"></i> Grade Document Upload</h2>
-                    <p>Upload your academic record and let the system extract your GWA automatically.</p>
+                    <p>Upload your academic record and let the system extract your <?php echo htmlspecialchars(strtolower($academicMetricLabel)); ?> automatically.</p>
                 </div>
                 <?php if ($isLoggedIn): ?>
                 <div class="app-page-hero-side">
@@ -132,7 +138,7 @@ require_once __DIR__ . '/../app/Config/init.php';
 
             <div style="margin: 0 0 20px 0; padding: 12px 14px; border-radius: 12px; background: #f8fafc; border: 1px solid #cbd5e1; color: #334155; font-size: 0.9rem;">
                 <i class="fas fa-circle-info" style="color: #2c5aa0;"></i>
-                GWA scale reminder: <strong>1.00 is the highest grade</strong> and <strong>5.00 is the lowest grade</strong>.
+                Academic score scale reminder: <strong>1.00 is the highest grade</strong> and <strong>5.00 is the lowest grade</strong>.
             </div>
             
             <?php if(!$isLoggedIn): ?>
@@ -140,12 +146,12 @@ require_once __DIR__ . '/../app/Config/init.php';
             <div class="upload-card">
                 <div class="upload-card-header">
                     <h2><i class="fas fa-lock"></i> Login Required</h2>
-                    <p>Access automatic GWA extraction and personalized scholarship matching</p>
+                    <p>Access automatic academic score extraction and personalized scholarship matching</p>
                 </div>
                 <div class="upload-card-body" style="text-align: center; padding: 48px 24px;">
                     <i class="fas fa-cloud-upload-alt" style="font-size: 4rem; color: #cbd5e1; margin-bottom: 20px;"></i>
-                    <h3 style="font-size: 1.2rem; margin-bottom: 8px;">You need to login to upload grades</h3>
-                    <p style="color: var(--gray); max-width: 400px; margin: 0 auto 24px;">Create an account or sign in to use the OCR-based GWA extraction and see your scholarship matches.</p>
+                    <h3 style="font-size: 1.2rem; margin-bottom: 8px;">You need to login to upload your academic record</h3>
+                    <p style="color: var(--gray); max-width: 400px; margin: 0 auto 24px;">Create an account or sign in to use the scanner-based academic score extraction and see your scholarship matches.</p>
                     <a href="login.php" class="btn btn-primary" style="padding: 12px 32px; border-radius: 40px;"><i class="fas fa-sign-in-alt"></i> Login Now</a>
                     
                     <!-- Example output preview (guest) -->
@@ -153,7 +159,7 @@ require_once __DIR__ . '/../app/Config/init.php';
                         <h4 style="font-size: 0.9rem; margin-bottom: 16px; color: var(--primary);"><i class="fas fa-chart-line"></i> Example Output After Upload</h4>
                         <div class="info-grid-compact" style="margin-bottom: 0;">
                             <div class="info-card-compact">
-                                <div class="label">Extracted GWA</div>
+                                <div class="label">Extracted Academic Score</div>
                                 <div class="value"><i class="fas fa-calculator"></i> 1.75 (Excellent)</div>
                             </div>
                             <div class="info-card-compact">
@@ -180,8 +186,8 @@ require_once __DIR__ . '/../app/Config/init.php';
                     <!-- Compact user info row (matching dashboard stats) -->
                     <div class="stats-grid-compact">
                         <div class="stat-item-compact">
-                            <div class="stat-value-compact"><?php echo $userGWA ? number_format((float)$userGWA, 2) : '-'; ?></div>
-                            <div class="stat-label-compact">Current GWA</div>
+                            <div class="stat-value-compact"><?php echo $currentAcademicScore ? number_format((float)$currentAcademicScore, 2) : '-'; ?></div>
+                            <div class="stat-label-compact">Current <?php echo htmlspecialchars($academicMetricLabel); ?></div>
                         </div>
                         <div class="stat-item-compact">
                             <div class="stat-value-compact"><?php echo $documentsUploaded; ?></div>
@@ -245,18 +251,18 @@ require_once __DIR__ . '/../app/Config/init.php';
                             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                                 <div>
                                     <h4 style="margin: 0 0 4px 0; font-size: 0.9rem;"><i class="fas fa-microchip"></i> OCR Processing</h4>
-                                    <p style="margin: 0; font-size: 0.75rem; color: var(--gray);">Extract GWA automatically from your document</p>
+                                    <p style="margin: 0; font-size: 0.75rem; color: var(--gray);">Extract <?php echo htmlspecialchars(strtolower($academicMetricLabel)); ?> automatically from your document</p>
                                 </div>
                                 <button type="submit" class="btn-primary-modern" id="processBtn">
                                     <i class="fas fa-magic"></i> Process Document
                                 </button>
                             </div>
                             
-                            <!-- GWA status if already uploaded -->
-                            <?php if($userGWA): ?>
+                            <!-- Academic score status if already uploaded -->
+                            <?php if($currentAcademicScore): ?>
                             <div class="gwa-status">
                                 <i class="fas fa-chart-simple"></i> 
-                                <strong>Current GWA:</strong> <?php echo number_format((float)$userGWA, 2); ?> 
+                                <strong>Current <?php echo htmlspecialchars($academicMetricLabel); ?>:</strong> <?php echo number_format((float)$currentAcademicScore, 2); ?> 
                                 <span style="font-size: 0.7rem;">(Upload new file to update)</span>
                             </div>
                             <?php endif; ?>
@@ -267,8 +273,8 @@ require_once __DIR__ . '/../app/Config/init.php';
 
             <div class="upload-card upload-report-card" style="margin-bottom: 20px;">
                 <div class="upload-card-header">
-                    <h2><i class="fas fa-flag"></i> Report Incorrect GWA</h2>
-                    <p>Submit a correction if OCR read your academic record incorrectly</p>
+                    <h2><i class="fas fa-flag"></i> Report Incorrect <?php echo htmlspecialchars($academicMetricLabel); ?></h2>
+                    <p>Submit a correction if the scanner read your academic record incorrectly</p>
                 </div>
                 <div class="upload-card-body">
                     <p class="upload-report-note">
@@ -277,7 +283,7 @@ require_once __DIR__ . '/../app/Config/init.php';
                     <div class="upload-report-chip-row">
                         <span class="upload-report-chip">
                             <i class="fas fa-calculator"></i>
-                            Last extracted GWA:
+                            Last extracted <?php echo htmlspecialchars($academicMetricLabel); ?>:
                             <?php echo $lastExtractedGwa !== null ? number_format((float) $lastExtractedGwa, 2) : 'Not detected'; ?>
                         </span>
                         <?php if ($lastRawOcrValue !== null): ?>
@@ -297,15 +303,15 @@ require_once __DIR__ . '/../app/Config/init.php';
                                 <label for="reportReason" style="display: block; margin-bottom: 6px; font-size: 0.82rem; font-weight: 600; color: var(--dark);">Reason</label>
                                 <select id="reportReason" name="reason_code" required style="width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 10px;">
                                     <option value="">Select reason</option>
-                                    <option value="wrong_detected_gwa">Detected GWA is wrong</option>
-                                    <option value="gwa_not_detected">GWA was not detected</option>
-                                    <option value="wrong_conversion">Wrong percentage to GWA conversion</option>
-                                    <option value="blurry_scan">OCR misread due to scan quality</option>
+                                    <option value="wrong_detected_gwa">Detected <?php echo htmlspecialchars($academicMetricLabel); ?> is wrong</option>
+                                    <option value="gwa_not_detected"><?php echo htmlspecialchars($academicMetricLabel); ?> was not detected</option>
+                                    <option value="wrong_conversion">Wrong percentage to academic score conversion</option>
+                                    <option value="blurry_scan">Scanner misread due to scan quality</option>
                                     <option value="other">Other issue</option>
                                 </select>
                             </div>
                             <div>
-                                <label for="reportedGwa" style="display: block; margin-bottom: 6px; font-size: 0.82rem; font-weight: 600; color: var(--dark);">Correct GWA (optional)</label>
+                                <label for="reportedGwa" style="display: block; margin-bottom: 6px; font-size: 0.82rem; font-weight: 600; color: var(--dark);">Correct <?php echo htmlspecialchars($academicMetricLabel); ?> (optional)</label>
                                 <input
                                     type="number"
                                     step="0.01"
@@ -317,7 +323,7 @@ require_once __DIR__ . '/../app/Config/init.php';
                                     style="width: 100%; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 10px;"
                                 >
                                 <p style="margin: 6px 0 0 0; font-size: 0.74rem; color: var(--gray);">
-                                    Use the Philippine GWA scale: 1.00 is highest, 5.00 is lowest.
+                                    Use the Philippine academic score scale: 1.00 is highest, 5.00 is lowest.
                                 </p>
                             </div>
                         </div>
@@ -345,12 +351,12 @@ require_once __DIR__ . '/../app/Config/init.php';
                 <div class="process-step-mini">
                     <div class="step-icon"><i class="fas fa-cogs"></i></div>
                     <h4>Step 2: OCR Extraction</h4>
-                    <p>System extracts text and identifies your GWA, subjects, and grades automatically.</p>
+                    <p>System extracts text and identifies your <?php echo htmlspecialchars(strtolower($academicMetricLabel)); ?>, subjects, and grades automatically.</p>
                 </div>
                 <div class="process-step-mini">
                     <div class="step-icon"><i class="fas fa-check-double"></i></div>
                     <h4>Step 3: Validation</h4>
-                    <p>Validates GWA consistency, school accreditation, and matches eligibility criteria.</p>
+                    <p>Validates academic score consistency, school accreditation, and matches eligibility criteria.</p>
                 </div>
             </div>
             
@@ -378,13 +384,13 @@ require_once __DIR__ . '/../app/Config/init.php';
                 </div>
             </div>
             
-            <!-- Previous Uploads Info (if GWA exists) -->
-            <?php if($userGWA): ?>
+            <!-- Previous Uploads Info (if academic score exists) -->
+            <?php if($currentAcademicScore): ?>
             <div class="upload-card" style="background: #fefce8; border-left: 5px solid var(--accent);">
                 <div class="upload-card-body" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                     <div>
-                        <h4 style="margin: 0 0 5px 0; display: flex; align-items: center; gap: 8px;"><i class="fas fa-chart-line" style="color: var(--success);"></i> Your Current GWA Information</h4>
-                        <p style="margin: 0; font-size: 0.85rem;"><strong>GWA:</strong> <?php echo number_format((float)$userGWA, 2); ?> &nbsp;|&nbsp; <strong>Last Updated:</strong> <?php echo isset($_SESSION['gwa_updated']) ? date('F j, Y', strtotime($_SESSION['gwa_updated'])) : 'Recently'; ?></p>
+                        <h4 style="margin: 0 0 5px 0; display: flex; align-items: center; gap: 8px;"><i class="fas fa-chart-line" style="color: var(--success);"></i> Your Current <?php echo htmlspecialchars($academicMetricLabel); ?> Information</h4>
+                        <p style="margin: 0; font-size: 0.85rem;"><strong><?php echo htmlspecialchars($academicMetricLabel); ?>:</strong> <?php echo number_format((float)$currentAcademicScore, 2); ?> &nbsp;|&nbsp; <strong>Last Updated:</strong> <?php echo isset($_SESSION['gwa_updated']) ? date('F j, Y', strtotime($_SESSION['gwa_updated'])) : 'Recently'; ?></p>
                         <p style="margin: 5px 0 0 0; font-size: 0.75rem; color: var(--gray);"><i class="fas fa-badge-check"></i> Ready for scholarship matching</p>
                     </div>
                     <a href="scholarships.php" class="btn-outline-modern"><i class="fas fa-gem"></i> View Scholarships</a>
@@ -415,6 +421,7 @@ require_once __DIR__ . '/../app/Config/init.php';
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const isLoggedIn = <?php echo $isLoggedIn ? 'true' : 'false'; ?>;
+            const academicMetricLabel = <?php echo json_encode($academicMetricLabel); ?>;
             
             if (isLoggedIn) {
                 const fileInput = document.getElementById('gradeFile');
@@ -529,7 +536,7 @@ require_once __DIR__ . '/../app/Config/init.php';
                             Swal.fire({
                                 icon: 'warning',
                                 title: 'Reason is required',
-                                text: 'Please select why the extracted GWA is incorrect.',
+                                text: 'Please select why the extracted ' + academicMetricLabel + ' is incorrect.',
                                 confirmButtonColor: '#9a3412'
                             });
                             return false;
@@ -541,8 +548,8 @@ require_once __DIR__ . '/../app/Config/init.php';
                                 e.preventDefault();
                                 Swal.fire({
                                     icon: 'warning',
-                                    title: 'Invalid correct GWA',
-                                    text: 'Correct GWA must be between 1.00 and 5.00.',
+                                    title: 'Invalid correct ' + academicMetricLabel,
+                                    text: 'Correct ' + academicMetricLabel + ' must be between 1.00 and 5.00.',
                                     confirmButtonColor: '#9a3412'
                                 });
                                 return false;

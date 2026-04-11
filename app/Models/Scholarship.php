@@ -289,9 +289,10 @@ class Scholarship extends Model {
             FROM scholarships s
             LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id
             {$this->providerWebsiteJoinClause()}
-            WHERE s.status = 'active' 
-            AND COALESCE(s.min_gwa, s.max_gwa) >= :gwa
-            ORDER BY COALESCE(s.min_gwa, s.max_gwa) ASC
+            WHERE s.status = 'active'
+            AND s.min_gwa IS NOT NULL
+            AND s.min_gwa >= :gwa
+            ORDER BY s.min_gwa ASC
         ");
         $stmt->bindValue(':gwa', $gwa);
         $stmt->execute();

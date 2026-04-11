@@ -47,6 +47,11 @@ function normalizeReviewedGwa($value): ?string
     return number_format($numericValue, 2, '.', '');
 }
 
+function getReviewedAcademicLabel(?string $documentType): string
+{
+    return (string) $documentType === 'form_138' ? 'academic score' : 'GWA';
+}
+
 function getSupportingVerificationConfig(?string $documentType): ?array
 {
     $configs = [
@@ -152,16 +157,17 @@ try {
         $reviewedGwa = null;
         $profileUpdate = [];
         $verificationNote = null;
+        $reviewLabel = getReviewedAcademicLabel($documentDetails['document_type'] ?? null);
         if (canEditReviewedGwa() && $documentDetails && isGradeReviewDocument($documentDetails['document_type'] ?? null)) {
             $reviewedGwa = normalizeReviewedGwa($_POST['gwa'] ?? null);
 
             if ($reviewedGwa === null) {
-                echo json_encode(['success' => false, 'message' => 'Enter the reviewed GWA before verifying this document.']);
+                echo json_encode(['success' => false, 'message' => 'Enter the reviewed ' . $reviewLabel . ' before verifying this document.']);
                 exit();
             }
 
             if ($reviewedGwa === '') {
-                echo json_encode(['success' => false, 'message' => 'GWA must be a valid number between 1.00 and 5.00.']);
+                echo json_encode(['success' => false, 'message' => ucfirst($reviewLabel) . ' must be a valid number between 1.00 and 5.00.']);
                 exit();
             }
         }
@@ -181,7 +187,14 @@ try {
             $verificationNote = 'Verified as: ' . $supportingVerificationConfig['options'][$verificationValue];
         }
 
-        $result = $documentModel->verifyDocument($documentId, $userId, $reviewedGwa, $profileUpdate, $verificationNote);
+        $result = $documentModel->verifyDocument(
+            $documentId,
+            $userId,
+            $reviewedGwa,
+            $profileUpdate,
+            $verificationNote,
+            $documentDetails['document_type'] ?? null
+        );
         
         if ($result) {
             if ($documentDetails) {
@@ -210,7 +223,7 @@ try {
                     $notificationMessage = $documentLabel . ' was verified successfully.';
 
                     if ($reviewedGwa !== null && isGradeReviewDocument($documentDetails['document_type'] ?? null)) {
-                        $notificationMessage .= ' Your recorded GWA is now ' . number_format((float) $reviewedGwa, 2) . '.';
+                        $notificationMessage .= ' Your recorded ' . getReviewedAcademicLabel($documentDetails['document_type'] ?? null) . ' is now ' . number_format((float) $reviewedGwa, 2) . '.';
                     }
 
                     if ($verificationNote !== null) {
@@ -234,7 +247,7 @@ try {
                 }
             }
             if ($reviewedGwa !== null) {
-                $successMessage = 'Document verified and GWA updated successfully.';
+                $successMessage = 'Document verified and ' . getReviewedAcademicLabel($documentDetails['document_type'] ?? null) . ' updated successfully.';
             } elseif (!empty($profileUpdate)) {
                 $successMessage = 'Supporting document verified and profile value saved successfully.';
             } else {
@@ -311,17 +324,21 @@ try {
         }
 
         if (!$documentDetails || !isGradeReviewDocument($documentDetails['document_type'] ?? null)) {
-            echo json_encode(['success' => false, 'message' => 'GWA can only be updated for TOR or Form 138 documents.']);
+            echo json_encode(['success' => false, 'message' => 'Academic scores can only be updated for TOR or Form 138 documents.']);
             exit();
         }
 
         $reviewedGwa = normalizeReviewedGwa($_POST['gwa'] ?? null);
         if ($reviewedGwa === null || $reviewedGwa === '') {
-            echo json_encode(['success' => false, 'message' => 'GWA must be a valid number between 1.00 and 5.00.']);
+            echo json_encode(['success' => false, 'message' => ucfirst(getReviewedAcademicLabel($documentDetails['document_type'] ?? null)) . ' must be a valid number between 1.00 and 5.00.']);
             exit();
         }
 
-        $result = $documentModel->saveStudentGwa((int) $userId, $reviewedGwa);
+        $result = $documentModel->updateReviewedAcademicScore(
+            (int) $userId,
+            $reviewedGwa,
+            $documentDetails['document_type'] ?? null
+        );
 
         if ($result) {
             if ($documentDetails) {
@@ -343,9 +360,9 @@ try {
                 ]);
             }
 
-            echo json_encode(['success' => true, 'message' => 'GWA updated successfully.']);
+            echo json_encode(['success' => true, 'message' => ucfirst(getReviewedAcademicLabel($documentDetails['document_type'] ?? null)) . ' updated successfully.']);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Failed to update the student GWA.']);
+            echo json_encode(['success' => false, 'message' => 'Failed to update the student ' . getReviewedAcademicLabel($documentDetails['document_type'] ?? null) . '.']);
         }
 
     } elseif ($action === 'reject') {

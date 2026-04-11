@@ -45,11 +45,13 @@ document.addEventListener('DOMContentLoaded', switchProfileTabFromHash);
 window.addEventListener('hashchange', switchProfileTabFromHash);
 
 function toggleProfileApplicantFields() {
-    const applicantTypeSelect = document.getElementById('editApplicantType');
-    if (!applicantTypeSelect) {
+    const applicantTypeInput = document.getElementById('editApplicantType');
+    if (!applicantTypeInput) {
         return;
     }
 
+    const schoolGroup = document.getElementById('editSchoolGroup');
+    const schoolInput = document.getElementById('editSchool');
     const schoolLabel = document.getElementById('editSchoolLabel');
     const courseLabel = document.getElementById('editCourseLabel');
     const admissionStatusLabel = document.getElementById('editAdmissionStatusLabel');
@@ -63,18 +65,21 @@ function toggleProfileApplicantFields() {
     const enrollmentStatus = document.getElementById('editEnrollmentStatus');
     const admissionStatus = document.getElementById('editAdmissionStatus');
 
-    const applicantType = applicantTypeSelect.value;
+    const applicantType = applicantTypeInput.value;
     const isIncoming = applicantType === 'incoming_freshman';
     const isCurrentStudent = applicantType === 'current_college' || applicantType === 'transferee' || applicantType === 'continuing_student';
 
+    if (schoolGroup) {
+        schoolGroup.style.display = isCurrentStudent ? '' : 'none';
+    }
     if (schoolLabel) {
-        schoolLabel.textContent = isIncoming ? 'Current / Last School *' : 'College / University *';
+        schoolLabel.textContent = 'College / University *';
     }
     if (courseLabel) {
         courseLabel.textContent = isIncoming ? 'Planned Course *' : 'Course *';
     }
     if (admissionStatusLabel) {
-        admissionStatusLabel.textContent = isIncoming ? 'Admission Status *' : 'Admission / Enrollment Status';
+        admissionStatusLabel.textContent = 'Admission Status *';
     }
 
     incomingFields.forEach((field) => {
@@ -85,6 +90,7 @@ function toggleProfileApplicantFields() {
         field.style.display = isCurrentStudent ? '' : 'none';
     });
 
+    if (schoolInput) schoolInput.required = isCurrentStudent;
     if (shsSchool) shsSchool.required = isIncoming;
     if (shsStrand) shsStrand.required = isIncoming;
     if (shsGraduationYear) shsGraduationYear.required = isIncoming;
@@ -93,13 +99,9 @@ function toggleProfileApplicantFields() {
     if (enrollmentStatus) enrollmentStatus.required = isCurrentStudent;
     if (admissionStatus) {
         admissionStatus.required = isIncoming;
-        if (isCurrentStudent && !admissionStatus.value) {
-            admissionStatus.value = 'enrolled';
-        }
     }
 }
 
-document.getElementById('editApplicantType')?.addEventListener('change', toggleProfileApplicantFields);
 toggleProfileApplicantFields();
 
 function isValidProfileName(value) {

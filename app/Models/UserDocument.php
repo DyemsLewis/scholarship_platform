@@ -73,6 +73,11 @@ class UserDocument extends Model {
         return in_array('gwa', $this->getStudentDataTableColumns(), true);
     }
 
+    private function canStoreStudentShsAverage(): bool
+    {
+        return in_array('shs_average', $this->getStudentDataTableColumns(), true);
+    }
+
     private function isGradeReviewDocument(?string $documentType): bool
     {
         return in_array((string) $documentType, ['grades', 'form_138'], true);
@@ -122,6 +127,39 @@ class UserDocument extends Model {
         return $insertStmt->execute([$userId, $formatted]);
     }
 
+    public function saveStudentShsAverage(int $userId, $shsAverage): bool
+    {
+        if (!$this->canStoreStudentShsAverage()) {
+            return false;
+        }
+
+        $normalized = trim((string) $shsAverage);
+        if ($normalized === '' || !is_numeric($normalized)) {
+            return false;
+        }
+
+        $formatted = number_format((float) $normalized, 2, '.', '');
+        $numericValue = (float) $formatted;
+        $isAcademicScoreScale = $numericValue >= 1.0 && $numericValue <= 5.0;
+        $isPercentageScale = $numericValue >= 60.0 && $numericValue <= 100.0;
+
+        if (!$isAcademicScoreScale && !$isPercentageScale) {
+            return false;
+        }
+
+        $existsStmt = $this->pdo->prepare("SELECT COUNT(*) FROM student_data WHERE student_id = ?");
+        $existsStmt->execute([$userId]);
+        $recordExists = ((int) $existsStmt->fetchColumn()) > 0;
+
+        if ($recordExists) {
+            $updateStmt = $this->pdo->prepare("UPDATE student_data SET shs_average = ? WHERE student_id = ?");
+            return $updateStmt->execute([$formatted, $userId]);
+        }
+
+        $insertStmt = $this->pdo->prepare("INSERT INTO student_data (student_id, shs_average) VALUES (?, ?)");
+        return $insertStmt->execute([$formatted, $userId]);
+    }
+
     public function clearStudentGwa(int $userId): bool
     {
         if (!$this->canStoreStudentGwa()) {
@@ -130,6 +168,52 @@ class UserDocument extends Model {
 
         $stmt = $this->pdo->prepare("UPDATE student_data SET gwa = NULL WHERE student_id = ?");
         return $stmt->execute([$userId]);
+    }
+
+    public function clearStudentShsAverage(int $userId): bool
+    {
+        if (!$this->canStoreStudentShsAverage()) {
+            return false;
+        }
+
+        $stmt = $this->pdo->prepare("UPDATE student_data SET shs_average = NULL WHERE student_id = ?");
+        return $stmt->execute([$userId]);
+    }
+
+    private function syncReviewedAcademicScore(int $userId, $reviewedGwa, ?string $documentType): bool
+    {
+        if (!$this->saveStudentGwa($userId, $reviewedGwa)) {
+            return false;
+        }
+
+        if ((string) $documentType === 'form_138' && $this->canStoreStudentShsAverage()) {
+            if (!$this->saveStudentShsAverage($userId, $reviewedGwa)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function updateReviewedAcademicScore(int $userId, $reviewedGwa, ?string $documentType = null): bool
+    {
+        try {
+            $this->pdo->beginTransaction();
+
+            if (!$this->syncReviewedAcademicScore($userId, $reviewedGwa, $documentType)) {
+                $this->pdo->rollBack();
+                return false;
+            }
+
+            $this->pdo->commit();
+            return true;
+        } catch (PDOException $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            error_log("Update reviewed academic score error: " . $e->getMessage());
+            return false;
+        }
     }
 
     public function ensureDocumentTypes(): bool
@@ -620,7 +704,7 @@ class UserDocument extends Model {
     /**
      * Verify document (admin action)
      */
-    public function verifyDocument($documentId, $userId, $reviewedGwa = null, array $profileUpdate = [], ?string $adminNote = null) {
+    public function verifyDocument($documentId, $userId, $reviewedGwa = null, array $profileUpdate = [], ?string $adminNote = null, ?string $documentType = null) {
         try {
             $this->pdo->beginTransaction();
             
@@ -635,7 +719,14 @@ class UserDocument extends Model {
             $stmt->execute([$adminNote, $documentId, $userId]);
             
             if ($stmt->rowCount() > 0) {
-                if ($reviewedGwa !== null && !$this->saveStudentGwa((int) $userId, $reviewedGwa)) {
+                $stmt = $this->pdo->prepare("
+                    SELECT document_type, file_name FROM user_documents WHERE id = ?
+                ");
+                $stmt->execute([$documentId]);
+                $doc = $stmt->fetch();
+
+                $resolvedDocumentType = $documentType ?? ($doc['document_type'] ?? null);
+                if ($reviewedGwa !== null && !$this->syncReviewedAcademicScore((int) $userId, $reviewedGwa, $resolvedDocumentType)) {
                     $this->pdo->rollBack();
                     return false;
                 }
@@ -647,13 +738,6 @@ class UserDocument extends Model {
                         return false;
                     }
                 }
-
-                // Get document details for logging
-                $stmt = $this->pdo->prepare("
-                    SELECT document_type, file_name FROM user_documents WHERE id = ?
-                ");
-                $stmt->execute([$documentId]);
-                $doc = $stmt->fetch();
                 
                 // Log verification
                 $stmt = $this->pdo->prepare("
@@ -700,9 +784,18 @@ class UserDocument extends Model {
                 $stmt->execute([$documentId]);
                 $doc = $stmt->fetch();
 
-                if ($this->isGradeReviewDocument($doc['document_type'] ?? null) && !$this->clearStudentGwa((int) $userId)) {
-                    $this->pdo->rollBack();
-                    return false;
+                if ($this->isGradeReviewDocument($doc['document_type'] ?? null)) {
+                    if (!$this->clearStudentGwa((int) $userId)) {
+                        $this->pdo->rollBack();
+                        return false;
+                    }
+
+                    if (($doc['document_type'] ?? null) === 'form_138' && $this->canStoreStudentShsAverage()) {
+                        if (!$this->clearStudentShsAverage((int) $userId)) {
+                            $this->pdo->rollBack();
+                            return false;
+                        }
+                    }
                 }
                 
                 // Log rejection

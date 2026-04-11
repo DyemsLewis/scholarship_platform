@@ -544,15 +544,15 @@ class OcrService
     public static function buildScannerStatusMessage(?float $finalGwa, ?float $rawGwaValue): string
     {
         if ($finalGwa !== null) {
-            $message = 'Scanner result: GWA detected (' . number_format($finalGwa, 2) . ').';
+            $message = 'Scanner result: academic score detected (' . number_format($finalGwa, 2) . ').';
             if ($rawGwaValue !== null && abs($rawGwaValue - $finalGwa) > 0.0001) {
-                $message = 'Scanner result: GWA detected. Raw value ' . number_format($rawGwaValue, 2) .
-                    ' converted to PH GWA ' . number_format($finalGwa, 2) . '.';
+                $message = 'Scanner result: academic score detected. Raw value ' . number_format($rawGwaValue, 2) .
+                    ' converted to PH academic score ' . number_format($finalGwa, 2) . '.';
             }
             return $message;
         }
 
-        return 'Scanner result: GWA not detected.';
+        return 'Scanner result: academic score not detected.';
     }
 
     public static function analyzeGwaFromText(string $text): array

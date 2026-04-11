@@ -296,9 +296,9 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
         <div class="profile-quick-stats">
             <div style="background: #f8fafc; padding: 12px 5px; border-radius: 8px; text-align: center;">
                 <div style="font-size: 1.3rem; font-weight: bold; color: var(--primary); line-height: 1.2;">
-                    <?php echo $userGWA ? number_format((float)$userGWA, 2) : 'N/A'; ?>
+                    <?php echo $userAcademicScore ? number_format((float)$userAcademicScore, 2) : 'N/A'; ?>
                 </div>
-                <div style="color: var(--gray); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">GWA</div>
+                <div style="color: var(--gray); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;"><?php echo htmlspecialchars($userAcademicMetricLabel); ?></div>
             </div>
             
             <div style="background: #f8fafc; padding: 12px 5px; border-radius: 8px; text-align: center;">
@@ -393,6 +393,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
                     </div>
                 </div>
                 
+                <?php if (!$isIncomingApplicant): ?>
                 <div style="background: #f8fafc; padding: 10px; border-radius: 8px;">
                     <div style="color: var(--gray); font-size: 0.7rem; margin-bottom: 2px;">School</div>
                     <div style="font-weight: 500; color: var(--dark); font-size: 0.9rem;">
@@ -400,6 +401,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
                         <?php echo htmlspecialchars($userSchool ?: 'Not set'); ?>
                     </div>
                 </div>
+                <?php endif; ?>
                 
                 <div style="background: #f8fafc; padding: 10px; border-radius: 8px;">
                     <div style="color: var(--gray); font-size: 0.7rem; margin-bottom: 2px;">Course</div>
@@ -454,13 +456,15 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
                     </div>
                 </div>
 
+                <?php if (!$isIncomingApplicant): ?>
                 <div style="background: #f8fafc; padding: 10px; border-radius: 8px;">
-                    <div style="color: var(--gray); font-size: 0.7rem; margin-bottom: 2px;"><?php echo $isIncomingApplicant ? 'Current / Last School' : 'College / University'; ?></div>
+                    <div style="color: var(--gray); font-size: 0.7rem; margin-bottom: 2px;">College / University</div>
                     <div style="font-weight: 500; color: var(--dark); font-size: 0.9rem;">
                         <i class="fas fa-university" style="margin-right: 5px; color: var(--primary);"></i>
                         <?php echo htmlspecialchars($userSchool ?: 'Not set'); ?>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <div style="background: #f8fafc; padding: 10px; border-radius: 8px;">
                     <div style="color: var(--gray); font-size: 0.7rem; margin-bottom: 2px;"><?php echo $isIncomingApplicant ? 'Planned Course' : 'Course'; ?></div>
@@ -480,6 +484,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
                 </div>
                 <?php endif; ?>
 
+                <?php if ($isIncomingApplicant): ?>
                 <div style="background: #f8fafc; padding: 10px; border-radius: 8px;">
                     <div style="color: var(--gray); font-size: 0.7rem; margin-bottom: 2px;">Target Course</div>
                     <div style="font-weight: 500; color: var(--dark); font-size: 0.9rem;">
@@ -487,6 +492,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
                         <?php echo htmlspecialchars($userTargetCourse ?: $userCourse ?: 'Not set'); ?>
                     </div>
                 </div>
+                <?php endif; ?>
 
                 <?php if ($showCollegeProgressFields): ?>
                 <div style="background: #f8fafc; padding: 10px; border-radius: 8px;">
@@ -583,25 +589,25 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
             </div>
         </div>
         
-        <!-- GWA Row -->
+        <!-- Academic Score Row -->
         <div style="margin-bottom: 15px;">
-            <!-- GWA Card -->
+            <!-- Academic Score Card -->
             <div style="background: linear-gradient(135deg, #f0f4ff, #ffffff); padding: 12px; border-radius: 10px; border: 1px solid #e0e7ff;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <div style="width: 35px; height: 35px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
                         <i class="fas fa-chart-line" style="color: white; font-size: 1rem;"></i>
                     </div>
                     <div>
-                        <div style="color: var(--gray); font-size: 0.7rem;">GWA</div>
+                        <div style="color: var(--gray); font-size: 0.7rem;"><?php echo htmlspecialchars($userAcademicMetricLabel); ?></div>
                         <div style="font-size: 1.3rem; font-weight: bold; color: var(--primary); line-height: 1;">
-                            <?php echo $userGWA ? number_format((float)$userGWA, 2) : 'N/A'; ?>
+                            <?php echo $userAcademicScore ? number_format((float)$userAcademicScore, 2) : 'N/A'; ?>
                         </div>
-                        <?php if($userGWA): ?>
+                        <?php if($userAcademicScore): ?>
                         <div style="color: var(--gray); font-size: 0.65rem;">
                             <?php 
-                            if($userGWA <= 1.5) echo 'Excellent';
-                            elseif($userGWA <= 1.75) echo 'Very Good';
-                            elseif($userGWA <= 2.0) echo 'Good';
+                            if($userAcademicScore <= 1.5) echo 'Excellent';
+                            elseif($userAcademicScore <= 1.75) echo 'Very Good';
+                            elseif($userAcademicScore <= 2.0) echo 'Good';
                             else echo 'Satisfactory';
                             ?>
                         </div>
@@ -710,22 +716,18 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
             <small style="font-size: 0.7rem; display: block; margin-bottom: 12px;">Birthdate stays read-only here, but you can update gender directly.</small>
             
             <div style="margin-bottom: 12px;">
-                <label for="editApplicantType" style="font-size: 0.8rem;">Applicant Type *</label>
-                <select id="editApplicantType" name="applicant_type" required style="width: 100%; padding: 8px; font-size: 0.9rem;">
-                    <option value="">Select applicant type</option>
-                    <option value="incoming_freshman" <?php echo ($userApplicantType ?? '') === 'incoming_freshman' ? 'selected' : ''; ?>>Incoming Freshman</option>
-                    <option value="current_college" <?php echo ($userApplicantType ?? '') === 'current_college' ? 'selected' : ''; ?>>Current College Student</option>
-                    <option value="transferee" <?php echo ($userApplicantType ?? '') === 'transferee' ? 'selected' : ''; ?>>Transferee</option>
-                    <option value="continuing_student" <?php echo ($userApplicantType ?? '') === 'continuing_student' ? 'selected' : ''; ?>>Continuing Student</option>
-                </select>
+                <label for="editApplicantTypeDisplay" style="font-size: 0.8rem;">Applicant Type</label>
+                <input type="hidden" id="editApplicantType" name="applicant_type" value="<?php echo htmlspecialchars((string) ($userApplicantType ?? '')); ?>">
+                <input type="text" id="editApplicantTypeDisplay" value="<?php echo htmlspecialchars($profileApplicantTypeLabel); ?>" disabled style="width: 100%; padding: 8px; font-size: 0.9rem; background: #f5f5f5;">
+                <small style="font-size: 0.7rem; display: block; margin-top: 6px;">Applicant type is locked after registration. If this is incorrect, ask an admin to review your account.</small>
             </div>
 
             <div class="profile-two-col-grid" style="margin-bottom: 15px;">
-                <div>
-                    <label for="editSchool" id="editSchoolLabel" style="font-size: 0.8rem;"><?php echo $isIncomingApplicant ? 'Current / Last School *' : 'College / University *'; ?></label>
+                <div class="edit-current-student-field" id="editSchoolGroup" style="<?php echo $isIncomingApplicant ? 'display: none;' : ''; ?>">
+                    <label for="editSchool" id="editSchoolLabel" style="font-size: 0.8rem;">College / University *</label>
                     <input type="text" id="editSchool" name="school" 
                             value="<?php echo htmlspecialchars($userSchool); ?>" 
-                            required style="width: 100%; padding: 8px; font-size: 0.9rem;">
+                            <?php echo $isIncomingApplicant ? '' : 'required'; ?> style="width: 100%; padding: 8px; font-size: 0.9rem;">
                 </div>
                 
                 <div>
@@ -742,7 +744,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
                 </div>
 
                 <div class="profile-two-col-grid" style="margin-bottom: 10px;">
-                    <div>
+                    <div class="edit-incoming-field" style="<?php echo $isIncomingApplicant ? '' : 'display: none;'; ?>">
                         <label for="editAdmissionStatus" id="editAdmissionStatusLabel" style="font-size: 0.75rem;"><?php echo $isIncomingApplicant ? 'Admission Status *' : 'Admission / Enrollment Status'; ?></label>
                         <select id="editAdmissionStatus" name="admission_status" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                             <option value="">Select status</option>
@@ -753,7 +755,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
                         </select>
                     </div>
 
-                    <div class="edit-current-student-field">
+                    <div class="edit-current-student-field" style="<?php echo $isIncomingApplicant ? 'display: none;' : ''; ?>">
                         <label for="editYearLevel" style="font-size: 0.75rem;">Year Level *</label>
                         <select id="editYearLevel" name="year_level" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                             <option value="">Select year level</option>
@@ -765,7 +767,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
                         </select>
                     </div>
 
-                    <div class="edit-current-student-field">
+                    <div class="edit-current-student-field" style="<?php echo $isIncomingApplicant ? 'display: none;' : ''; ?>">
                         <label for="editEnrollmentStatus" style="font-size: 0.75rem;">Enrollment Status *</label>
                         <select id="editEnrollmentStatus" name="enrollment_status" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                             <option value="">Select enrollment status</option>
@@ -776,7 +778,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
                         </select>
                     </div>
 
-                    <div class="edit-current-student-field">
+                    <div class="edit-current-student-field" style="<?php echo $isIncomingApplicant ? 'display: none;' : ''; ?>">
                         <label for="editAcademicStanding" style="font-size: 0.75rem;">Academic Standing</label>
                         <select id="editAcademicStanding" name="academic_standing" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                             <option value="">Select standing</option>
@@ -787,32 +789,32 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
                         </select>
                     </div>
 
-                    <div class="edit-incoming-field">
+                    <div class="edit-incoming-field" style="<?php echo $isIncomingApplicant ? '' : 'display: none;'; ?>">
                         <label for="editShsSchool" style="font-size: 0.75rem;">Senior High School *</label>
                         <input type="text" id="editShsSchool" name="shs_school" value="<?php echo htmlspecialchars($userShsSchool ?? ''); ?>" placeholder="Senior high school name" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                     </div>
 
-                    <div class="edit-incoming-field">
+                    <div class="edit-incoming-field" style="<?php echo $isIncomingApplicant ? '' : 'display: none;'; ?>">
                         <label for="editShsStrand" style="font-size: 0.75rem;">SHS Strand *</label>
                         <input type="text" id="editShsStrand" name="shs_strand" value="<?php echo htmlspecialchars($userShsStrand ?? ''); ?>" placeholder="e.g., STEM, ABM, HUMSS" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                     </div>
 
-                    <div class="edit-incoming-field">
+                    <div class="edit-incoming-field" style="<?php echo $isIncomingApplicant ? '' : 'display: none;'; ?>">
                         <label for="editShsGraduationYear" style="font-size: 0.75rem;">SHS Graduation Year *</label>
                         <input type="number" id="editShsGraduationYear" name="shs_graduation_year" value="<?php echo htmlspecialchars((string) ($userShsGraduationYear ?? '')); ?>" placeholder="e.g., 2026" min="2000" max="<?php echo date('Y') + 6; ?>" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                     </div>
 
-                    <div class="edit-incoming-field">
+                    <div class="edit-incoming-field" style="<?php echo $isIncomingApplicant ? '' : 'display: none;'; ?>">
                         <label for="editTargetCollege" style="font-size: 0.75rem;">Preferred College / University *</label>
                         <input type="text" id="editTargetCollege" name="target_college" value="<?php echo htmlspecialchars($userTargetCollege ?? ''); ?>" placeholder="College you plan to attend" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                     </div>
 
-                    <div>
+                    <div class="edit-incoming-field" style="<?php echo $isIncomingApplicant ? '' : 'display: none;'; ?>">
                         <label for="editTargetCourse" style="font-size: 0.75rem;">Target Course</label>
                         <input type="text" id="editTargetCourse" name="target_course" value="<?php echo htmlspecialchars($userTargetCourse ?? $userCourse ?? ''); ?>" placeholder="Planned or preferred course" style="width: 100%; padding: 8px; font-size: 0.9rem;">
                     </div>
                 </div>
-                <small style="font-size: 0.7rem;">Incoming freshmen use SHS and admission details. Current college students use year level and enrollment details.</small>
+                <small style="font-size: 0.7rem;">Only the academic fields tied to your registered applicant type can be edited here.</small>
             </div>
 
             <div style="margin-bottom: 14px; padding: 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #dbe4ee;">

@@ -298,11 +298,15 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
                                     </div>
                                 </div>
 
-                                <div class="form-group signup-full-width">
-                                    <label for="signupSchool" id="signupSchoolLabel"><?php echo $signupApplicantTypeValue === 'incoming_freshman' ? 'Current / Last School *' : 'School/University *'; ?></label>
+                                <div
+                                    class="form-group signup-full-width"
+                                    id="signupSchoolGroup"
+                                    <?php echo $signupApplicantTypeValue === 'incoming_freshman' ? 'style="display: none;"' : ''; ?>
+                                >
+                                    <label for="signupSchool" id="signupSchoolLabel">School/University *</label>
                                     <div class="input-with-icon">
                                         <i class="fas fa-university"></i>
-                                        <input type="text" id="signupSchool" name="school" placeholder="Enter your school or university name" value="<?php echo htmlspecialchars(signupOldValue($signupOld, 'school')); ?>" required>
+                                        <input type="text" id="signupSchool" name="school" placeholder="Enter your school or university name" value="<?php echo htmlspecialchars(signupOldValue($signupOld, 'school')); ?>" <?php echo $signupApplicantTypeValue === 'incoming_freshman' ? '' : 'required'; ?>>
                                     </div>
                                 </div>
 
@@ -996,6 +1000,8 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
     const emailVerificationStatus = document.getElementById('emailVerificationStatus');
     const verifiedEmailStateInput = document.getElementById('verifiedEmailState');
     const applicantTypeSelect = document.getElementById('signupApplicantType');
+    const schoolGroup = document.getElementById('signupSchoolGroup');
+    const schoolInput = document.getElementById('signupSchool');
     const schoolLabel = document.getElementById('signupSchoolLabel');
     const courseLabel = document.getElementById('signupCourseLabel');
     const admissionStatusLabel = document.getElementById('signupAdmissionStatusLabel');
@@ -1259,8 +1265,11 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
         const isIncoming = applicantType === 'incoming_freshman';
         const isCurrentStudent = applicantType === 'current_college' || applicantType === 'transferee' || applicantType === 'continuing_student';
 
+        if (schoolGroup) {
+            schoolGroup.style.display = isIncoming ? 'none' : 'block';
+        }
         if (schoolLabel) {
-            schoolLabel.textContent = isIncoming ? 'Current / Last School *' : 'School/University *';
+            schoolLabel.textContent = 'School/University *';
         }
         if (courseLabel) {
             courseLabel.textContent = isIncoming ? 'Planned Course/Program *' : 'Course/Program *';
@@ -1277,6 +1286,9 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
             field.style.display = isCurrentStudent ? 'block' : 'none';
         });
 
+        if (schoolInput) {
+            schoolInput.required = !isIncoming;
+        }
         if (shsSchoolInput) shsSchoolInput.required = isIncoming;
         if (shsStrandInput) shsStrandInput.required = isIncoming;
         if (shsGraduationYearInput) shsGraduationYearInput.required = isIncoming;

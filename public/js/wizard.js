@@ -125,6 +125,9 @@ class ScholarshipWizard {
         const gwaWithinRequirement = this.getIntValue('wizardGwaWithinRequirement');
         const profilePending = this.getIntValue('wizardProfilePendingCount');
         const profileFailed = this.getIntValue('wizardProfileFailedCount');
+        const academicMetricLabel = this.getTextValue('wizardAcademicMetricLabel') || 'GWA';
+        const academicDocumentLabel = this.getTextValue('wizardAcademicDocumentLabel') || 'TOR/grades';
+        const academicMetricName = academicMetricLabel.toLowerCase();
 
         if (profilePending > 0) {
             this.showToast('Please complete your applicant profile first.', 'warning');
@@ -137,12 +140,12 @@ class ScholarshipWizard {
         }
 
         if (gwaRequired === 1 && hasGwa === 0) {
-            this.showToast('Please upload your TOR/grades to set your GWA first.', 'warning');
+            this.showToast(`Please upload your ${academicDocumentLabel} to set your ${academicMetricName} first.`, 'warning');
             return false;
         }
 
         if (gwaRequired === 1 && gwaWithinRequirement === 0) {
-            this.showToast('Your GWA is above the required limit for this scholarship.', 'warning');
+            this.showToast(`Your ${academicMetricName} is above the required limit for this scholarship.`, 'warning');
             return false;
         }
 
@@ -262,6 +265,15 @@ class ScholarshipWizard {
 
         const parsed = parseInt(element.value || '0', 10);
         return Number.isNaN(parsed) ? 0 : parsed;
+    }
+
+    getTextValue(id) {
+        const element = document.getElementById(id);
+        if (!element) {
+            return '';
+        }
+
+        return String(element.value || '').trim();
     }
 
     showSubmissionSuccess(message) {

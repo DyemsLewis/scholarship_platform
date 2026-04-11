@@ -352,8 +352,6 @@ $manageScholarshipsUrl = normalizeAppUrl('AdminView/manage_scholarships.php');
                                 $requiredGwa = null;
                                 if (isset($scholarship['min_gwa']) && $scholarship['min_gwa'] !== null && $scholarship['min_gwa'] !== '') {
                                     $requiredGwa = (float) $scholarship['min_gwa'];
-                                } elseif (isset($scholarship['max_gwa']) && $scholarship['max_gwa'] !== null && $scholarship['max_gwa'] !== '') {
-                                    $requiredGwa = (float) $scholarship['max_gwa'];
                                 }
                                 ?>
                                 <tr class="scholarship-list-row">

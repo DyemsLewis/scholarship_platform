@@ -33,9 +33,10 @@ if (!$scholarship) {
 $requiredGwa = null;
 if (isset($scholarship['min_gwa']) && $scholarship['min_gwa'] !== null && $scholarship['min_gwa'] !== '') {
     $requiredGwa = (float) $scholarship['min_gwa'];
-} elseif (isset($scholarship['max_gwa']) && $scholarship['max_gwa'] !== null && $scholarship['max_gwa'] !== '') {
-    $requiredGwa = (float) $scholarship['max_gwa'];
 }
+$academicMetricLabel = $userAcademicMetricLabel;
+$academicDocumentLabel = $userAcademicDocumentLabel;
+$minimumAcademicLabel = $academicMetricLabel === 'GWA' ? 'Minimum GWA' : 'Minimum Academic Score';
 
 $assessmentRequirement = strtolower(trim((string) ($scholarship['assessment_requirement'] ?? 'none')));
 $hasAssessment = $assessmentRequirement !== '' && $assessmentRequirement !== 'none';
@@ -80,8 +81,8 @@ try {
 
 if ($isLoggedIn) {
     $matchedScholarships = $scholarshipService->getMatchedScholarships(
-        $userGWA,
-        $userCourse,
+        $userAcademicScore,
+        $userCourse ?: $userTargetCourse,
         $userLatitude,
         $userLongitude,
         [
@@ -89,6 +90,7 @@ if ($isLoggedIn) {
             'year_level' => $userYearLevel,
             'admission_status' => $userAdmissionStatus,
             'shs_strand' => $userShsStrand,
+            'shs_average' => $userShsAverage,
             'course' => $userCourse,
             'target_course' => $userTargetCourse,
             'school' => $userSchool,
@@ -108,6 +110,9 @@ if ($isLoggedIn) {
             $matchText = $matchPercentage !== null ? $scholarshipService->getMatchText($matchPercentage) : 'Unavailable';
             $requiresGwa = !empty($item['requires_gwa']);
             $isEligible = !empty($item['is_eligible']);
+            $academicMetricLabel = (string) ($item['academic_metric_label'] ?? $academicMetricLabel);
+            $academicDocumentLabel = (string) ($item['academic_document_label'] ?? $academicDocumentLabel);
+            $minimumAcademicLabel = $academicMetricLabel === 'GWA' ? 'Minimum GWA' : 'Minimum Academic Score';
             if (isset($item['distance']) && $item['distance'] !== null) {
                 $distance = (float) $item['distance'];
             }
@@ -192,16 +197,16 @@ foreach (($documentSummary['requirements'] ?? []) as $requirement) {
 }
 $hasAllRequired = $requirementsCount === 0 ? true : ($missingCount === 0 && $rejectedCount === 0);
 
-$academicDecision = 'No GWA requirement';
+$academicDecision = 'No ' . $academicMetricLabel . ' requirement';
 $academicClass = 'info';
 if ($requiredGwa !== null) {
     if (!$isLoggedIn) {
-        $academicDecision = 'Login to evaluate against required GWA';
+        $academicDecision = 'Login to evaluate against required ' . strtolower($academicMetricLabel);
         $academicClass = 'warn';
-    } elseif (empty($userGWA)) {
-        $academicDecision = 'Pending: upload grades';
+    } elseif (empty($userAcademicScore)) {
+        $academicDecision = 'Pending: upload ' . strtolower($academicDocumentLabel);
         $academicClass = 'warn';
-    } elseif ((float) $userGWA <= (float) $requiredGwa) {
+    } elseif ((float) $userAcademicScore <= (float) $requiredGwa) {
         $academicDecision = 'Passed';
         $academicClass = 'good';
     } else {
@@ -379,11 +384,11 @@ if (!$isLoggedIn) {
     $readinessMessage = 'Sign in to compare this scholarship against your profile and document records.';
 } elseif ($requiresGwa) {
     $primaryActionHref = 'upload.php';
-    $primaryActionLabel = 'Upload Grades';
+    $primaryActionLabel = 'Upload ' . $academicDocumentLabel;
     $primaryActionIcon = 'fa-upload';
     $readinessHeadline = 'Needs academic record';
     $readinessClass = 'warn';
-    $readinessMessage = 'Upload your TOR or Form 138 so the system can verify your recorded GWA.';
+    $readinessMessage = 'Upload your ' . $academicDocumentLabel . ' so the system can verify your recorded ' . strtolower($academicMetricLabel) . '.';
 } elseif ($profileNeedsAttention) {
     $primaryActionHref = 'profile.php';
     $primaryActionLabel = 'Update Profile';
@@ -415,7 +420,7 @@ if (!$isLoggedIn) {
 }
 
 $academicDetail = $requiredGwa !== null
-    ? ('Required GWA: ' . number_format($requiredGwa, 2) . ' or better.')
+    ? ('Required ' . strtolower($academicMetricLabel) . ': ' . number_format($requiredGwa, 2) . ' or better.')
     : 'No fixed academic cutoff is configured for this scholarship.';
 $profileDetail = ($profileEvaluation['total'] ?? 0) > 0
     ? (($profileEvaluation['met'] ?? 0) . '/' . ($profileEvaluation['total'] ?? 0) . ' configured profile filters are aligned.')
@@ -644,7 +649,7 @@ $addEligibilityRequirement(
 
 if ($requiredGwa !== null) {
     $addEligibilityRequirement(
-        'Required GWA',
+        $minimumAcademicLabel,
         $requiredGwaLabel,
         'Students usually check this first before preparing the rest of the requirements.'
     );
@@ -749,7 +754,7 @@ if ($deadlineClass === 'bad') {
     $detailCardStatusLabel = 'Not Open Yet';
 } elseif ($requiresGwa) {
     $detailCardStatusClass = 'estimated';
-    $detailCardStatusLabel = 'Needs GWA';
+    $detailCardStatusLabel = 'Needs ' . $academicMetricLabel;
 } elseif ($readyToApplyNow) {
     $detailCardStatusClass = 'ready';
     $detailCardStatusLabel = 'Ready to Apply';
@@ -791,17 +796,17 @@ $matchedReasons = [];
 $attentionReasons = [];
 
 if ($requiredGwa !== null) {
-    if (!empty($userGWA)) {
-        if ((float) $userGWA <= (float) $requiredGwa) {
-            $pushReason($matchedReasons, 'GWA meets the required limit');
+    if (!empty($userAcademicScore)) {
+        if ((float) $userAcademicScore <= (float) $requiredGwa) {
+            $pushReason($matchedReasons, $academicMetricLabel . ' meets the required limit');
         } else {
-            $pushReason($attentionReasons, 'Your current GWA is above the allowed limit');
+            $pushReason($attentionReasons, 'Your current ' . strtolower($academicMetricLabel) . ' is above the allowed limit');
         }
     } else {
-        $pushReason($attentionReasons, 'Upload your academic record so the system can verify your GWA');
+        $pushReason($attentionReasons, 'Upload your academic record so the system can verify your ' . strtolower($academicMetricLabel));
     }
 } else {
-    $pushReason($matchedReasons, 'No fixed GWA cutoff is required for this scholarship');
+    $pushReason($matchedReasons, 'No fixed ' . strtolower($academicMetricLabel) . ' cutoff is required for this scholarship');
 }
 
 if ($deadlineClass === 'bad') {
@@ -876,11 +881,11 @@ if ($deadlineClass === 'bad') {
 } elseif ($requiresGwa) {
     $nextStepTone = 'warning';
     $nextStepIcon = 'fa-chart-line';
-    $nextStepMessage = $openingDatePrepPrefix . 'Upload your grades to complete the academic requirement check.';
+    $nextStepMessage = $openingDatePrepPrefix . 'Upload your ' . $academicDocumentLabel . ' to complete the academic requirement check.';
     $primaryActionHref = 'upload.php';
     $primaryActionClass = 'btn-warning-modern';
     $primaryActionIcon = 'fa-upload';
-    $primaryActionLabel = 'Upload Grades';
+    $primaryActionLabel = 'Upload ' . $academicDocumentLabel;
 } elseif ($profileRequirementPending > 0) {
     $nextStepTone = 'warning';
     $nextStepIcon = 'fa-user-gear';
@@ -921,10 +926,10 @@ if ($deadlineClass === 'bad') {
     $primaryActionClass = 'btn-warning-modern';
     $primaryActionIcon = 'fa-upload';
     $primaryActionLabel = 'Upload Documents';
-} elseif ($requiredGwa !== null && !empty($userGWA) && (float) $userGWA > (float) $requiredGwa) {
+} elseif ($requiredGwa !== null && !empty($userAcademicScore) && (float) $userAcademicScore > (float) $requiredGwa) {
     $nextStepTone = 'warning';
     $nextStepIcon = 'fa-triangle-exclamation';
-    $nextStepMessage = 'Your current GWA is above the scholarship minimum requirement.';
+    $nextStepMessage = 'Your current ' . strtolower($academicMetricLabel) . ' is above the scholarship minimum requirement.';
     $primaryActionType = 'button';
     $primaryActionClass = 'btn-disabled-modern';
     $primaryActionIcon = 'fa-ban';
@@ -950,7 +955,7 @@ if ($detailCardStatusClass === 'ready') {
         : 'Complete the missing profile fields first so the system can finish checking your eligibility.';
 } elseif ($detailCardStatusClass === 'estimated') {
     $eligibilityStatusTitle = 'Not yet. The system still needs your academic record.';
-    $eligibilityStatusSummary = 'Upload your grade document first so the system can verify your GWA and finish the scholarship check.';
+    $eligibilityStatusSummary = 'Upload your academic record first so the system can verify your ' . strtolower($academicMetricLabel) . ' and finish the scholarship check.';
 } elseif ($detailCardStatusClass === 'expired') {
     $eligibilityStatusTitle = 'This scholarship is already closed.';
     $eligibilityStatusSummary = 'You can still review the details, but new applications are no longer accepted.';
@@ -992,8 +997,8 @@ $statusChecklistItems = [
 
 $canApplyRuleItems = [
     $requiredGwa !== null
-        ? 'Your recorded GWA must be ' . $requiredGwaLabel . '.'
-        : 'This scholarship does not use a fixed GWA cutoff.',
+        ? ('Your recorded ' . strtolower($academicMetricLabel) . ' must be ' . $requiredGwaLabel . '.')
+        : ('This scholarship does not use a fixed ' . strtolower($academicMetricLabel) . ' cutoff.'),
     'Your profile should match the target audience: ' . $audienceLabel . '.',
     $requirementsCount > 0
         ? 'All listed required documents should be uploaded and not rejected.'
@@ -1005,8 +1010,8 @@ $canApplyRuleItems = [
 
 $cantApplyRuleItems = [
     $requiredGwa !== null
-        ? 'You cannot apply yet if your GWA is missing or above ' . $requiredGwaLabel . '.'
-        : 'GWA alone does not block this scholarship, but other checks can still do so.',
+        ? ('You cannot apply yet if your ' . strtolower($academicMetricLabel) . ' is missing or above ' . $requiredGwaLabel . '.')
+        : (strtolower($academicMetricLabel) . ' alone does not block this scholarship, but other checks can still do so.'),
     'You cannot apply yet if your applicant profile is incomplete or does not match the scholarship audience.',
     $requirementsCount > 0
         ? 'You cannot apply yet if required files are missing, rejected, or still waiting for review.'
@@ -1120,16 +1125,16 @@ $matchScoreLimitingReasons = [];
 
 if ($requiredGwa !== null) {
     if (!$isLoggedIn) {
-        $pushReason($matchScoreLimitingReasons, 'Log in so the system can compare your GWA with the scholarship requirement.');
-    } elseif (empty($userGWA)) {
+        $pushReason($matchScoreLimitingReasons, 'Log in so the system can compare your ' . strtolower($academicMetricLabel) . ' with the scholarship requirement.');
+    } elseif (empty($userAcademicScore)) {
         $pushReason($matchScoreLimitingReasons, 'Your academic record is missing, so the score is only partly estimated right now.');
-    } elseif ((float) $userGWA <= (float) $requiredGwa) {
-        $pushReason($matchScorePositiveReasons, 'Your GWA is within the required range for this scholarship.');
+    } elseif ((float) $userAcademicScore <= (float) $requiredGwa) {
+        $pushReason($matchScorePositiveReasons, 'Your ' . strtolower($academicMetricLabel) . ' is within the required range for this scholarship.');
     } else {
-        $pushReason($matchScoreLimitingReasons, 'Your current GWA is above the scholarship limit.');
+        $pushReason($matchScoreLimitingReasons, 'Your current ' . strtolower($academicMetricLabel) . ' is above the scholarship limit.');
     }
 } else {
-    $pushReason($matchScorePositiveReasons, 'This scholarship does not require a fixed GWA cutoff.');
+    $pushReason($matchScorePositiveReasons, 'This scholarship does not require a fixed ' . strtolower($academicMetricLabel) . ' cutoff.');
 }
 
 if (is_array($coursePathwayCheck)) {
@@ -1335,7 +1340,7 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
 
                 <div class="scholarship-fact-grid">
                     <article class="scholarship-fact-card">
-                        <span>Minimum GWA</span>
+                        <span><?php echo htmlspecialchars($minimumAcademicLabel); ?></span>
                         <strong><?php echo htmlspecialchars($requiredGwaLabel); ?></strong>
                     </article>
                     <article class="scholarship-fact-card">

@@ -62,8 +62,6 @@ class ScholarshipService {
             $requiredGwa = null;
             if (isset($scholarship['min_gwa']) && $scholarship['min_gwa'] !== null && $scholarship['min_gwa'] !== '') {
                 $requiredGwa = (float) $scholarship['min_gwa'];
-            } elseif (isset($scholarship['max_gwa']) && $scholarship['max_gwa'] !== null && $scholarship['max_gwa'] !== '') {
-                $requiredGwa = (float) $scholarship['max_gwa'];
             }
 
             $scholarship['match_score'] = $matchScore['score'];
@@ -71,6 +69,9 @@ class ScholarshipService {
             $scholarship['is_eligible'] = $matchScore['eligible'];
             $scholarship['requires_gwa'] = $matchScore['requires_gwa'] ?? false;
             $scholarship['required_gwa'] = $requiredGwa;
+            $scholarship['academic_score'] = $matchScore['academic_score'] ?? null;
+            $scholarship['academic_metric_label'] = $matchScore['academic_metric_label'] ?? 'GWA';
+            $scholarship['academic_document_label'] = $matchScore['academic_document_label'] ?? 'TOR/grades';
             $scholarship['profile_checks'] = $matchScore['profile_checks'] ?? [];
             $scholarship['profile_requirement_total'] = $matchScore['profile_requirement_total'] ?? 0;
             $scholarship['profile_requirement_met'] = $matchScore['profile_requirement_met'] ?? 0;
@@ -116,6 +117,7 @@ class ScholarshipService {
             'year_level' => strtolower(trim((string) ($userProfile['year_level'] ?? ''))),
             'admission_status' => strtolower(trim((string) ($userProfile['admission_status'] ?? ''))),
             'shs_strand' => strtolower(trim((string) ($userProfile['shs_strand'] ?? ''))),
+            'shs_average' => strtolower(trim((string) ($userProfile['shs_average'] ?? ''))),
             'course' => strtolower(trim((string) ($userProfile['course'] ?? $userCourse ?? ''))),
             'target_course' => strtolower(trim((string) ($userProfile['target_course'] ?? ''))),
             'school' => strtolower(trim((string) ($userProfile['school'] ?? ''))),
@@ -551,6 +553,14 @@ class ScholarshipService {
         $maxScore = 145;
         $eligible = true;
         $requiresGwa = false;
+        $normalizedProfile = $this->normalizeProfile($userProfile, $userCourse);
+        $academicScore = resolveApplicantAcademicScore(
+            $normalizedProfile['applicant_type'] ?? '',
+            $userGWA,
+            $normalizedProfile['shs_average'] ?? null
+        );
+        $academicMetricLabel = getApplicantAcademicMetricLabel($normalizedProfile['applicant_type'] ?? '');
+        $academicDocumentLabel = getApplicantAcademicDocumentLabel($normalizedProfile['applicant_type'] ?? '');
         $profileEvaluation = $this->evaluateProfileRequirements($scholarship, $userProfile);
         $currentInfoSignals = $this->evaluateCurrentInformationSignals($scholarship, $userProfile);
         if (!$profileEvaluation['eligible']) {
@@ -560,21 +570,18 @@ class ScholarshipService {
         $requiredGwa = null;
         if (isset($scholarship['min_gwa']) && $scholarship['min_gwa'] !== null && $scholarship['min_gwa'] !== '') {
             $requiredGwa = (float) $scholarship['min_gwa'];
-        } elseif (isset($scholarship['max_gwa']) && $scholarship['max_gwa'] !== null && $scholarship['max_gwa'] !== '') {
-            // Backward compatibility for existing data.
-            $requiredGwa = (float) $scholarship['max_gwa'];
         }
 
         // Check GWA requirement (40 points).
         // Only block on GWA when the scholarship actually defines a GWA limit.
         if ($requiredGwa !== null) {
-            if ($userGWA !== null) {
-                if ($userGWA <= $requiredGwa) {
+            if ($academicScore !== null) {
+                if ($academicScore <= $requiredGwa) {
                     $gwaScore = 40;
                     // Bonus for excellent GWA
-                    if ($userGWA <= 1.5) {
+                    if ($academicScore <= 1.5) {
                         $gwaScore += 10;
-                    } elseif ($userGWA <= 1.75) {
+                    } elseif ($academicScore <= 1.75) {
                         $gwaScore += 5;
                     }
                     $score += $gwaScore;
@@ -595,8 +602,11 @@ class ScholarshipService {
         }
         
         // Course compatibility (30 points)
-        if ($userCourse) {
-            $courseScore = $this->calculateCourseScore($scholarship, $userCourse);
+        $referenceCourse = $normalizedProfile['target_course'] !== ''
+            ? $normalizedProfile['target_course']
+            : ($normalizedProfile['course'] ?? '');
+        if ($referenceCourse !== '') {
+            $courseScore = $this->calculateCourseScore($scholarship, $referenceCourse);
             $score += $courseScore;
         } else {
             $score += 15; // No course data
@@ -657,6 +667,9 @@ class ScholarshipService {
             'percentage' => $percentage,
             'eligible' => $eligible,
             'requires_gwa' => $requiresGwa,
+            'academic_score' => $academicScore,
+            'academic_metric_label' => $academicMetricLabel,
+            'academic_document_label' => $academicDocumentLabel,
             'profile_checks' => $profileEvaluation['checks'],
             'profile_requirement_total' => $profileEvaluation['total'],
             'profile_requirement_met' => $profileEvaluation['met'],

@@ -93,7 +93,6 @@ function queueBuildMatchGuidePayload(array $application, ScholarshipService $sch
         'deadline' => $application['deadline'] ?? null,
         'application_open_date' => $application['scholarship_application_open_date'] ?? null,
         'min_gwa' => $application['scholarship_min_gwa'] ?? null,
-        'max_gwa' => $application['scholarship_max_gwa'] ?? null,
         'address' => (string) ($application['scholarship_address'] ?? ''),
         'city' => (string) ($application['scholarship_city'] ?? ''),
         'province' => (string) ($application['scholarship_province'] ?? ''),
@@ -151,8 +150,6 @@ function queueBuildMatchGuidePayload(array $application, ScholarshipService $sch
     $matchRequiredGwa = null;
     if ($scholarshipContext['min_gwa'] !== null && $scholarshipContext['min_gwa'] !== '') {
         $matchRequiredGwa = (float) $scholarshipContext['min_gwa'];
-    } elseif ($scholarshipContext['max_gwa'] !== null && $scholarshipContext['max_gwa'] !== '') {
-        $matchRequiredGwa = (float) $scholarshipContext['max_gwa'];
     }
 
     $pushReason = static function (array &$reasons, string $reason, int $limit = 4): void {
@@ -430,9 +427,8 @@ $studentProvinceSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', '
 $studentCitizenshipSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'citizenship');
 $studentIncomeBracketSelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'household_income_bracket');
 $studentSpecialCategorySelect = queueOptionalColumnSelect($pdo, 'sd', 'student_data', 'special_category');
-$scholarshipEligibilitySelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'eligibility', 'scholarship_eligibility');
-$scholarshipMinGwaSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'min_gwa', 'scholarship_min_gwa');
-$scholarshipMaxGwaSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'max_gwa', 'scholarship_max_gwa');
+$scholarshipEligibilitySelect = queueOptionalColumnSelect($pdo, 's', 'scholarships', 'eligibility', 'scholarship_eligibility');
+$scholarshipMinGwaSelect = queueOptionalColumnSelect($pdo, 's', 'scholarships', 'min_gwa', 'scholarship_min_gwa');
 $scholarshipAddressSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'address', 'scholarship_address');
 $scholarshipCitySelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'city', 'scholarship_city');
 $scholarshipProvinceSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'province', 'scholarship_province');
@@ -505,7 +501,6 @@ try {
             s.description AS scholarship_description,
             {$scholarshipEligibilitySelect}
             {$scholarshipMinGwaSelect}
-            {$scholarshipMaxGwaSelect}
             COALESCE(sd2.provider, 'Not specified') AS provider,
             sd2.deadline,
             {$scholarshipAddressSelect}
@@ -711,6 +706,7 @@ unset($_SESSION['success'], $_SESSION['error']);
                             : 'Not scored';
                         $scoreLabel = $application['probability_score'] !== null ? 'Profile score' : 'Profile score unavailable';
                         $statusValue = (string) ($application['status'] ?? 'pending');
+                        $isIncomingFreshmanApplicant = strtolower(trim((string) ($application['applicant_type'] ?? ''))) === 'incoming_freshman';
                         $courseLabel = trim((string) ($application['course'] ?? '')) ?: 'Course not provided';
                         $schoolLabel = trim((string) ($application['school'] ?? '')) ?: 'School not provided';
                         $viewApplicationUrl = buildEntityUrl('view_application.php', 'application', $applicationId, 'view', ['id' => $applicationId]);
@@ -724,7 +720,9 @@ unset($_SESSION['success'], $_SESSION['error']);
                                         <p><?php echo htmlspecialchars($application['email']); ?></p>
                                         <div class="application-record-submeta">
                                             <span><i class="fas fa-graduation-cap"></i><?php echo htmlspecialchars($courseLabel); ?></span>
-                                            <span><i class="fas fa-school"></i><?php echo htmlspecialchars($schoolLabel); ?></span>
+                                            <?php if (!$isIncomingFreshmanApplicant): ?>
+                                                <span><i class="fas fa-school"></i><?php echo htmlspecialchars($schoolLabel); ?></span>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
