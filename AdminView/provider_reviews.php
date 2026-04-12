@@ -58,14 +58,56 @@ function providerReviewsWebsiteLabel(?string $value): string
     return preg_replace('#^https?://#i', '', rtrim($website, '/')) ?? $website;
 }
 
-function providerReviewsFileExists(?string $relativePath): bool
+function providerReviewsResolveFilePath(?string $relativePath): ?string
 {
     $normalized = trim(str_replace('\\', '/', (string) $relativePath), '/');
     if ($normalized === '' || strpos($normalized, '..') !== false) {
-        return false;
+        return null;
     }
 
-    return is_file(dirname(__DIR__) . '/public/uploads/' . $normalized);
+    $candidatePaths = [$normalized];
+    if (strpos($normalized, 'public/uploads/') === 0) {
+        $candidatePaths[] = substr($normalized, strlen('public/uploads/'));
+    }
+    if (strpos($normalized, 'uploads/') === 0) {
+        $candidatePaths[] = substr($normalized, strlen('uploads/'));
+    }
+    $candidatePaths = array_values(array_unique(array_filter($candidatePaths, static fn($value) => trim((string) $value) !== '')));
+
+    $projectRoot = dirname(__DIR__);
+    foreach ($candidatePaths as $candidatePath) {
+        $publicAbsolutePath = $projectRoot . '/public/uploads/' . $candidatePath;
+        if (is_file($publicAbsolutePath)) {
+            return $publicAbsolutePath;
+        }
+
+        $legacyAbsolutePath = $projectRoot . '/app/public/uploads/' . $candidatePath;
+        if (!is_file($legacyAbsolutePath)) {
+            continue;
+        }
+
+        $publicDirectory = dirname($publicAbsolutePath);
+        if (!is_dir($publicDirectory)) {
+            @mkdir($publicDirectory, 0775, true);
+        }
+
+        if (!is_file($publicAbsolutePath)) {
+            @rename($legacyAbsolutePath, $publicAbsolutePath);
+        }
+
+        if (is_file($publicAbsolutePath)) {
+            return $publicAbsolutePath;
+        }
+
+        return $legacyAbsolutePath;
+    }
+
+    return null;
+}
+
+function providerReviewsFileExists(?string $relativePath): bool
+{
+    return providerReviewsResolveFilePath($relativePath) !== null;
 }
 
 $search = trim((string) ($_GET['search'] ?? ''));

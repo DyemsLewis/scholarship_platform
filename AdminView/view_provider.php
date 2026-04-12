@@ -136,6 +136,53 @@ function providerReviewAddress(array $profile): string
     return providerReviewValue($profile['address'] ?? '');
 }
 
+function providerReviewLocateUpload(string $candidatePath): array
+{
+    $projectRoot = dirname(__DIR__);
+    $segments = array_map('rawurlencode', explode('/', $candidatePath));
+    $publicAbsolutePath = $projectRoot . '/public/uploads/' . $candidatePath;
+
+    if (is_file($publicAbsolutePath)) {
+        return [
+            'exists' => true,
+            'absolute_path' => $publicAbsolutePath,
+            'url' => '../public/uploads/' . implode('/', $segments)
+        ];
+    }
+
+    $legacyAbsolutePath = $projectRoot . '/app/public/uploads/' . $candidatePath;
+    if (!is_file($legacyAbsolutePath)) {
+        return [
+            'exists' => false,
+            'absolute_path' => '',
+            'url' => ''
+        ];
+    }
+
+    $publicDirectory = dirname($publicAbsolutePath);
+    if (!is_dir($publicDirectory)) {
+        @mkdir($publicDirectory, 0775, true);
+    }
+
+    if (!is_file($publicAbsolutePath)) {
+        @rename($legacyAbsolutePath, $publicAbsolutePath);
+    }
+
+    if (is_file($publicAbsolutePath)) {
+        return [
+            'exists' => true,
+            'absolute_path' => $publicAbsolutePath,
+            'url' => '../public/uploads/' . implode('/', $segments)
+        ];
+    }
+
+    return [
+        'exists' => true,
+        'absolute_path' => $legacyAbsolutePath,
+        'url' => '../app/public/uploads/' . implode('/', $segments)
+    ];
+}
+
 function providerReviewUploadedFileMeta(?string $relativePath): array
 {
     $rawPath = trim((string) $relativePath);
@@ -174,17 +221,16 @@ function providerReviewUploadedFileMeta(?string $relativePath): array
     $candidatePaths = array_values(array_unique(array_filter($candidatePaths, static fn($value) => trim((string) $value) !== '')));
 
     foreach ($candidatePaths as $candidatePath) {
-        $absolutePath = dirname(__DIR__) . '/public/uploads/' . $candidatePath;
-        if (!is_file($absolutePath)) {
+        $resolvedUpload = providerReviewLocateUpload($candidatePath);
+        if (empty($resolvedUpload['exists'])) {
             continue;
         }
 
-        $segments = array_map('rawurlencode', explode('/', $candidatePath));
         return [
             'recorded' => true,
             'exists' => true,
-            'absolute_path' => $absolutePath,
-            'url' => '../public/uploads/' . implode('/', $segments),
+            'absolute_path' => (string) ($resolvedUpload['absolute_path'] ?? ''),
+            'url' => (string) ($resolvedUpload['url'] ?? ''),
             'filename' => basename($candidatePath),
             'extension' => strtolower(pathinfo($candidatePath, PATHINFO_EXTENSION)),
             'stored_path' => $rawPath
@@ -262,7 +308,6 @@ $providerLatitude = trim((string) ($providerProfile['latitude'] ?? ''));
 $providerLongitude = trim((string) ($providerProfile['longitude'] ?? ''));
 $providerLocationName = trim((string) ($providerProfile['location_name'] ?? ''));
 $hasPinnedLocation = $providerLatitude !== '' && $providerLongitude !== '';
-$coordinatesLabel = $hasPinnedLocation ? $providerLatitude . ', ' . $providerLongitude : 'No map pin recorded';
 $hasAddress = trim($addressLabel) !== '' && $addressLabel !== 'Not provided';
 $hasDescription = trim((string) ($providerProfile['description'] ?? '')) !== '';
 $verificationMeta = providerReviewUploadedFileMeta($providerProfile['verification_document'] ?? null);
@@ -339,6 +384,48 @@ foreach ($legitimacySignals as $signal) {
 }
 
 $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', ['id' => $providerId]);
+$providerStatusLabel = ucfirst($currentStatus);
+$providerVerificationLabel = $hasVerificationDocument
+    ? 'Uploaded'
+    : ($hasStoredVerificationDocument ? 'Stored path issue' : 'Missing');
+$providerReviewIssues = [];
+if (!$hasVerificationDocument) {
+    $providerReviewIssues[] = 'verification file';
+}
+if ($organizationEmail === '') {
+    $providerReviewIssues[] = 'organization email';
+}
+if (!$hasAddress) {
+    $providerReviewIssues[] = 'address details';
+}
+$providerReviewTone = ($currentStatus === 'active' || empty($providerReviewIssues)) ? 'ready' : 'attention';
+if ($currentStatus === 'active') {
+    $providerReadinessLabel = 'Account already active';
+    $providerReadinessNote = 'This provider already has access. Continue checking the organization profile and uploaded file for record accuracy.';
+} elseif (empty($providerReviewIssues)) {
+    $providerReadinessLabel = 'Ready for activation review';
+    $providerReadinessNote = 'Core review details are present. Cross-check the organization profile, contact ownership, and verification file before activating the account.';
+} else {
+    $providerReadinessLabel = 'Needs manual review';
+    $providerReadinessNote = 'Check the ' . implode(', ', $providerReviewIssues) . ' before activating this provider account.';
+}
+$providerSourceLabel = ucwords(str_replace('_', ' ', $profileSource !== '' ? $profileSource : 'provider_data'));
+$providerReviewDescription = 'Review the provider profile, contact ownership, and verification proof before granting provider access.';
+$providerContactSummary = providerReviewValue($providerDisplayName) . ' | ' . providerReviewValue($providerProfile['contact_person_position'] ?? '', 'Contact position not set');
+$providerLocationSummary = trim(implode(', ', array_filter([
+    trim((string) ($providerProfile['city'] ?? '')),
+    trim((string) ($providerProfile['province'] ?? ''))
+])));
+if ($providerLocationSummary === '') {
+    $providerLocationSummary = 'Location not set';
+}
+$providerFlashSuccess = isset($_SESSION['success']) ? (string) $_SESSION['success'] : '';
+$providerFlashError = isset($_SESSION['error']) ? (string) $_SESSION['error'] : '';
+unset($_SESSION['success'], $_SESSION['error']);
+$adminStyleVersion = @filemtime(__DIR__ . '/../public/css/admin_style.css') ?: time();
+$reviewsStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/reviews.css') ?: time();
+$viewApplicationStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/view-application.css') ?: time();
+$viewProviderStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/view-provider.css') ?: time();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -348,90 +435,153 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
     <title>Provider Review - Admin</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="../public/css/admin_style.css">
-    <link rel="stylesheet" href="../AdminPublic/css/reviews.css?v=2">
-    <link rel="stylesheet" href="../AdminPublic/css/view-provider.css?v=<?php echo urlencode((string) @filemtime(__DIR__ . '/../AdminPublic/css/view-provider.css')); ?>">
+    <link rel="stylesheet" href="../public/css/admin_style.css?v=<?php echo urlencode((string) $adminStyleVersion); ?>">
+    <link rel="stylesheet" href="../AdminPublic/css/reviews.css?v=<?php echo urlencode((string) $reviewsStyleVersion); ?>">
+    <link rel="stylesheet" href="../AdminPublic/css/view-application.css?v=<?php echo urlencode((string) $viewApplicationStyleVersion); ?>">
+    <link rel="stylesheet" href="../AdminPublic/css/view-provider.css?v=<?php echo urlencode((string) $viewProviderStyleVersion); ?>">
 </head>
-<body>
+<body class="application-review-screen provider-review-screen">
     <?php include 'layouts/admin_header.php'; ?>
 
     <section class="admin-dashboard provider-review-page">
         <div class="container">
-            <?php if (isset($_SESSION['success'])): ?>
-            <div class="alert alert-success">
+            <?php if ($providerFlashSuccess !== ''): ?>
+            <div class="alert alert-success application-review-alert">
                 <i class="fas fa-check-circle"></i>
-                <p><?php echo htmlspecialchars((string) $_SESSION['success']); unset($_SESSION['success']); ?></p>
+                <p><?php echo htmlspecialchars($providerFlashSuccess); ?></p>
             </div>
             <?php endif; ?>
 
-            <?php if (isset($_SESSION['error'])): ?>
-            <div class="alert alert-error">
+            <?php if ($providerFlashError !== ''): ?>
+            <div class="alert alert-error application-review-alert">
                 <i class="fas fa-exclamation-circle"></i>
-                <p><?php echo htmlspecialchars((string) $_SESSION['error']); unset($_SESSION['error']); ?></p>
+                <p><?php echo htmlspecialchars($providerFlashError); ?></p>
             </div>
             <?php endif; ?>
 
-            <div class="page-header-modern provider-header-modern">
-                <div class="provider-header-shell">
-                    <div class="provider-header-copy">
-                        <a href="provider_reviews.php" class="back-link-modern"><i class="fas fa-arrow-left"></i> Back to Provider Reviews</a>
-                        <h1><?php echo htmlspecialchars($organizationName); ?></h1>
-                        <p>Review organization details, contact information, and the uploaded verification file before activating this provider account.</p>
+            <div class="page-header provider-review-page-header">
+                <div>
+                    <h1><i class="fas fa-building-shield"></i> Provider Review</h1>
+                    <p>Review organization legitimacy, contact ownership, and the uploaded verification file before granting provider access.</p>
+                </div>
+                <a href="provider_reviews.php" class="app-review-header-back provider-review-page-back">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Back to Provider Reviews</span>
+                </a>
+            </div>
 
-                        <div class="provider-header-chips">
-                            <span class="provider-chip provider-chip-status provider-chip-<?php echo htmlspecialchars($currentStatus); ?>">
-                                Account: <?php echo htmlspecialchars(ucfirst($currentStatus)); ?>
+            <?php $reviewsCurrentView = 'providers'; include 'layouts/reviews_nav.php'; ?>
+
+            <section class="app-review-shell provider-review-shell state-<?php echo htmlspecialchars($providerReviewTone); ?>">
+                <div class="app-review-shell-inner">
+                    <div class="app-review-shell-brand">
+                        <div class="app-review-shell-kicker-group">
+                            <span class="app-review-brand-pill">
+                                <i class="fas fa-building-shield"></i>
+                                Review Workspace
                             </span>
-                            <span class="provider-chip <?php echo $isVerified ? 'provider-chip-good' : 'provider-chip-warning'; ?>">
-                                <?php echo $isVerified ? 'Verified' : 'Needs Manual Review'; ?>
+                            <span class="app-review-shell-status">
+                                <i class="fas <?php echo htmlspecialchars($providerReviewTone === 'ready' ? 'fa-circle-check' : 'fa-triangle-exclamation'); ?>"></i>
+                                <?php echo htmlspecialchars($providerReadinessLabel); ?>
                             </span>
-                            <span class="provider-chip provider-chip-neutral">
-                                Source: <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $profileSource !== '' ? $profileSource : 'provider_data'))); ?>
+                        </div>
+
+                        <div class="app-review-avatar-stage">
+                            <span class="app-review-avatar-mark provider-review-avatar-mark">
+                                <?php echo htmlspecialchars(getUserInitials($organizationName)); ?>
                             </span>
                         </div>
                     </div>
 
-                    <div class="provider-header-actions">
-                        <?php if ($currentStatus !== 'active'): ?>
-                        <form method="POST" action="<?php echo htmlspecialchars($providerStatusActionUrl); ?>" class="provider-activate-form" data-provider-activate-form="true">
-                            <input type="hidden" name="action" value="update_status">
-                            <?php echo csrfInputField('admin_account_management'); ?>
-                            <input type="hidden" name="user_id" value="<?php echo $providerId; ?>">
-                            <input type="hidden" name="status" value="active">
-                            <input type="hidden" name="entity_token" value="<?php echo htmlspecialchars($providerStatusToken); ?>">
-                            <input type="hidden" name="redirect_target" value="provider_review">
-                            <button type="submit" class="btn btn-primary provider-activate-button">
-                                <i class="fas fa-circle-check"></i>
-                                Activate Provider
-                            </button>
-                        </form>
-                        <?php else: ?>
-                        <div class="provider-active-note">
-                            <i class="fas fa-circle-check"></i>
-                            Provider account is active
+                    <div class="app-review-shell-content">
+                        <div class="app-review-shell-head">
+                            <div class="app-review-shell-title-wrap">
+                                <h1><?php echo htmlspecialchars($organizationName); ?></h1>
+                                <p><?php echo htmlspecialchars($providerContactSummary); ?></p>
+                            </div>
+                            <div class="app-review-shell-head-actions">
+                                <span class="provider-review-source-chip">
+                                    <i class="fas fa-database"></i>
+                                    <?php echo htmlspecialchars($providerSourceLabel); ?>
+                                </span>
+                            </div>
                         </div>
-                        <?php endif; ?>
-                        <?php if ($canManageAccounts): ?>
-                        <a href="<?php echo htmlspecialchars($editProviderUrl); ?>" class="btn btn-outline provider-action-button">
-                            <i class="fas fa-pen-to-square"></i>
-                            Edit Account
-                        </a>
-                        <?php endif; ?>
-                        <?php if ($website !== ''): ?>
-                        <a href="<?php echo htmlspecialchars($website); ?>" class="btn btn-outline provider-action-button" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-up-right-from-square"></i>
-                            Visit Website
-                        </a>
-                        <?php endif; ?>
-                        <?php if ($hasVerificationDocument): ?>
-                        <a href="<?php echo htmlspecialchars($verificationMeta['url']); ?>" class="btn btn-outline provider-action-button" target="_blank" rel="noopener noreferrer">
-                            <i class="fas fa-file-arrow-down"></i>
-                            Open Verification File
-                        </a>
-                        <?php endif; ?>
+
+                        <div class="app-review-provider-summary">
+                            <div class="app-review-provider-line">
+                                <span class="app-review-provider-label">Organization Type</span>
+                                <strong class="app-review-provider-inline-name"><?php echo htmlspecialchars($organizationType); ?></strong>
+                            </div>
+                            <p class="app-review-provider-inline-note"><?php echo htmlspecialchars($providerReviewDescription); ?></p>
+                        </div>
+
+                        <div class="app-review-summary-strip provider-review-summary-strip">
+                            <article class="app-review-summary-tile">
+                                <span>Account Status</span>
+                                <strong><?php echo htmlspecialchars($providerStatusLabel); ?></strong>
+                            </article>
+                            <article class="app-review-summary-tile">
+                                <span>Manual Verification</span>
+                                <strong><?php echo $isVerified ? 'Verified' : 'Pending'; ?></strong>
+                            </article>
+                            <article class="app-review-summary-tile">
+                                <span>Verification File</span>
+                                <strong><?php echo htmlspecialchars($providerVerificationLabel); ?></strong>
+                            </article>
+                            <article class="app-review-summary-tile">
+                                <span>Review Signals</span>
+                                <strong><?php echo htmlspecialchars($reviewStats['good'] . ' strong / ' . $reviewStats['warning'] . ' flagged'); ?></strong>
+                            </article>
+                        </div>
+
+                        <div class="app-review-next-step-banner is-<?php echo htmlspecialchars($providerReviewTone === 'ready' ? 'success' : 'warning'); ?>">
+                            <i class="fas <?php echo htmlspecialchars($providerReviewTone === 'ready' ? 'fa-circle-check' : 'fa-shield-halved'); ?>"></i>
+                            <span><?php echo htmlspecialchars($providerReadinessNote); ?></span>
+                        </div>
+
+                        <div class="provider-review-action-row">
+                            <?php if ($currentStatus !== 'active'): ?>
+                            <form method="POST" action="<?php echo htmlspecialchars($providerStatusActionUrl); ?>" class="provider-activate-form" data-provider-activate-form="true">
+                                <input type="hidden" name="action" value="update_status">
+                                <?php echo csrfInputField('admin_account_management'); ?>
+                                <input type="hidden" name="user_id" value="<?php echo $providerId; ?>">
+                                <input type="hidden" name="status" value="active">
+                                <input type="hidden" name="entity_token" value="<?php echo htmlspecialchars($providerStatusToken); ?>">
+                                <input type="hidden" name="redirect_target" value="provider_review">
+                                <button type="submit" class="btn btn-primary provider-activate-button">
+                                    <i class="fas fa-circle-check"></i>
+                                    Activate Provider
+                                </button>
+                            </form>
+                            <?php else: ?>
+                            <div class="provider-action-status">
+                                <i class="fas fa-circle-check"></i>
+                                Provider account is active
+                            </div>
+                            <?php endif; ?>
+                            <?php if ($canManageAccounts): ?>
+                            <a href="<?php echo htmlspecialchars($editProviderUrl); ?>" class="btn btn-outline provider-action-button">
+                                <i class="fas fa-pen-to-square"></i>
+                                Edit Account
+                            </a>
+                            <?php endif; ?>
+                            <?php if ($website !== ''): ?>
+                            <a href="<?php echo htmlspecialchars($website); ?>" class="btn btn-outline provider-action-button" target="_blank" rel="noopener noreferrer">
+                                <i class="fas fa-up-right-from-square"></i>
+                                Visit Website
+                            </a>
+                            <?php endif; ?>
+                            <?php if ($hasVerificationDocument): ?>
+                            <button type="button" class="btn btn-outline provider-action-button provider-open-file-modal" data-provider-file-modal-open="true">
+                                <i class="fas fa-file-arrow-down"></i>
+                                View Verification File
+                            </button>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
-            </div>
+
+            </section>
 
             <?php if ($profileSource === 'staff_profiles'): ?>
             <div class="provider-review-note">
@@ -440,10 +590,10 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
             </div>
             <?php endif; ?>
 
-            <div class="provider-review-layout">
-                <main class="provider-review-main">
-                    <section class="form-card-modern provider-panel provider-summary-panel">
-                        <div class="card-header">
+            <div class="provider-review-layout review-layout">
+                <main class="provider-review-main review-main">
+                    <section id="providerSnapshot" class="form-card-modern provider-panel provider-summary-panel provider-panel-accent-summary">
+                        <div class="card-header review-panel-header">
                             <div>
                                 <h3><i class="fas fa-list-check"></i> Review Snapshot</h3>
                                 <small>Provider legitimacy signals</small>
@@ -487,8 +637,8 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
                         </div>
                     </section>
 
-                    <section class="form-card-modern provider-panel">
-                        <div class="card-header">
+                    <section id="providerOrganization" class="form-card-modern provider-panel provider-panel-accent-profile">
+                        <div class="card-header review-panel-header">
                             <div>
                                 <h3><i class="fas fa-building"></i> Organization Details</h3>
                                 <small>Organization information</small>
@@ -528,7 +678,7 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
                             </div>
                             <div class="detail-card">
                                 <span class="detail-label">Pinned Location</span>
-                                <div class="detail-value"><?php echo htmlspecialchars(providerReviewValue($providerLocationName, $hasPinnedLocation ? 'Coordinates only' : 'Not provided')); ?></div>
+                                <div class="detail-value"><?php echo htmlspecialchars(providerReviewValue($providerLocationName, $hasPinnedLocation ? 'Map pin recorded' : 'Not provided')); ?></div>
                             </div>
                             <div class="detail-card">
                                 <span class="detail-label">City</span>
@@ -542,10 +692,6 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
                                 <span class="detail-label">ZIP Code</span>
                                 <div class="detail-value"><?php echo htmlspecialchars(providerReviewValue($providerProfile['zip_code'] ?? '')); ?></div>
                             </div>
-                            <div class="detail-card">
-                                <span class="detail-label">Coordinates</span>
-                                <div class="detail-value"><?php echo htmlspecialchars($coordinatesLabel); ?></div>
-                            </div>
                             <div class="detail-card full">
                                 <span class="detail-label">Organization Description</span>
                                 <div class="detail-value <?php echo $hasDescription ? '' : 'muted'; ?>"><?php echo nl2br(htmlspecialchars(providerReviewValue($providerProfile['description'] ?? '', 'No organization description was provided.'))); ?></div>
@@ -554,8 +700,8 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
                         </div>
                     </section>
 
-                    <section class="form-card-modern provider-panel">
-                        <div class="card-header">
+                    <section id="providerContact" class="form-card-modern provider-panel provider-panel-accent-program">
+                        <div class="card-header review-panel-header">
                             <div>
                                 <h3><i class="fas fa-address-card"></i> Contact and Account Information</h3>
                                 <small>Contact and login details</small>
@@ -602,8 +748,8 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
                         </div>
                     </section>
 
-                    <section class="form-card-modern provider-panel">
-                        <div class="card-header">
+                    <section id="providerVerification" class="form-card-modern provider-panel provider-panel-accent-timeline">
+                        <div class="card-header review-panel-header">
                             <div>
                                 <h3><i class="fas fa-file-lines"></i> Verification File</h3>
                                 <small>Uploaded file</small>
@@ -614,28 +760,13 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
                         <div class="document-summary-bar">
                             <div>
                                 <strong><?php echo htmlspecialchars($verificationMeta['filename']); ?></strong>
-                                <p>Available file</p>
+                                <p>Available file. Use the button to inspect the full verification document in a modal.</p>
                             </div>
-                            <a href="<?php echo htmlspecialchars($verificationMeta['url']); ?>" class="btn btn-outline" target="_blank" rel="noopener noreferrer">
+                            <button type="button" class="btn btn-outline provider-open-file-modal" data-provider-file-modal-open="true">
                                 <i class="fas fa-up-right-from-square"></i>
-                                Open Full File
-                            </a>
+                                View Full File
+                            </button>
                         </div>
-
-                        <?php if ($isImagePreview): ?>
-                        <div class="document-preview image-preview">
-                            <img src="<?php echo htmlspecialchars($verificationMeta['url']); ?>" alt="Provider verification document preview">
-                        </div>
-                        <?php elseif ($isPdfPreview): ?>
-                        <div class="document-preview pdf-preview">
-                            <iframe src="<?php echo htmlspecialchars($verificationMeta['url']); ?>#toolbar=0" title="Provider verification document preview"></iframe>
-                        </div>
-                        <?php else: ?>
-                        <div class="document-preview document-preview-fallback">
-                            <i class="fas fa-file-lines"></i>
-                            <p>This file type does not support inline preview here, but it can still be opened in a new tab.</p>
-                        </div>
-                        <?php endif; ?>
                         <?php elseif ($hasStoredVerificationDocument): ?>
                         <div class="document-preview document-preview-fallback">
                             <i class="fas fa-file-circle-exclamation"></i>
@@ -651,9 +782,9 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
                     </section>
                 </main>
 
-                <aside class="provider-review-aside">
-                    <section class="form-card-modern provider-side-card">
-                        <div class="card-header">
+                <aside class="provider-review-aside review-sidebar sidebar-stack">
+                    <section class="form-card-modern provider-side-card provider-panel-accent-summary">
+                        <div class="card-header review-panel-header">
                             <div>
                                 <h3><i class="fas fa-clipboard-check"></i> Review Summary</h3>
                                 <small>Activation checklist</small>
@@ -682,11 +813,14 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
                                 <strong><?php echo $hasAddress ? 'Provided' : 'Incomplete'; ?></strong>
                             </li>
                             </ul>
+                            <div class="review-note info provider-inline-note">
+                                Profile source: <?php echo htmlspecialchars($providerSourceLabel); ?>
+                            </div>
                         </div>
                     </section>
 
-                    <section class="form-card-modern provider-side-card">
-                        <div class="card-header">
+                    <section class="form-card-modern provider-side-card provider-panel-accent-timeline">
+                        <div class="card-header review-panel-header">
                             <div>
                                 <h3><i class="fas fa-clock-rotate-left"></i> Timeline</h3>
                                 <small>Account activity</small>
@@ -710,8 +844,8 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
                         </div>
                     </section>
 
-                    <section class="form-card-modern provider-side-card">
-                        <div class="card-header">
+                    <section class="form-card-modern provider-side-card provider-panel-accent-program">
+                        <div class="card-header review-panel-header">
                             <div>
                                 <h3><i class="fas fa-shield-heart"></i> Review Reminder</h3>
                                 <small>Before activation</small>
@@ -719,12 +853,66 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
                         </div>
                         <div class="card-body">
                             <p class="review-reminder">Check the verification file, organization website, and contact details before activating this provider account.</p>
+                            <div class="review-note <?php echo htmlspecialchars($providerReviewTone === 'ready' ? 'ready' : 'warning'); ?> provider-inline-note">
+                                <?php echo htmlspecialchars($providerReadinessNote); ?>
+                            </div>
                         </div>
                     </section>
                 </aside>
             </div>
         </div>
     </section>
+
+    <?php if ($hasVerificationDocument): ?>
+    <div class="provider-file-modal" id="providerFileModal" aria-hidden="true">
+        <div class="provider-file-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="providerFileModalTitle">
+            <div class="provider-file-modal-header">
+                <div>
+                    <h3 id="providerFileModalTitle">Verification File</h3>
+                    <p><?php echo htmlspecialchars($verificationMeta['filename']); ?></p>
+                </div>
+                <button type="button" class="provider-file-modal-close" id="providerFileModalClose" aria-label="Close verification file preview">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div class="provider-file-modal-body">
+                <?php if ($isImagePreview): ?>
+                <div class="provider-file-modal-preview-wrap" id="providerFileModalPreviewWrap">
+                    <img src="<?php echo htmlspecialchars($verificationMeta['url']); ?>" id="providerFileModalImage" alt="Provider verification file full preview">
+                </div>
+                <?php elseif ($isPdfPreview): ?>
+                <div class="provider-file-modal-preview-wrap" id="providerFileModalPreviewWrap">
+                    <iframe src="<?php echo htmlspecialchars($verificationMeta['url']); ?>#toolbar=1&navpanes=0" id="providerFileModalFrame" title="Provider verification file full preview"></iframe>
+                </div>
+                <?php else: ?>
+                <div class="provider-file-modal-preview provider-file-modal-preview-fallback">
+                    <i class="fas fa-file-lines"></i>
+                    <p>This file type cannot be previewed in the modal.</p>
+                    <a href="<?php echo htmlspecialchars($verificationMeta['url']); ?>" class="btn btn-outline" target="_blank" rel="noopener noreferrer">
+                        <i class="fas fa-up-right-from-square"></i>
+                        Open in New Tab
+                    </a>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <div class="provider-file-modal-footer">
+                <div class="provider-file-modal-zoom-controls" aria-label="Verification file zoom controls">
+                    <button type="button" class="btn btn-outline provider-file-modal-zoom-btn" id="providerFileModalZoomOut" title="Zoom out">
+                        <i class="fas fa-magnifying-glass-minus"></i>
+                    </button>
+                    <span class="provider-file-modal-zoom-level" id="providerFileModalZoomLevel">100%</span>
+                    <button type="button" class="btn btn-outline provider-file-modal-zoom-btn" id="providerFileModalZoomIn" title="Zoom in">
+                        <i class="fas fa-magnifying-glass-plus"></i>
+                    </button>
+                    <button type="button" class="btn btn-outline provider-file-modal-reset-btn" id="providerFileModalZoomReset">Reset</button>
+                </div>
+                <button type="button" class="btn btn-outline" id="providerFileModalFooterClose">Close</button>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
@@ -754,6 +942,134 @@ $editProviderUrl = buildEntityUrl('edit_user.php', 'user', $providerId, 'edit', 
                     providerActivateForm.submit();
                 }
             });
+        }
+
+        const providerFileModal = document.getElementById('providerFileModal');
+        if (providerFileModal) {
+            const openButtons = document.querySelectorAll('[data-provider-file-modal-open="true"]');
+            const closeButtons = [
+                document.getElementById('providerFileModalClose'),
+                document.getElementById('providerFileModalFooterClose')
+            ].filter(Boolean);
+            const providerFileModalPreviewWrap = document.getElementById('providerFileModalPreviewWrap');
+            const providerFileModalImage = document.getElementById('providerFileModalImage');
+            const providerFileModalFrame = document.getElementById('providerFileModalFrame');
+            const providerFileModalZoomOut = document.getElementById('providerFileModalZoomOut');
+            const providerFileModalZoomIn = document.getElementById('providerFileModalZoomIn');
+            const providerFileModalZoomReset = document.getElementById('providerFileModalZoomReset');
+            const providerFileModalZoomLevel = document.getElementById('providerFileModalZoomLevel');
+            const providerFilePreviewType = <?php echo json_encode($isImagePreview ? 'image' : ($isPdfPreview ? 'pdf' : 'document')); ?>;
+            let providerFilePreviewZoom = 1;
+
+            const updateProviderFileZoomControls = () => {
+                const isZoomable = providerFilePreviewType === 'image' || providerFilePreviewType === 'pdf';
+
+                if (providerFileModalZoomOut) {
+                    providerFileModalZoomOut.disabled = !isZoomable;
+                }
+                if (providerFileModalZoomIn) {
+                    providerFileModalZoomIn.disabled = !isZoomable;
+                }
+                if (providerFileModalZoomReset) {
+                    providerFileModalZoomReset.disabled = !isZoomable || Math.abs(providerFilePreviewZoom - 1) < 0.01;
+                }
+                if (providerFileModalZoomLevel) {
+                    providerFileModalZoomLevel.textContent = isZoomable
+                        ? `${Math.round(providerFilePreviewZoom * 100)}%`
+                        : 'N/A';
+                }
+            };
+
+            const applyProviderFileZoom = () => {
+                if (providerFileModalPreviewWrap) {
+                    providerFileModalPreviewWrap.classList.toggle('is-zoomed', providerFilePreviewZoom > 1.01);
+                }
+
+                if (providerFilePreviewType === 'image' && providerFileModalImage) {
+                    providerFileModalImage.style.transform = `scale(${providerFilePreviewZoom})`;
+                    providerFileModalImage.style.transformOrigin = 'top left';
+                    return;
+                }
+
+                if (providerFilePreviewType === 'pdf' && providerFileModalFrame) {
+                    providerFileModalFrame.style.zoom = String(providerFilePreviewZoom);
+                    if (providerFileModalFrame.style.zoom !== String(providerFilePreviewZoom)) {
+                        providerFileModalFrame.style.transform = `scale(${providerFilePreviewZoom})`;
+                        providerFileModalFrame.style.transformOrigin = 'top left';
+                    } else {
+                        providerFileModalFrame.style.transform = '';
+                        providerFileModalFrame.style.transformOrigin = '';
+                    }
+                }
+            };
+
+            const resetProviderFileZoom = () => {
+                providerFilePreviewZoom = 1;
+                applyProviderFileZoom();
+                if (providerFileModalPreviewWrap) {
+                    providerFileModalPreviewWrap.scrollTop = 0;
+                    providerFileModalPreviewWrap.scrollLeft = 0;
+                }
+                updateProviderFileZoomControls();
+            };
+
+            const changeProviderFileZoom = (delta) => {
+                if (providerFilePreviewType !== 'image' && providerFilePreviewType !== 'pdf') {
+                    return;
+                }
+
+                providerFilePreviewZoom = Math.max(0.5, Math.min(3, Number((providerFilePreviewZoom + delta).toFixed(2))));
+                applyProviderFileZoom();
+                updateProviderFileZoomControls();
+            };
+
+            const openProviderFileModal = () => {
+                resetProviderFileZoom();
+                providerFileModal.classList.add('active');
+                providerFileModal.setAttribute('aria-hidden', 'false');
+                document.body.classList.add('provider-file-modal-open');
+            };
+
+            const closeProviderFileModal = () => {
+                providerFileModal.classList.remove('active');
+                providerFileModal.setAttribute('aria-hidden', 'true');
+                document.body.classList.remove('provider-file-modal-open');
+                resetProviderFileZoom();
+            };
+
+            openButtons.forEach((button) => {
+                button.addEventListener('click', openProviderFileModal);
+            });
+
+            closeButtons.forEach((button) => {
+                button.addEventListener('click', closeProviderFileModal);
+            });
+
+            providerFileModal.addEventListener('click', (event) => {
+                if (event.target === providerFileModal) {
+                    closeProviderFileModal();
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && providerFileModal.classList.contains('active')) {
+                    closeProviderFileModal();
+                }
+            });
+
+            if (providerFileModalZoomOut) {
+                providerFileModalZoomOut.addEventListener('click', () => changeProviderFileZoom(-0.25));
+            }
+
+            if (providerFileModalZoomIn) {
+                providerFileModalZoomIn.addEventListener('click', () => changeProviderFileZoom(0.25));
+            }
+
+            if (providerFileModalZoomReset) {
+                providerFileModalZoomReset.addEventListener('click', resetProviderFileZoom);
+            }
+
+            updateProviderFileZoomControls();
         }
     </script>
     <?php include 'layouts/admin_footer.php'; ?>

@@ -158,8 +158,8 @@ if ($accountStatus !== 'active') {
     securityClearRateLimit($loginRateLimitBucket);
     $statusMessageMap = [
         'pending' => 'Your account is pending review. Please wait for approval before signing in.',
-        'inactive' => 'Your account is inactive. Please contact an administrator for assistance.',
-        'suspended' => 'Your account has been suspended. Please contact an administrator for assistance.'
+        'inactive' => 'Your account is inactive. Please contact the support team for assistance.',
+        'suspended' => 'Your account has been suspended. Please contact the support team for assistance.'
     ];
 
     $_SESSION['error'] = $statusMessageMap[$accountStatus] ?? 'Your account is not allowed to sign in at the moment.';

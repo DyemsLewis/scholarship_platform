@@ -1169,7 +1169,7 @@ if ($wizardProfileInitials === '') {
                                                     <p>Code: <code><?php echo htmlspecialchars((string) ($requirement['type'] ?? 'N/A')); ?></code></p>
                                                     <?php if (!empty($docFile['file_name'])): ?><p>File: <?php echo htmlspecialchars((string) $docFile['file_name']); ?></p><?php endif; ?>
                                                     <?php if (!empty($docFile['uploaded_at'])): ?><p>Uploaded: <?php echo date('M d, Y h:i A', strtotime((string) $docFile['uploaded_at'])); ?></p><?php endif; ?>
-                                                    <?php if (!empty($docFile['admin_notes'])): ?><p class="wizard-doc-note"><strong>Admin note:</strong> <?php echo htmlspecialchars((string) $docFile['admin_notes']); ?></p><?php endif; ?>
+                                                    <?php if (!empty($docFile['admin_notes'])): ?><p class="wizard-doc-note"><strong>Review note:</strong> <?php echo htmlspecialchars((string) $docFile['admin_notes']); ?></p><?php endif; ?>
                                                 </div>
                                             </div>
                                             <div class="wizard-doc-side">

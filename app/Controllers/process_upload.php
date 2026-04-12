@@ -41,7 +41,7 @@ function buildAcademicScanReviewMessage(string $documentLabel, bool $scanComplet
     $message .= $scanCompleted
         ? 'The scanner could not detect your academic score this time. '
         : 'The scanner could not complete the scan this time. ';
-    $message .= 'Your document can still be reviewed by admin, who can record your GWA or academic score manually, or you can upload a clearer image or smaller PDF and try again.';
+    $message .= 'Your document can still be reviewed by the review team, and your GWA or academic score can still be recorded manually, or you can upload a clearer image or smaller PDF and try again.';
 
     $scannerStatusMessage = trim($scannerStatusMessage);
     if (

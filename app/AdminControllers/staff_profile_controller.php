@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../Config/session_bootstrap.php';
 require_once __DIR__ . '/../Config/db_config.php';
+require_once __DIR__ . '/../Config/csrf.php';
 require_once __DIR__ . '/../Config/access_control.php';
 require_once __DIR__ . '/../Config/helpers.php';
 require_once __DIR__ . '/../Config/password_policy.php';
@@ -16,7 +17,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 if (!isset($_SESSION['user_id']) || !isRoleIn(['provider', 'admin', 'super_admin'])) {
+    http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'Not authenticated']);
+    exit();
+}
+
+$csrfValidation = csrfValidateRequest('staff_profile_self_service');
+if (!$csrfValidation['valid']) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'message' => $csrfValidation['message']]);
     exit();
 }
 

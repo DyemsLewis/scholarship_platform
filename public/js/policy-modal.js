@@ -113,15 +113,15 @@
             icon: 'fas fa-building-columns',
             eyebrow: 'Provider Review Terms',
             title: 'Provider Terms and Conditions',
-            intro: 'Submitting a provider account means your organization details may be reviewed by administrators before access is granted.',
+            intro: 'Submitting a provider account means your organization details may be reviewed before access is granted.',
             sections: [
                 {
                     heading: 'Accurate organization details',
                     body: 'You confirm that the organization name, contact person, location, and profile details entered are accurate and belong to your institution.'
                 },
                 {
-                    heading: 'Admin review and approval',
-                    body: 'Provider accounts are subject to admin review. Approval may depend on verification files, organization legitimacy, and completeness of submitted details.'
+                    heading: 'Review and approval',
+                    body: 'Provider accounts are subject to review. Approval may depend on verification files, organization legitimacy, and completeness of submitted details.'
                 },
                 {
                     heading: 'Responsible scholarship posting',
@@ -171,7 +171,7 @@
                 },
                 {
                     heading: 'Document verification',
-                    body: 'Uploaded records may be checked by administrators or scholarship providers, and pending or rejected documents can block submission or review.'
+                    body: 'Uploaded records may be checked by reviewers or scholarship providers, and pending or rejected documents can block submission or review.'
                 },
                 {
                     heading: 'Eligibility and assessment',
@@ -200,7 +200,7 @@
                 },
                 {
                     heading: 'Who may review them',
-                    body: 'Authorized administrators and approved scholarship providers may view only the records needed to review your application.'
+                    body: 'Authorized reviewers and approved scholarship providers may view only the records needed to review your application.'
                 },
                 {
                     heading: 'Why accuracy matters',

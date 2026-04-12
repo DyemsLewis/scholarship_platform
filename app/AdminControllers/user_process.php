@@ -5,12 +5,14 @@ require_once __DIR__ . '/../Config/access_control.php';
 require_once __DIR__ . '/../Config/csrf.php';
 require_once __DIR__ . '/../Config/url_token.php';
 require_once __DIR__ . '/../Config/admin_account_options.php';
+require_once __DIR__ . '/../Config/SmtpMailer.php';
 require_once __DIR__ . '/../Models/ActivityLog.php';
 require_once __DIR__ . '/../Models/StaffAccountProfile.php';
 
 requireRoles(['admin', 'super_admin'], '../View/index.php', 'Only administrators can manage account-related actions.');
 
 $actorRole = getCurrentSessionRole();
+$mailConfig = require __DIR__ . '/../Config/mail_config.php';
 
 function tableExists(PDO $pdo, string $tableName): bool {
     static $cache = [];
@@ -102,6 +104,7 @@ function getTargetUserSnapshot(PDO $pdo, int $userId): ?array {
             u.id,
             u.username,
             u.email,
+            u.status,
             u.role,
             {$nameExpression} AS full_name
         FROM users u
@@ -249,6 +252,68 @@ function syncProviderVerificationStatus(PDO $pdo, int $userId, string $status): 
     $stmt->execute($params);
 }
 
+function shouldSendProviderActivationEmail(?array $targetUser, string $newStatus): bool {
+    if (!$targetUser) {
+        return false;
+    }
+
+    $previousStatus = strtolower(trim((string) ($targetUser['status'] ?? '')));
+    return strtolower(trim($newStatus)) === 'active' && $previousStatus !== 'active';
+}
+
+function buildProviderActivationEmail(array $providerDetails): array {
+    $providerName = trim((string) ($providerDetails['display_name'] ?? ''));
+    if ($providerName === '') {
+        $providerName = trim((string) ($providerDetails['username'] ?? ''));
+    }
+    if ($providerName === '') {
+        $providerName = 'Provider';
+    }
+
+    $subject = 'Scholarship Finder Provider Account Activated';
+    $body = "Hello {$providerName},\n\n"
+        . "Your provider account has been approved and activated in Scholarship Finder.\n\n"
+        . "You can now sign in and access provider features, including scholarship posting, application review, and provider account management.\n\n"
+        . "What you can do next:\n"
+        . "1. Log in to your provider account.\n"
+        . "2. Review your organization profile and contact details.\n"
+        . "3. Post or manage scholarship programs.\n"
+        . "4. Start reviewing applications submitted to your scholarships.\n\n"
+        . "If you were not expecting this account activation, please contact the Scholarship Finder administrator immediately.\n\n"
+        . "Thank you,\nScholarship Finder";
+
+    return [$subject, $body];
+}
+
+function sendProviderActivationEmail(array $mailConfig, array $providerDetails): array {
+    $recipientEmail = trim((string) ($providerDetails['email'] ?? ''));
+    if ($recipientEmail === '' || !filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+        return [
+            'success' => false,
+            'skipped' => true,
+            'error' => 'The provider does not have a valid email address on file.'
+        ];
+    }
+
+    if (empty($mailConfig['configured'])) {
+        return [
+            'success' => false,
+            'skipped' => true,
+            'error' => 'Email notifications are not configured on this server.'
+        ];
+    }
+
+    [$subject, $body] = buildProviderActivationEmail($providerDetails);
+    $mailer = new SmtpMailer($mailConfig);
+    $sendResult = $mailer->send($recipientEmail, $subject, wordwrap($body, 70));
+
+    return [
+        'success' => !empty($sendResult['success']),
+        'skipped' => false,
+        'error' => $sendResult['error'] ?? null
+    ];
+}
+
 function storeEditUserOldInput(array $input): void {
     $allowedKeys = [
         'user_id',
@@ -374,8 +439,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $targetUser = getTargetUserSnapshot($pdo, $id);
             $stmt = $pdo->prepare("UPDATE users SET status=? WHERE id=?");
             if ($stmt->execute([$status, $id])) {
+                $activationEmailNotice = null;
                 if ($targetRole === 'provider') {
                     syncProviderVerificationStatus($pdo, $id, $status);
+                    if (shouldSendProviderActivationEmail($targetUser, $status)) {
+                        $activationEmailNotice = sendProviderActivationEmail($mailConfig, $targetUser);
+                        if (empty($activationEmailNotice['success'])) {
+                            error_log('Failed to send provider activation email for user #' . $id . ': ' . ($activationEmailNotice['error'] ?? 'Unknown error'));
+                        }
+                    }
                 }
                 if ($targetUser) {
                     $activityLog = new ActivityLog($pdo);
@@ -391,9 +463,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         ]
                     ]);
                 }
-                $_SESSION['success'] = ($targetRole === 'provider' && $status === 'active')
-                    ? 'Provider account activated successfully'
-                    : 'User status updated successfully';
+                if ($targetRole === 'provider' && $status === 'active') {
+                    if ($activationEmailNotice && !empty($activationEmailNotice['success'])) {
+                        $_SESSION['success'] = 'Provider account activated and email notification sent successfully';
+                    } elseif ($activationEmailNotice && empty($activationEmailNotice['success'])) {
+                        $_SESSION['success'] = 'Provider account activated successfully. Email notification could not be sent.';
+                    } else {
+                        $_SESSION['success'] = 'Provider account activated successfully';
+                    }
+                } else {
+                    $_SESSION['success'] = 'User status updated successfully';
+                }
             } else {
                 $_SESSION['error'] = 'Failed to update user status';
             }
@@ -741,6 +821,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 
                 $pdo->commit();
                 clearEditUserOldInput();
+                $activationEmailNotice = null;
+                if ($targetRole === 'provider' && shouldSendProviderActivationEmail($targetUserBefore, $status)) {
+                    $updatedTargetUser = getTargetUserSnapshot($pdo, $id);
+                    if ($updatedTargetUser) {
+                        $activationEmailNotice = sendProviderActivationEmail($mailConfig, $updatedTargetUser);
+                        if (empty($activationEmailNotice['success'])) {
+                            error_log('Failed to send provider activation email for user #' . $id . ' after account edit: ' . ($activationEmailNotice['error'] ?? 'Unknown error'));
+                        }
+                    }
+                }
 
                 if ($targetUserBefore) {
                     $activityLog = new ActivityLog($pdo);
@@ -757,7 +847,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     ]);
                 }
 
-                $_SESSION['success'] = 'User updated successfully';
+                if ($targetRole === 'provider' && $status === 'active' && shouldSendProviderActivationEmail($targetUserBefore, $status)) {
+                    if ($activationEmailNotice && !empty($activationEmailNotice['success'])) {
+                        $_SESSION['success'] = 'Provider account updated and activation email sent successfully';
+                    } elseif ($activationEmailNotice && empty($activationEmailNotice['success'])) {
+                        $_SESSION['success'] = 'Provider account updated successfully. Activation email could not be sent.';
+                    } else {
+                        $_SESSION['success'] = 'Provider account updated successfully';
+                    }
+                } else {
+                    $_SESSION['success'] = 'User updated successfully';
+                }
                 
             } catch (Exception $e) {
                 $pdo->rollBack();

@@ -75,7 +75,7 @@ function buildApplicationSubmissionEmail(array $details): array
         . "What to do next:\n"
         . "1. Log in to Scholarship Finder to monitor your application status.\n"
         . "2. Keep your uploaded documents available in case the reviewer asks for re-upload or clarification.\n"
-        . "3. Watch your email and account for updates from the provider or admin reviewers.\n"
+        . "3. Watch your email and account for updates from the provider or the review team.\n"
         . "4. Avoid submitting duplicate applications for the same scholarship unless you are instructed to do so.\n\n"
         . "Thank you,\nScholarship Finder";
 

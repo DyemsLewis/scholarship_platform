@@ -199,6 +199,7 @@
     let selectedLat = null;
     let selectedLng = null;
     let selectedDisplayLocation = '';
+    const geocodeCsrfToken = <?php echo json_encode(csrfGetToken('geocode_lookup')); ?>;
 
     const defaultLat = 14.5995;
     const defaultLng = 120.9842;
@@ -251,6 +252,7 @@
 
     function callGeocodeController(action, payload) {
         const params = new URLSearchParams({ action });
+        params.append('csrf_token', geocodeCsrfToken);
         Object.keys(payload || {}).forEach(function(key) {
             params.append(key, payload[key]);
         });

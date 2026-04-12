@@ -639,6 +639,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
         <h3 style="margin-bottom: 15px; color: var(--primary); font-size: 1.2rem;">Edit Profile</h3>
         
         <form id="editProfileForm" enctype="multipart/form-data">
+            <?php echo csrfInputField('profile_self_service'); ?>
             <!-- Username display (read-only) -->
             <div style="margin-bottom: 12px;">
                 <label for="editUsername" style="font-size: 0.8rem;">Username</label>
@@ -719,7 +720,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
                 <label for="editApplicantTypeDisplay" style="font-size: 0.8rem;">Applicant Type</label>
                 <input type="hidden" id="editApplicantType" name="applicant_type" value="<?php echo htmlspecialchars((string) ($userApplicantType ?? '')); ?>">
                 <input type="text" id="editApplicantTypeDisplay" value="<?php echo htmlspecialchars($profileApplicantTypeLabel); ?>" disabled style="width: 100%; padding: 8px; font-size: 0.9rem; background: #f5f5f5;">
-                <small style="font-size: 0.7rem; display: block; margin-top: 6px;">Applicant type is locked after registration. If this is incorrect, ask an admin to review your account.</small>
+                <small style="font-size: 0.7rem; display: block; margin-top: 6px;">Applicant type is locked after registration. If this is incorrect, ask the support team to review your account.</small>
             </div>
 
             <div class="profile-two-col-grid" style="margin-bottom: 15px;">
@@ -943,6 +944,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
               data-username="<?php echo htmlspecialchars((string) ($_SESSION['user_username'] ?? '')); ?>"
               data-email="<?php echo htmlspecialchars((string) ($_SESSION['user_email'] ?? '')); ?>"
               data-name="<?php echo htmlspecialchars(trim((string) (($_SESSION['user_display_name'] ?? '') ?: (($_SESSION['user_firstname'] ?? '') . ' ' . ($_SESSION['user_lastname'] ?? ''))))); ?>">
+            <?php echo csrfInputField('profile_self_service'); ?>
             <!-- Add hidden action field -->
             <input type="hidden" name="action" value="change_password">
             

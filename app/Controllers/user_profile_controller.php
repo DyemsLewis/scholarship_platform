@@ -2,6 +2,8 @@
 // Controller/user_profile_controller.php
 require_once __DIR__ . '/../Config/session_bootstrap.php';
 require_once __DIR__ . '/../Config/db_config.php';
+require_once __DIR__ . '/../Config/csrf.php';
+require_once __DIR__ . '/../Config/access_control.php';
 require_once __DIR__ . '/../Config/helpers.php';
 require_once __DIR__ . '/../Config/password_policy.php';
 require_once __DIR__ . '/../Models/User.php';
@@ -544,7 +546,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     header('Content-Type: application/json');
 
     if (!isset($_SESSION['user_id'])) {
+        http_response_code(401);
         echo json_encode(['success' => false, 'message' => 'Not authenticated']);
+        exit();
+    }
+
+    if (!isRoleIn(['student'])) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Only student accounts can update this profile.']);
+        exit();
+    }
+
+    $csrfValidation = csrfValidateRequest('profile_self_service');
+    if (!$csrfValidation['valid']) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => $csrfValidation['message']]);
         exit();
     }
 

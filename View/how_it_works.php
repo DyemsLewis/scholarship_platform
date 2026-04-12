@@ -58,7 +58,7 @@ $guestPagesCssVersion = @filemtime(__DIR__ . '/../public/css/guest-pages.css') ?
                 <article class="guest-step-card">
                     <span class="guest-step-number">4</span>
                     <h3>Apply and Track</h3>
-                    <p>Students submit through the guided application flow and then track updates, decisions, and admin notes.</p>
+            <p>Students submit through the guided application flow and then track updates, decisions, and review notes.</p>
                 </article>
             </div>
         </section>
@@ -76,8 +76,8 @@ $guestPagesCssVersion = @filemtime(__DIR__ . '/../public/css/guest-pages.css') ?
                 </article>
 
                 <article class="guest-info-card">
-                    <h3>Admin Review</h3>
-                    <p>After submission, providers or administrators review the profile and documents before making a final decision.</p>
+            <h3>Application Review</h3>
+            <p>After submission, providers or reviewers check the profile and documents before making a final decision.</p>
                 </article>
             </div>
         </section>

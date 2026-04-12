@@ -62,6 +62,7 @@ $locationModalHasCoordinates = !($locationModalLatitude === 0.0 && $locationModa
     let selectedLng = <?php echo json_encode($locationModalLongitude); ?>;
     let selectedAddress = <?php echo json_encode($locationModalAddress); ?>;
     const hasInitialCoordinates = <?php echo $locationModalHasCoordinates ? 'true' : 'false'; ?>;
+    const locationSaveCsrfToken = <?php echo json_encode(csrfGetToken('student_location_update')); ?>;
 
     function showWarning(text) {
         warningEl.textContent = text || '';
@@ -182,7 +183,8 @@ $locationModalHasCoordinates = !($locationModalLatitude === 0.0 && $locationModa
         const params = new URLSearchParams({
             latitude: String(selectedLat),
             longitude: String(selectedLng),
-            location_name: selectedAddress || ''
+            location_name: selectedAddress || '',
+            csrf_token: locationSaveCsrfToken
         });
 
         saveBtn.disabled = true;

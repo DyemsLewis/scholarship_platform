@@ -83,11 +83,11 @@ $providerSignupCssVersion = @filemtime(__DIR__ . '/../public/css/provider-signup
                 <div class="signup-header">
                     <i class="fas fa-building-columns signup-header-icon"></i>
                     <h1>Create Provider Account</h1>
-                    <p>Register your institution or organization so it can post scholarships after admin review and approval.</p>
+                    <p>Register your institution or organization so it can post scholarships after review and approval.</p>
                 </div>
 
                 <div class="signup-note">
-                    <strong>Provider registration:</strong> verify your login email first, complete your organization and contact details, then wait for admin approval before the account can sign in.
+                    <strong>Provider registration:</strong> verify your login email first, complete your organization and contact details, then wait for approval before the account can sign in.
                 </div>
 
                 <?php if (!$signupVerificationDbReady): ?>
@@ -203,7 +203,7 @@ $providerSignupCssVersion = @filemtime(__DIR__ . '/../public/css/provider-signup
                                 <i class="fas fa-file-lines"></i>
                                 <textarea id="organizationDescription" name="description" placeholder="Briefly describe the organization and the scholarship programs it manages"><?php echo htmlspecialchars(providerOldValue($providerOld, 'description')); ?></textarea>
                             </div>
-                            <small class="hint">A short background helps admins understand the organization during account review.</small>
+                            <small class="hint">A short background helps reviewers understand the organization during account review.</small>
                         </div>
                     </div>
                 </div>
@@ -345,7 +345,7 @@ $providerSignupCssVersion = @filemtime(__DIR__ . '/../public/css/provider-signup
                                     </span>
                                 </label>
 
-                                <p class="consent-footnote provider-consent-footnote">Click the highlighted policy names in the checkbox if you want to review them before submitting. Provider accounts still need admin approval before they can sign in.</p>
+                                <p class="consent-footnote provider-consent-footnote">Click the highlighted policy names in the checkbox if you want to review them before submitting. Provider accounts still need approval before they can sign in.</p>
                             </div>
                         </div>
                     </div>
@@ -360,7 +360,7 @@ $providerSignupCssVersion = @filemtime(__DIR__ . '/../public/css/provider-signup
 
                     <div class="form-footer">
                         <p>Already approved and active? <a href="login.php">Go to login</a></p>
-                        <p>Admin review is required before provider accounts can sign in and manage scholarship postings.</p>
+                        <p>Account review is required before provider accounts can sign in and manage scholarship postings.</p>
                     </div>
                     </div>
                 </div>

@@ -64,7 +64,7 @@ $guestPagesCssVersion = @filemtime(__DIR__ . '/../public/css/guest-pages.css') ?
 
                 <details class="guest-faq-item">
                     <summary>Can I track more than one scholarship application?</summary>
-                    <p>Yes. The Applications page can show multiple scholarship applications, each with its own status, timeline, and admin notes.</p>
+            <p>Yes. The Applications page can show multiple scholarship applications, each with its own status, timeline, and review notes.</p>
                 </details>
 
                 <details class="guest-faq-item">

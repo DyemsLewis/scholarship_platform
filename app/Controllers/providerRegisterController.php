@@ -202,7 +202,7 @@ function providerSaveVerificationDocument(array $file): ?string
         throw new RuntimeException('Verification document must be a PDF, JPG, or PNG file.');
     }
 
-    $uploadDirectory = dirname(__DIR__) . '/public/uploads/provider_verification';
+    $uploadDirectory = dirname(__DIR__, 2) . '/public/uploads/provider_verification';
     if (!is_dir($uploadDirectory) && !mkdir($uploadDirectory, 0775, true) && !is_dir($uploadDirectory)) {
         throw new RuntimeException('Unable to create the provider verification upload directory.');
     }
@@ -502,7 +502,7 @@ try {
 
     clearSignupVerification($pdo, $email);
     unset($_SESSION['provider_signup_old'], $_SESSION['provider_signup_errors']);
-    $_SESSION['success'] = 'Provider account created successfully. Your account is pending admin review before login is allowed.';
+    $_SESSION['success'] = 'Provider account created successfully. Your account is pending review before login is allowed.';
     header('Location: ' . normalizeAppUrl('../View/login.php'));
     exit();
 } catch (Throwable $e) {

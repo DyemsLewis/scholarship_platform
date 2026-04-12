@@ -380,6 +380,7 @@ $profilePageDescription = $isProviderRole
                             </div>
                         </div>
                         <form id="editStaffProfileForm" class="staff-edit-form">
+                            <?php echo csrfInputField('staff_profile_self_service'); ?>
                             <?php if ($isProviderRole): ?>
                             <div class="staff-form-panel">
                                 <h4>Provider Organization</h4>
@@ -443,6 +444,7 @@ $profilePageDescription = $isProviderRole
                                 <?php echo htmlspecialchars(passwordPolicyHint()); ?>
                             </div>
                             <form id="changeStaffPasswordForm" class="staff-edit-form">
+                                <?php echo csrfInputField('staff_profile_self_service'); ?>
                                 <input type="hidden" name="action" value="change_password">
                                 <div class="staff-form-grid">
                                     <div class="staff-form-group">

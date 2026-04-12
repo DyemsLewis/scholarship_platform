@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../Config/session_bootstrap.php';
+require_once __DIR__ . '/../Config/csrf.php';
 header('Content-Type: application/json');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -7,6 +8,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     echo json_encode([
         'success' => false,
         'message' => 'Method not allowed.'
+    ]);
+    exit();
+}
+
+$csrfValidation = csrfValidateRequest('geocode_lookup');
+if (!$csrfValidation['valid']) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'message' => $csrfValidation['message']
     ]);
     exit();
 }
@@ -66,6 +77,15 @@ if ($action === 'search') {
         echo json_encode([
             'success' => false,
             'message' => 'Address query is required.'
+        ]);
+        exit();
+    }
+
+    if ((function_exists('mb_strlen') ? mb_strlen($query) : strlen($query)) > 200) {
+        http_response_code(422);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Address query is too long.'
         ]);
         exit();
     }

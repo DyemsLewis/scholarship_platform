@@ -307,7 +307,7 @@ require_once __DIR__ . '/../app/Config/init.php';
                 </div>
                 <div class="upload-card-body">
                     <p class="upload-report-note">
-                        Your report will be marked for manual verification by admin.
+                        Your report will be marked for manual verification during review.
                     </p>
                     <div class="upload-report-chip-row">
                         <span class="upload-report-chip">

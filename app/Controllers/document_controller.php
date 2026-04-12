@@ -2,6 +2,8 @@
 // Controller/document_controller.php
 require_once __DIR__ . '/../Config/session_bootstrap.php';
 require_once __DIR__ . '/../Config/db_config.php';
+require_once __DIR__ . '/../Config/csrf.php';
+require_once __DIR__ . '/../Config/access_control.php';
 require_once __DIR__ . '/../Models/UserDocument.php';
 require_once __DIR__ . '/../Models/ActivityLog.php';
 
@@ -102,7 +104,7 @@ class DocumentController {
                 $result['success'] = true;
                 $result['message'] = $this->getDocumentTypeName($documentType)
                     . ($isUpdate ? ' updated successfully.' : ' uploaded successfully.')
-                    . ' It will be verified by admin.';
+                    . ' It will be reviewed for verification.';
                 $result['document'] = $document;
 
                 $this->activityLog->log($isUpdate ? 'update' : 'upload', 'document', $isUpdate ? 'Updated a document for verification.' : 'Uploaded a document for verification.', [
@@ -226,8 +228,24 @@ class DocumentController {
 }
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    header('Content-Type: application/json; charset=UTF-8');
+
     if (!isset($_SESSION['user_id'])) {
+        http_response_code(401);
         echo json_encode(['success' => false, 'message' => 'Please login first']);
+        exit();
+    }
+
+    if (!isRoleIn(['student'])) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Only student accounts can manage uploaded documents.']);
+        exit();
+    }
+
+    $csrfValidation = csrfValidateRequest('document_upload');
+    if (!$csrfValidation['valid']) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => $csrfValidation['message']]);
         exit();
     }
     
@@ -235,9 +253,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     // Check if it's a single file upload
     if (isset($_FILES['document_file']) && isset($_POST['document_type'])) {
+        $documentType = trim((string) ($_POST['document_type'] ?? ''));
         $result = $controller->uploadDocument(
             $_SESSION['user_id'],
-            $_POST['document_type'],
+            $documentType,
             $_FILES['document_file']
         );
         echo json_encode($result);
@@ -256,7 +275,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
     // Check if it's a delete action
     elseif (isset($_POST['action']) && $_POST['action'] === 'delete' && isset($_POST['document_id'])) {
-        $result = $controller->deleteDocument($_POST['document_id'], $_SESSION['user_id']);
+        $documentId = filter_var($_POST['document_id'], FILTER_VALIDATE_INT, [
+            'options' => ['min_range' => 1]
+        ]);
+        if ($documentId === false) {
+            echo json_encode(['success' => false, 'message' => 'Invalid document selection.']);
+            exit();
+        }
+
+        $result = $controller->deleteDocument($documentId, $_SESSION['user_id']);
         echo json_encode($result);
     }
     // Get document stats
@@ -275,6 +302,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 if ($_SERVER['REQUEST_METHOD'] == 'GET') {
     if (!isset($_SESSION['user_id'])) {
         header('Location: ' . normalizeAppUrl('../View/login.php'));
+        exit();
+    }
+
+    if (!isRoleIn(['student'])) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'message' => 'Only student accounts can view uploaded documents here.']);
         exit();
     }
     

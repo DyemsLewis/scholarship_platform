@@ -1699,6 +1699,7 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
 
                 <form id="uploadForm" method="POST" enctype="multipart/form-data">
                     <input type="hidden" id="documentType" name="document_type">
+                    <?php echo csrfInputField('document_upload'); ?>
 
                     <div class="modal-body">
                         <div class="upload-mode-note" id="uploadModeNote" hidden></div>
