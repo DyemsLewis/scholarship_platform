@@ -15,6 +15,45 @@ function redirectWithUploadError(string $message): void
     exit();
 }
 
+function setUploadNotice(string $type, string $message, string $title = 'Grade Document Scan Result'): void
+{
+    unset($_SESSION['upload_success'], $_SESSION['upload_error'], $_SESSION['upload_warning'], $_SESSION['message']);
+
+    $_SESSION['upload_notice_title'] = $title;
+
+    if ($type === 'success') {
+        $_SESSION['upload_success'] = true;
+        $_SESSION['message'] = $message;
+        return;
+    }
+
+    if ($type === 'warning') {
+        $_SESSION['upload_warning'] = $message;
+        return;
+    }
+
+    $_SESSION['upload_error'] = $message;
+}
+
+function buildAcademicScanReviewMessage(string $documentLabel, bool $scanCompleted, string $scannerStatusMessage = ''): string
+{
+    $message = ucfirst($documentLabel) . ' uploaded and saved to documents. ';
+    $message .= $scanCompleted
+        ? 'The scanner could not detect your academic score this time. '
+        : 'The scanner could not complete the scan this time. ';
+    $message .= 'Your document can still be reviewed by admin, who can record your GWA or academic score manually, or you can upload a clearer image or smaller PDF and try again.';
+
+    $scannerStatusMessage = trim($scannerStatusMessage);
+    if (
+        $scannerStatusMessage !== '' &&
+        strcasecmp($scannerStatusMessage, 'Scanner result: academic score not detected.') !== 0
+    ) {
+        $message .= ' Scanner note: ' . $scannerStatusMessage;
+    }
+
+    return $message;
+}
+
 function getUploadMimeType(string $tmpPath): string
 {
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -363,8 +402,7 @@ if (!($ocrResult['success'] ?? false)) {
         ]
     ]);
 
-    $_SESSION['upload_error'] = ucfirst($documentLabel) . ' uploaded and saved to documents, but the scanner could not complete the scan. ' . $scannerStatusMessage;
-    $_SESSION['upload_notice_title'] = 'Grade Document Scan Result';
+    setUploadNotice('warning', buildAcademicScanReviewMessage($documentLabel, false, $scannerStatusMessage));
     header('Location: ' . normalizeAppUrl('../View/upload.php'));
     exit();
 }
@@ -408,12 +446,10 @@ if ($finalGwa !== null) {
 
     $gwaSaved = saveUserGwa($pdo, $userId, $finalGwa);
     if ($gwaSaved) {
-        $_SESSION['upload_success'] = true;
-        $_SESSION['upload_notice_title'] = 'Grade Document Scan Result';
+        setUploadNotice('success', $scannerStatusMessage . ' ' . ucfirst($documentLabel) . ' uploaded and saved to documents.');
         $_SESSION['extracted_gwa'] = $finalGwa;
         $_SESSION['user_gwa'] = $finalGwa;
         $_SESSION['gwa_updated'] = date('Y-m-d H:i:s');
-        $_SESSION['message'] = $scannerStatusMessage . ' ' . ucfirst($documentLabel) . ' uploaded and saved to documents.';
         header('Location: ' . normalizeAppUrl('../View/upload.php'));
         exit();
     }
@@ -424,7 +460,6 @@ if ($finalGwa !== null) {
     exit();
 }
 
-$_SESSION['upload_error'] = $scannerStatusMessage . ' ' . ucfirst($documentLabel) . ' uploaded and saved in documents. Please upload a clearer academic record.';
-$_SESSION['upload_notice_title'] = 'Grade Document Scan Result';
+setUploadNotice('warning', buildAcademicScanReviewMessage($documentLabel, true, $scannerStatusMessage));
 header('Location: ' . normalizeAppUrl('../View/upload.php'));
 exit();

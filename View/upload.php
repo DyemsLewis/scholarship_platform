@@ -43,6 +43,12 @@ require_once __DIR__ . '/../app/Config/init.php';
     $lastTorDocumentId = isset($_SESSION['last_uploaded_tor_document_id']) && is_numeric($_SESSION['last_uploaded_tor_document_id'])
         ? (int) $_SESSION['last_uploaded_tor_document_id']
         : 0;
+    $ocrUploadConfigPath = __DIR__ . '/../app/Config/ocr_config.php';
+    $ocrUploadConfig = is_file($ocrUploadConfigPath) ? (require $ocrUploadConfigPath) : [];
+    $scannerMaxUploadBytes = max(0, (int) ($ocrUploadConfig['ocr_space_max_upload_bytes'] ?? 1048576));
+    $scannerMaxUploadLabel = rtrim(rtrim(number_format($scannerMaxUploadBytes / 1048576, 2), '0'), '.') . 'MB';
+    $acceptedUploadLimitBytes = 5 * 1024 * 1024;
+    $acceptedUploadLimitLabel = '5MB';
     
     // Get document stats for consistency
     $documentsUploaded = 0;
@@ -95,6 +101,10 @@ require_once __DIR__ . '/../app/Config/init.php';
         $uploadNoticeType = 'success';
         $uploadNoticeMessage = (string) $_SESSION['message'];
         unset($_SESSION['upload_success'], $_SESSION['message'], $_SESSION['upload_notice_title']);
+    } elseif (!empty($_SESSION['upload_warning'])) {
+        $uploadNoticeType = 'warning';
+        $uploadNoticeMessage = (string) $_SESSION['upload_warning'];
+        unset($_SESSION['upload_warning'], $_SESSION['upload_notice_title']);
     } elseif (!empty($_SESSION['upload_error'])) {
         $uploadNoticeType = 'error';
         $uploadNoticeMessage = (string) $_SESSION['upload_error'];
@@ -103,13 +113,29 @@ require_once __DIR__ . '/../app/Config/init.php';
 
     $uploadNoticeTitle = normalizeScannerNoticeCopy($uploadNoticeTitle);
     $uploadNoticeMessage = normalizeScannerNoticeCopy($uploadNoticeMessage);
+    $uploadNoticeBackground = '#fef2f2';
+    $uploadNoticeBorder = '#fecaca';
+    $uploadNoticeColor = '#b91c1c';
+    $uploadNoticeIcon = 'fa-exclamation-triangle';
+
+    if ($uploadNoticeType === 'success') {
+        $uploadNoticeBackground = '#ecfdf5';
+        $uploadNoticeBorder = '#86efac';
+        $uploadNoticeColor = '#166534';
+        $uploadNoticeIcon = 'fa-check-circle';
+    } elseif ($uploadNoticeType === 'warning') {
+        $uploadNoticeBackground = '#fffbeb';
+        $uploadNoticeBorder = '#fcd34d';
+        $uploadNoticeColor = '#92400e';
+        $uploadNoticeIcon = 'fa-circle-info';
+    }
     ?>
 
     <section class="dashboard user-page-shell">
         <div class="container">
             <?php if ($uploadNoticeMessage !== ''): ?>
-                <div style="margin-bottom: 16px; padding: 12px 14px; border-radius: 10px; background: <?php echo $uploadNoticeType === 'success' ? '#ecfdf5' : '#fef2f2'; ?>; border: 1px solid <?php echo $uploadNoticeType === 'success' ? '#86efac' : '#fecaca'; ?>; color: <?php echo $uploadNoticeType === 'success' ? '#166534' : '#b91c1c'; ?>; font-size: 0.9rem;">
-                    <i class="fas <?php echo $uploadNoticeType === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'; ?>"></i>
+                <div style="margin-bottom: 16px; padding: 12px 14px; border-radius: 10px; background: <?php echo $uploadNoticeBackground; ?>; border: 1px solid <?php echo $uploadNoticeBorder; ?>; color: <?php echo $uploadNoticeColor; ?>; font-size: 0.9rem;">
+                    <i class="fas <?php echo $uploadNoticeIcon; ?>"></i>
                     <?php echo htmlspecialchars($uploadNoticeMessage); ?>
                 </div>
             <?php endif; ?>
@@ -239,7 +265,10 @@ require_once __DIR__ . '/../app/Config/init.php';
                         <div class="upload-zone-modern" id="uploadArea">
                             <i class="fas fa-cloud-upload-alt"></i>
                             <h3>Drag & drop your academic record</h3>
-                            <p>Supported: JPG, PNG, PDF (Max 5MB)</p>
+                            <p>Supported: JPG, PNG, PDF (Uploads up to <?php echo htmlspecialchars($acceptedUploadLimitLabel); ?>)</p>
+                            <div style="margin-top: 8px; font-size: 0.8rem; color: #64748b; line-height: 1.55;">
+                                Scanner limit: <strong><?php echo htmlspecialchars($scannerMaxUploadLabel); ?></strong>. Files larger than that are still accepted up to <?php echo htmlspecialchars($acceptedUploadLimitLabel); ?> and saved to documents, but automatic scanning may not finish.
+                            </div>
                             <div id="fileName" class="file-name-badge" style="display: none;"></div>
                             <input type="file" id="gradeFile" name="grade_file" accept=".jpg,.jpeg,.png,.pdf" style="display: none;" required>
                             <div style="margin-top: 12px;">
@@ -427,6 +456,9 @@ require_once __DIR__ . '/../app/Config/init.php';
                 const fileInput = document.getElementById('gradeFile');
                 const fileNameDisplay = document.getElementById('fileName');
                 const uploadArea = document.getElementById('uploadArea');
+                const scannerMaxSize = <?php echo (int) $scannerMaxUploadBytes; ?>;
+                const scannerMaxSizeLabel = <?php echo json_encode($scannerMaxUploadLabel); ?>;
+                const acceptedUploadLimitLabel = <?php echo json_encode($acceptedUploadLimitLabel); ?>;
                 
                 if (fileInput) {
                     fileInput.addEventListener('change', function(e) {
@@ -437,11 +469,16 @@ require_once __DIR__ . '/../app/Config/init.php';
                             const maxSize = 5 * 1024 * 1024;
                             
                             if (fileSize > maxSize) {
-                                fileNameDisplay.innerHTML = '<i class="fas fa-exclamation-triangle"></i> File too large! Max 5MB.';
+                                fileNameDisplay.innerHTML = '<i class="fas fa-exclamation-triangle"></i> File too large! Max ' + acceptedUploadLimitLabel + '.';
                                 fileNameDisplay.style.backgroundColor = '#fee2e2';
                                 fileNameDisplay.style.color = '#b91c1c';
                                 fileNameDisplay.style.display = 'inline-flex';
                                 this.value = '';
+                            } else if (scannerMaxSize > 0 && fileSize > scannerMaxSize) {
+                                fileNameDisplay.innerHTML = '<i class="fas fa-circle-info"></i> Selected: ' + fileName + ' (' + (fileSize / 1024 / 1024).toFixed(2) + ' MB). Upload is allowed, but the scanner limit is ' + scannerMaxSizeLabel + '.';
+                                fileNameDisplay.style.backgroundColor = '#fff7ed';
+                                fileNameDisplay.style.color = '#c2410c';
+                                fileNameDisplay.style.display = 'inline-flex';
                             } else {
                                 fileNameDisplay.innerHTML = '<i class="fas fa-file-pdf"></i> Selected: ' + fileName + ' (' + (fileSize / 1024 / 1024).toFixed(2) + ' MB)';
                                 fileNameDisplay.style.backgroundColor = '#eef2ff';

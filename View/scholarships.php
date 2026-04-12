@@ -177,6 +177,37 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
 
         return $detail !== '' ? $detail : $label;
     };
+
+    $buildProfileMismatchSummary = static function (array $checks): string {
+        $failedChecks = array_values(array_filter($checks, static function (array $check): bool {
+            return strtolower(trim((string) ($check['status'] ?? 'pending'))) === 'failed';
+        }));
+
+        if (empty($failedChecks)) {
+            return 'Some of your current applicant details do not match this scholarship requirement.';
+        }
+
+        usort($failedChecks, static function (array $left, array $right): int {
+            $leftPriority = strtolower(trim((string) ($left['key'] ?? ''))) === 'applicant_type' ? 0 : 1;
+            $rightPriority = strtolower(trim((string) ($right['key'] ?? ''))) === 'applicant_type' ? 0 : 1;
+            return $leftPriority <=> $rightPriority;
+        });
+
+        $failedCheck = $failedChecks[0];
+        $key = strtolower(trim((string) ($failedCheck['key'] ?? '')));
+        $label = trim((string) ($failedCheck['label'] ?? 'Profile'));
+        $target = trim((string) ($failedCheck['target'] ?? ''));
+
+        if ($key === 'applicant_type' && $target !== '') {
+            return 'Your current applicant type does not match this scholarship. Required applicant type: ' . $target . '.';
+        }
+
+        if ($label !== '' && $target !== '') {
+            return 'Your current ' . strtolower($label) . ' does not match this scholarship requirement. Required ' . strtolower($label) . ': ' . $target . '.';
+        }
+
+        return 'Some of your current applicant details do not match this scholarship requirement.';
+    };
     ?>
     
     <!-- Scholarships Section -->
@@ -352,21 +383,6 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
                             $matchBarClass = 'medium';
                         }
                         $readyToApplyNow = !empty($scholarship['is_eligible']) && $hasAllRequired && empty($scholarship['is_expired']);
-
-                        $audienceParts = [];
-                        if ($targetApplicantType !== '' && $targetApplicantType !== 'all') {
-                            $audienceParts[] = formatApplicantTypeLabel($targetApplicantType);
-                        }
-                        if ($targetYearLevel !== '' && $targetYearLevel !== 'any') {
-                            $audienceParts[] = formatYearLevelLabel($targetYearLevel);
-                        }
-                        if ($requiredAdmissionStatus !== '' && $requiredAdmissionStatus !== 'any') {
-                            $audienceParts[] = formatAdmissionStatusLabel($requiredAdmissionStatus) . '+';
-                        }
-                        if ($targetStrand !== '') {
-                            $audienceParts[] = strtoupper($targetStrand);
-                        }
-                        $audienceLabel = !empty($audienceParts) ? implode(' / ', $audienceParts) : 'Open to all applicants';
 
                         $distance = null;
                         if ($userHasLocation && isset($scholarship['latitude']) && isset($scholarship['longitude']) && $scholarship['latitude'] && $scholarship['longitude']) {
@@ -655,7 +671,12 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                     }
 
                                     $eligibilityFocusTags = [];
-                                    if ($targetApplicantType !== '' && $targetApplicantType !== 'all') {
+                                    if ($targetApplicantType === '' || $targetApplicantType === 'all') {
+                                        $eligibilityFocusTags[] = [
+                                            'icon' => 'fa-users',
+                                            'label' => 'Open to all applicants'
+                                        ];
+                                    } else {
                                         $eligibilityFocusTags[] = [
                                             'icon' => 'fa-user-graduate',
                                             'label' => formatApplicantTypeLabel($targetApplicantType)
@@ -799,7 +820,7 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                     } elseif ($profileRequirementFailed > 0) {
                                         $nextStepTone = 'warning';
                                         $nextStepIcon = 'fa-user-xmark';
-                                        $nextStepMessage = $openingDatePrepPrefix . 'Your current applicant profile does not yet match the target audience for this scholarship.';
+                                        $nextStepMessage = $openingDatePrepPrefix . $buildProfileMismatchSummary($profileChecks);
                                         $primaryActionHref = 'profile.php';
                                         $primaryActionClass = 'btn-outline-modern';
                                         $primaryActionIcon = 'fa-user-pen';
@@ -849,11 +870,6 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                         <div class="info-chip-modern">
                                             <span class="label">Deadline</span>
                                             <span class="value"><?php echo htmlspecialchars($deadlineDisplay); ?></span>
-                                        </div>
-
-                                        <div class="info-chip-modern">
-                                            <span class="label">Audience</span>
-                                            <span class="value"><?php echo htmlspecialchars($audienceLabel); ?></span>
                                         </div>
 
                                         <div class="info-chip-modern">

@@ -43,6 +43,21 @@ function providerReviewsValue($value, string $fallback = 'Not provided'): string
     return $trimmed !== '' ? $trimmed : $fallback;
 }
 
+function providerReviewsWebsiteLabel(?string $value): string
+{
+    $website = trim((string) ($value ?? ''));
+    if ($website === '') {
+        return 'No website';
+    }
+
+    $host = parse_url($website, PHP_URL_HOST);
+    if (is_string($host) && trim($host) !== '') {
+        return preg_replace('/^www\./i', '', trim($host)) ?? trim($host);
+    }
+
+    return preg_replace('#^https?://#i', '', rtrim($website, '/')) ?? $website;
+}
+
 function providerReviewsFileExists(?string $relativePath): bool
 {
     $normalized = trim(str_replace('\\', '/', (string) $relativePath), '/');
@@ -137,6 +152,8 @@ foreach ($providerUsers as $providerUser) {
         'verification_uploaded' => $verificationUploaded,
         'is_verified' => $isVerified,
         'created_at' => (string) ($providerUser['created_at'] ?? ''),
+        'created_label' => !empty($providerUser['created_at']) ? date('M d, Y', strtotime((string) $providerUser['created_at'])) : 'Not recorded',
+        'website_label' => providerReviewsWebsiteLabel($website),
         'review_url' => $reviewUrl,
         'needs_activation' => $needsActivation
     ];
@@ -191,7 +208,7 @@ if ($filter !== 'all') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../public/css/admin_style.css">
     <link rel="stylesheet" href="../public/css/card-pagination.css">
-    <link rel="stylesheet" href="../AdminPublic/css/reviews.css?v=2">
+    <link rel="stylesheet" href="../AdminPublic/css/reviews.css?v=3">
 </head>
 <body>
     <?php include 'layouts/admin_header.php'; ?>
@@ -296,10 +313,16 @@ if ($filter !== 'all') {
                     <?php foreach ($providerCards as $provider): ?>
                     <article class="provider-review-card" id="provider-review-<?php echo (int) $provider['id']; ?>">
                         <div class="provider-review-card-top">
-                            <div>
+                            <div class="provider-review-card-head">
                                 <span class="provider-review-label">Provider Account</span>
                                 <h2><?php echo htmlspecialchars($provider['organization_name']); ?></h2>
-                                <p><?php echo htmlspecialchars($provider['contact_name']); ?> | <?php echo htmlspecialchars($provider['contact_position']); ?></p>
+                                <p class="provider-review-contact">
+                                    <i class="fas fa-user-tie"></i>
+                                    <span class="provider-review-contact-name"><?php echo htmlspecialchars($provider['contact_name']); ?></span>
+                                    <?php if (trim((string) ($provider['contact_position'] ?? '')) !== '' && (string) ($provider['contact_position'] ?? '') !== 'Contact position not set'): ?>
+                                        <span class="provider-review-contact-position"><?php echo htmlspecialchars($provider['contact_position']); ?></span>
+                                    <?php endif; ?>
+                                </p>
                             </div>
                             <div class="provider-review-badges">
                                 <span class="provider-review-status provider-review-status-<?php echo htmlspecialchars($provider['status']); ?>">
@@ -313,22 +336,14 @@ if ($filter !== 'all') {
                             </div>
                         </div>
 
-                        <div class="provider-review-meta-grid">
-                            <div class="provider-meta-item">
-                                <span>Organization email</span>
+                        <div class="provider-review-summary-list">
+                            <div class="provider-review-summary-item">
+                                <span><i class="fas fa-envelope"></i> Organization email</span>
                                 <strong><?php echo htmlspecialchars($provider['organization_email']); ?></strong>
                             </div>
-                            <div class="provider-meta-item">
-                                <span>Location</span>
+                            <div class="provider-review-summary-item">
+                                <span><i class="fas fa-location-dot"></i> Location</span>
                                 <strong><?php echo htmlspecialchars($provider['location']); ?></strong>
-                            </div>
-                            <div class="provider-meta-item">
-                                <span>Website</span>
-                                <strong><?php echo htmlspecialchars(providerReviewsValue($provider['website'])); ?></strong>
-                            </div>
-                            <div class="provider-meta-item">
-                                <span>Registered</span>
-                                <strong><?php echo htmlspecialchars($provider['created_at'] !== '' ? date('M d, Y', strtotime($provider['created_at'])) : 'Not recorded'); ?></strong>
                             </div>
                         </div>
 
@@ -337,14 +352,23 @@ if ($filter !== 'all') {
                                 <i class="fas <?php echo $provider['verification_uploaded'] ? 'fa-file-circle-check' : 'fa-file-circle-xmark'; ?>"></i>
                                 <?php echo $provider['verification_uploaded'] ? 'Verification file uploaded' : 'Verification file missing'; ?>
                             </span>
-                            <span class="provider-review-check <?php echo $provider['website'] !== '' ? 'good' : 'neutral'; ?>">
-                                <i class="fas <?php echo $provider['website'] !== '' ? 'fa-globe' : 'fa-circle-info'; ?>"></i>
-                                <?php echo $provider['website'] !== '' ? 'Website provided' : 'Website not provided'; ?>
-                            </span>
                             <span class="provider-review-check <?php echo $provider['needs_activation'] ? 'warning' : 'good'; ?>">
                                 <i class="fas <?php echo $provider['needs_activation'] ? 'fa-user-clock' : 'fa-user-check'; ?>"></i>
-                                <?php echo $provider['needs_activation'] ? 'Awaiting activation decision' : 'Already active'; ?>
+                                <?php echo $provider['needs_activation'] ? 'Needs activation' : 'Already active'; ?>
                             </span>
+                        </div>
+
+                        <div class="provider-review-footer-meta">
+                            <span class="provider-review-footer-item">
+                                <i class="fas fa-calendar-days"></i>
+                                Registered <?php echo htmlspecialchars($provider['created_label']); ?>
+                            </span>
+                            <?php if ($provider['website'] !== '' && filter_var($provider['website'], FILTER_VALIDATE_URL)): ?>
+                            <a href="<?php echo htmlspecialchars($provider['website']); ?>" class="provider-review-footer-item provider-review-footer-link" target="_blank" rel="noopener noreferrer">
+                                <i class="fas fa-globe"></i>
+                                <?php echo htmlspecialchars($provider['website_label']); ?>
+                            </a>
+                            <?php endif; ?>
                         </div>
 
                         <div class="provider-review-actions">

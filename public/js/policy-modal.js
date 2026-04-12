@@ -46,14 +46,13 @@
             html: buildModalHtml(config),
             width: 760,
             padding: '1.2rem',
-            showCloseButton: true,
+            showCloseButton: false,
             confirmButtonText: 'Close',
             buttonsStyling: false,
             customClass: {
                 popup: 'policy-modal-popup',
                 htmlContainer: 'policy-modal-html',
-                confirmButton: 'policy-modal-confirm',
-                closeButton: 'policy-modal-close'
+                confirmButton: 'policy-modal-confirm'
             }
         });
     }

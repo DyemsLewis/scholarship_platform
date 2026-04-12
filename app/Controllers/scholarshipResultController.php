@@ -460,17 +460,9 @@ class ScholarshipService {
         $status = 'pending';
         $detail = 'Set your current or target course';
         if ($referenceCourse !== '') {
-            $courseScore = $this->calculateCourseScore($scholarship, $referenceCourse);
-            if ($courseScore >= 25) {
-                $status = 'met';
-                $detail = 'Course pathway strongly aligns with scholarship focus';
-            } elseif ($courseScore >= 15) {
-                $status = 'warn';
-                $detail = 'Course pathway partially aligns; review scholarship details';
-            } else {
-                $status = 'warn';
-                $detail = 'Course pathway has low alignment with listed focus';
-            }
+            $courseMatch = $this->analyzeCourseMatch($scholarship, $referenceCourse);
+            $status = $courseMatch['status'];
+            $detail = $courseMatch['detail'];
         }
 
         $checks[] = [
@@ -488,16 +480,16 @@ class ScholarshipService {
             $normalizedSchool = $this->normalizeLooseText($referenceSchool);
             if (strlen($normalizedSchool) >= 4 && $scholarshipText !== '' && str_contains($scholarshipText, $normalizedSchool)) {
                 $status = 'met';
-                $detail = 'Scholarship details mention your school/target college';
+                $detail = 'Passed school/location check because the scholarship details mention ' . $referenceSchool . '.';
             } elseif ($profile['city'] !== '' && $scholarshipText !== '' && str_contains($scholarshipText, $profile['city'])) {
                 $status = 'met';
-                $detail = 'Scholarship location aligns with your city';
+                $detail = 'Passed school/location check because the scholarship is listed in ' . ucwords($profile['city']) . '.';
             } elseif ($profile['province'] !== '' && $scholarshipText !== '' && str_contains($scholarshipText, $profile['province'])) {
                 $status = 'warn';
-                $detail = 'Scholarship location aligns with your province';
+                $detail = 'School/location check is only partial because the scholarship is listed in ' . ucwords($profile['province']) . '.';
             } else {
                 $status = 'warn';
-                $detail = 'No direct school/location mention in scholarship details';
+                $detail = 'School/location check is weaker because the scholarship details do not mention the recorded school or location.';
             }
         }
 
@@ -606,8 +598,8 @@ class ScholarshipService {
             ? $normalizedProfile['target_course']
             : ($normalizedProfile['course'] ?? '');
         if ($referenceCourse !== '') {
-            $courseScore = $this->calculateCourseScore($scholarship, $referenceCourse);
-            $score += $courseScore;
+            $courseMatch = $this->analyzeCourseMatch($scholarship, $referenceCourse);
+            $score += (int) ($courseMatch['score'] ?? 10);
         } else {
             $score += 15; // No course data
         }
@@ -688,13 +680,14 @@ class ScholarshipService {
     /**
      * Calculate course compatibility score
      */
-    private function calculateCourseScore($scholarship, $userCourse) {
+    private function analyzeCourseMatch($scholarship, $userCourse): array {
         $text = strtolower(
             ($scholarship['name'] ?? '') . ' ' . 
             ($scholarship['description'] ?? '') . ' ' . 
             ($scholarship['eligibility'] ?? '')
         );
-        $course = strtolower($userCourse);
+        $courseLabel = trim((string) $userCourse);
+        $course = strtolower($courseLabel);
         
         $stemKeywords = ['stem', 'science', 'engineering', 'technology', 'computer', 'math', 'it', 'information technology', 'bsit', 'bscs'];
         $businessKeywords = ['business', 'management', 'accountancy', 'marketing', 'finance', 'bsba', 'bsa'];
@@ -713,18 +706,39 @@ class ScholarshipService {
         $isScholarshipArts = $this->textContainsAny($text, $artsKeywords);
         $isScholarshipHealth = $this->textContainsAny($text, $healthKeywords);
         $isScholarshipArchitecture = $this->textContainsAny($text, $architectureKeywords);
+
+        $courseReference = $courseLabel !== '' ? $courseLabel : 'the recorded course';
         
         if (($isUserStem && $isScholarshipStem) || 
             ($isUserBusiness && $isScholarshipBusiness) || 
             ($isUserArts && $isScholarshipArts) || 
             ($isUserHealth && $isScholarshipHealth) ||
             ($isUserArchitecture && $isScholarshipArchitecture)) {
-            return 30; // Exact field match
-        } elseif (strpos($text, 'all courses') !== false || strpos($text, 'any course') !== false || strpos($text, 'open to all') !== false) {
-            return 25; // Open to all courses
-        } else {
-            return 10; // Low course relevance
+            return [
+                'score' => 30,
+                'status' => 'met',
+                'detail' => 'Passed course check because ' . $courseReference . ' matches the scholarship focus area.'
+            ];
         }
+
+        if (strpos($text, 'all courses') !== false || strpos($text, 'any course') !== false || strpos($text, 'open to all') !== false) {
+            return [
+                'score' => 25,
+                'status' => 'met',
+                'detail' => 'Passed course check because this scholarship is open to all courses.'
+            ];
+        }
+
+        return [
+            'score' => 10,
+            'status' => 'warn',
+            'detail' => 'Course check is weaker because the scholarship details do not clearly list ' . $courseReference . ' as a priority course.'
+        ];
+    }
+
+    private function calculateCourseScore($scholarship, $userCourse) {
+        $courseMatch = $this->analyzeCourseMatch($scholarship, $userCourse);
+        return (int) ($courseMatch['score'] ?? 10);
     }
     
     /**
@@ -809,6 +823,165 @@ class ScholarshipService {
      */
     public function formatDistance($distance) {
         return $this->scholarshipModel->formatDistance($distance);
+    }
+}
+
+if (!function_exists('scholarshipMatchGuideSentence')) {
+    function scholarshipMatchGuideSentence(string $text): string
+    {
+        $normalized = trim(preg_replace('/\s+/', ' ', $text) ?? $text);
+        if ($normalized === '') {
+            return '';
+        }
+
+        return preg_match('/[.!?]$/', $normalized) ? $normalized : ($normalized . '.');
+    }
+}
+
+if (!function_exists('scholarshipMatchGuideReasonFromCheck')) {
+    function scholarshipMatchGuideReasonFromCheck(array $check): string
+    {
+        $key = strtolower(trim((string) ($check['key'] ?? '')));
+        $status = strtolower(trim((string) ($check['status'] ?? 'pending')));
+        $target = trim((string) ($check['target'] ?? ''));
+        $detail = trim((string) ($check['detail'] ?? ''));
+        $fallbackLabel = trim((string) ($check['label'] ?? 'this scholarship'));
+
+        switch ($key) {
+            case 'applicant_type':
+                if ($status === 'met') {
+                    return scholarshipMatchGuideSentence('Passed applicant type because the recorded profile matches ' . $target);
+                }
+                if ($status === 'failed') {
+                    return scholarshipMatchGuideSentence('Applicant type does not pass because this scholarship requires ' . $target);
+                }
+                return 'Applicant type is still missing, so this scholarship check is not confirmed yet.';
+
+            case 'year_level':
+                if ($status === 'met') {
+                    return scholarshipMatchGuideSentence('Passed year level because the recorded profile matches ' . $target);
+                }
+                if ($status === 'failed') {
+                    return scholarshipMatchGuideSentence('Year level does not pass because this scholarship requires ' . $target);
+                }
+                return 'Year level is still missing, so this scholarship check is not confirmed yet.';
+
+            case 'admission_status':
+                if ($status === 'met') {
+                    return scholarshipMatchGuideSentence('Passed admission status because the recorded profile already meets ' . $target);
+                }
+                if ($status === 'failed') {
+                    return scholarshipMatchGuideSentence('Admission status does not pass because this scholarship requires at least ' . $target);
+                }
+                return 'Admission status is still missing, so this scholarship check is not confirmed yet.';
+
+            case 'target_strand':
+                if ($status === 'met') {
+                    return scholarshipMatchGuideSentence('Passed SHS strand because the recorded profile matches ' . $target);
+                }
+                if ($status === 'failed') {
+                    return scholarshipMatchGuideSentence('SHS strand does not pass because this scholarship requires ' . $target);
+                }
+                return 'SHS strand is still missing, so this scholarship check is not confirmed yet.';
+
+            case 'target_citizenship':
+                if ($status === 'met') {
+                    return scholarshipMatchGuideSentence('Passed citizenship because the recorded profile matches ' . $target);
+                }
+                if ($status === 'failed') {
+                    return scholarshipMatchGuideSentence('Citizenship does not pass because this scholarship requires ' . $target);
+                }
+                return 'Citizenship is still missing, so this scholarship check is not confirmed yet.';
+
+            case 'target_income_bracket':
+                if ($status === 'met') {
+                    return scholarshipMatchGuideSentence('Passed income bracket because the recorded profile matches the scholarship priority for ' . $target);
+                }
+                if ($status === 'failed') {
+                    return scholarshipMatchGuideSentence('Income bracket is a weaker signal because the scholarship priority is ' . $target);
+                }
+                if ($detail !== '' && stripos($detail, 'not disclosed') !== false) {
+                    return scholarshipMatchGuideSentence($detail);
+                }
+                return 'Household income bracket is still missing, so this scholarship check is not confirmed yet.';
+
+            case 'target_special_category':
+                if ($status === 'met') {
+                    return scholarshipMatchGuideSentence('Passed special category because the recorded profile matches ' . $target);
+                }
+                if ($status === 'failed') {
+                    return scholarshipMatchGuideSentence('Special category does not pass because this scholarship requires ' . $target);
+                }
+                return 'Special scholarship category is still missing, so this scholarship check is not confirmed yet.';
+
+            case 'enrollment_status':
+                if ($status === 'met') {
+                    $statusLabel = preg_replace('/^Status:\s*/i', '', $detail) ?: $target;
+                    return scholarshipMatchGuideSentence('Passed enrollment status because the applicant is marked as ' . $statusLabel);
+                }
+                if ($detail !== '') {
+                    return scholarshipMatchGuideSentence($detail);
+                }
+                return 'Enrollment status is still missing, so the current student context check is not confirmed yet.';
+
+            case 'academic_standing':
+                if ($status === 'met') {
+                    $standingLabel = preg_replace('/^Standing:\s*/i', '', $detail) ?: $target;
+                    return scholarshipMatchGuideSentence('Passed academic standing because the applicant is in ' . $standingLabel);
+                }
+                if ($detail !== '') {
+                    return scholarshipMatchGuideSentence($detail);
+                }
+                return 'Academic standing is still missing, so the current student context check is not confirmed yet.';
+
+            case 'course_pathway':
+            case 'school_context':
+                if ($detail !== '') {
+                    return scholarshipMatchGuideSentence($detail);
+                }
+                return scholarshipMatchGuideSentence($fallbackLabel . ' still needs more information');
+        }
+
+        if ($detail !== '') {
+            return scholarshipMatchGuideSentence($detail);
+        }
+
+        if ($status === 'met') {
+            return scholarshipMatchGuideSentence('Passed ' . strtolower($fallbackLabel) . ' check');
+        }
+
+        if ($status === 'failed') {
+            return scholarshipMatchGuideSentence(ucfirst($fallbackLabel) . ' does not pass yet');
+        }
+
+        return scholarshipMatchGuideSentence(ucfirst($fallbackLabel) . ' still needs more information');
+    }
+}
+
+if (!function_exists('scholarshipMatchGuideSummary')) {
+    function scholarshipMatchGuideSummary(?int $matchPercentage, bool $requiresAcademicRecord, bool $isGuest = false): string
+    {
+        if ($isGuest) {
+            return 'This is a personalized fit score. Sign in and complete your student details to see exactly which scholarship checks you already pass.';
+        }
+
+        if ($requiresAcademicRecord) {
+            return 'This score is still estimated because the academic record is missing. The checks below explain which parts of the scholarship already pass using the profile data on file.';
+        }
+
+        if ($matchPercentage !== null && $matchPercentage >= 80) {
+            return 'This score is high because several key scholarship checks are already passing.';
+        }
+
+        if ($matchPercentage !== null && $matchPercentage >= 60) {
+            return 'This score passed because some major scholarship checks are already passing, even though a few other signals are still weaker or incomplete.';
+        }
+
+        if ($matchPercentage !== null) {
+            return 'This score is lower because only some scholarship checks are passing right now, while other signals still need work.';
+        }
+
+        return 'The DSS explains this fit score by showing which scholarship checks already pass and which ones still limit the result.';
     }
 }
 ?>

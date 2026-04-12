@@ -2472,6 +2472,14 @@ body.report-issue-open {
     padding: 0 !important;
 }
 
+.swal2-popup.policy-modal-popup .swal2-actions {
+    width: 100%;
+    margin: 0 !important;
+    padding: 0 24px 24px !important;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
 .policy-modal {
     text-align: left;
     padding: 24px;
@@ -2602,6 +2610,8 @@ body.report-issue-open {
     border: none;
     border-radius: 999px;
     padding: 12px 22px;
+    min-height: 52px;
+    min-width: 94px;
     background: #2c5aa0;
     color: #ffffff;
     font-weight: 700;
@@ -2614,13 +2624,11 @@ body.report-issue-open {
     transform: translateY(-1px);
 }
 
-.policy-modal-close {
-    color: #64748b !important;
-    font-size: 1.8rem !important;
-    padding: 10px !important;
-}
-
 @media (max-width: 768px) {
+    .swal2-popup.policy-modal-popup .swal2-actions {
+        padding: 0 18px 18px !important;
+    }
+
     .policy-modal {
         padding: 18px;
     }
@@ -2639,6 +2647,10 @@ body.report-issue-open {
     .policy-modal-popup {
         width: calc(100vw - 16px) !important;
         border-radius: 22px !important;
+    }
+
+    .swal2-popup.policy-modal-popup .swal2-actions {
+        padding: 0 14px 14px !important;
     }
 
     .policy-modal {

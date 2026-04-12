@@ -25,31 +25,80 @@
 }
 
 .provider-consent-card {
+    margin-top: 12px;
+    padding: 24px 24px 22px;
+    border-color: #d7e3f4;
+    border-radius: 24px;
     background:
-        radial-gradient(circle at top right, rgba(59, 130, 246, 0.1), transparent 30%),
+        radial-gradient(circle at top right, rgba(59, 130, 246, 0.09), transparent 30%),
         linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.provider-consent-card .consent-card-header {
+    gap: 16px;
+    margin-bottom: 18px;
 }
 
 .provider-consent-card .consent-card-icon {
-    background: #e8f0ff;
-    color: #1d4ed8;
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    background: #eaf1ff;
+    color: #2457c5;
+    font-size: 1.45rem;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.provider-consent-card .consent-card-copy h3 {
+    font-size: 1.08rem;
+    margin-bottom: 8px;
+}
+
+.provider-consent-card .consent-card-copy p {
+    max-width: 780px;
+    color: #35507a;
+    font-size: 0.98rem;
+    line-height: 1.7;
 }
 
 .provider-consent-card .consent-link-card:hover {
     box-shadow: 0 14px 30px rgba(37, 99, 235, 0.08);
 }
 
-.provider-confirm-copy strong {
-    display: block;
-    color: #0f172a;
-    margin-bottom: 4px;
+.provider-consent-card .provider-confirm-check {
+    margin-top: 0;
+    padding: 18px 20px;
+    border-color: #d6e1f0;
+    border-radius: 22px;
+    align-items: center;
+    gap: 14px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
 }
 
-.provider-confirm-copy span {
-    display: block;
-    color: #475569;
-    line-height: 1.55;
-    font-size: 0.92rem;
+.provider-consent-card .consent-check-indicator {
+    width: 28px;
+    height: 28px;
+    margin-top: 0;
+    border-radius: 10px;
+    border-width: 1.5px;
+    border-color: #bfd3f7;
+}
+
+.provider-consent-card .consent-check-copy {
+    color: #243b63;
+    font-size: 0.98rem;
+    line-height: 1.7;
+}
+
+.provider-consent-card .consent-inline-link {
+    font-weight: 700;
+}
+
+.provider-consent-footnote {
+    margin: 16px 4px 0;
+    color: #58729a;
+    font-size: 0.9rem;
 }
 
 .provider-signup-actions {
@@ -63,5 +112,37 @@
 
     .provider-upload-card {
         padding: 12px;
+    }
+
+    .provider-consent-card {
+        padding: 20px 18px 18px;
+    }
+
+    .provider-consent-card .consent-card-header {
+        gap: 14px;
+        margin-bottom: 16px;
+    }
+
+    .provider-consent-card .consent-card-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 18px;
+        font-size: 1.25rem;
+    }
+
+    .provider-consent-card .provider-confirm-check {
+        padding: 16px 16px;
+        align-items: flex-start;
+    }
+
+    .provider-consent-card .consent-check-indicator {
+        width: 24px;
+        height: 24px;
+        margin-top: 3px;
+    }
+
+    .provider-consent-card .consent-check-copy {
+        font-size: 0.94rem;
+        line-height: 1.65;
     }
 }

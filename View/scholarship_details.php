@@ -588,6 +588,37 @@ $buildScholarshipCheckReason = static function (array $check, string $status): s
     return $detail !== '' ? $detail : $label;
 };
 
+$buildProfileMismatchSummary = static function (array $checks): string {
+    $failedChecks = array_values(array_filter($checks, static function (array $check): bool {
+        return strtolower(trim((string) ($check['status'] ?? 'pending'))) === 'failed';
+    }));
+
+    if (empty($failedChecks)) {
+        return 'Some of your current applicant details do not match this scholarship requirement.';
+    }
+
+    usort($failedChecks, static function (array $left, array $right): int {
+        $leftPriority = strtolower(trim((string) ($left['key'] ?? ''))) === 'applicant_type' ? 0 : 1;
+        $rightPriority = strtolower(trim((string) ($right['key'] ?? ''))) === 'applicant_type' ? 0 : 1;
+        return $leftPriority <=> $rightPriority;
+    });
+
+    $failedCheck = $failedChecks[0];
+    $key = strtolower(trim((string) ($failedCheck['key'] ?? '')));
+    $label = trim((string) ($failedCheck['label'] ?? 'Profile'));
+    $target = trim((string) ($failedCheck['target'] ?? ''));
+
+    if ($key === 'applicant_type' && $target !== '') {
+        return 'Your current applicant type does not match this scholarship. Required applicant type: ' . $target . '.';
+    }
+
+    if ($label !== '' && $target !== '') {
+        return 'Your current ' . strtolower($label) . ' does not match this scholarship requirement. Required ' . strtolower($label) . ': ' . $target . '.';
+    }
+
+    return 'Some of your current applicant details do not match this scholarship requirement.';
+};
+
 $buildCompactScholarshipText = static function (string $text, string $fallback = 'Not specified'): string {
     $normalized = trim(preg_replace('/\s+/', ' ', strip_tags($text)) ?? $text);
     if ($normalized === '') {
@@ -897,7 +928,7 @@ if ($deadlineClass === 'bad') {
 } elseif ($profileRequirementFailed > 0) {
     $nextStepTone = 'warning';
     $nextStepIcon = 'fa-user-xmark';
-    $nextStepMessage = $openingDatePrepPrefix . 'Your current applicant profile does not yet match the target audience for this scholarship.';
+    $nextStepMessage = $openingDatePrepPrefix . $buildProfileMismatchSummary($profileChecks);
     $primaryActionHref = 'profile.php';
     $primaryActionClass = 'btn-outline-modern';
     $primaryActionIcon = 'fa-user-pen';
@@ -951,7 +982,7 @@ if ($detailCardStatusClass === 'ready') {
 } elseif ($detailCardStatusClass === 'profile') {
     $eligibilityStatusTitle = 'Not yet. Your profile still needs attention.';
     $eligibilityStatusSummary = $profileRequirementFailed > 0
-        ? 'Some of your current applicant details do not match the target audience for this scholarship.'
+        ? $buildProfileMismatchSummary($profileChecks)
         : 'Complete the missing profile fields first so the system can finish checking your eligibility.';
 } elseif ($detailCardStatusClass === 'estimated') {
     $eligibilityStatusTitle = 'Not yet. The system still needs your academic record.';
@@ -1041,10 +1072,10 @@ if (is_array($coursePathwayCheck)) {
     $courseMatchDetail = trim((string) ($coursePathwayCheck['detail'] ?? $courseMatchDetail));
 
     if ($courseMatchStatus === 'met') {
-        $courseMatchValue = 'Strong course alignment';
+        $courseMatchValue = 'Passed course check';
         $courseMatchClass = 'good';
     } elseif ($courseMatchStatus === 'warn') {
-        $courseMatchValue = 'Partial course alignment';
+        $courseMatchValue = 'Course check needs review';
         $courseMatchClass = 'warn';
     } else {
         $courseMatchValue = 'Course details still needed';
@@ -1056,15 +1087,21 @@ if (is_array($coursePathwayCheck)) {
 }
 
 $profileMatchValue = ($profileEvaluation['total'] ?? 0) > 0
-    ? (($profileEvaluation['met'] ?? 0) . '/' . ($profileEvaluation['total'] ?? 0) . ' audience rules aligned')
+    ? (($profileEvaluation['met'] ?? 0) . '/' . ($profileEvaluation['total'] ?? 0) . ' audience checks passed')
     : 'No extra audience filters';
+$profileDetail = ($profileEvaluation['total'] ?? 0) > 0
+    ? (($profileEvaluation['met'] ?? 0) . ' of ' . ($profileEvaluation['total'] ?? 0) . ' scholarship audience checks are already passing.')
+    : 'This scholarship does not require extra profile filters.';
 $profileMatchClass = ($profileEvaluation['total'] ?? 0) > 0
     ? ($profileClass === 'bad' ? 'bad' : ($profileClass === 'warn' ? 'warn' : 'good'))
     : 'info';
 
 $studentContextValue = $currentInfoTotal > 0
-    ? ($currentInfoMet . '/' . $currentInfoTotal . ' support signals aligned')
+    ? ($currentInfoMet . '/' . $currentInfoTotal . ' support checks passed')
     : 'No extra context checks';
+$studentContextDetail = $currentInfoTotal > 0
+    ? ($currentInfoMet . ' of ' . $currentInfoTotal . ' current student support checks are already passing.')
+    : 'No additional current-information checks are required.';
 $studentContextClass = $currentInfoClass === 'good'
     ? 'good'
     : ($currentInfoClass === 'warn' ? 'warn' : 'info');
@@ -1104,19 +1141,7 @@ $matchGuideTitle = $matchPercentage !== null
     ? ('Why this shows as ' . (int) $matchPercentage . '% match')
     : 'How the match score works';
 
-if (!$isLoggedIn) {
-    $matchGuideSummary = 'This is a personalized fit score. Log in and complete your student details to see how well this scholarship matches your profile.';
-} elseif ($requiresGwa) {
-    $matchGuideSummary = 'This score is still partly estimated because your academic record is missing. The DSS is using your other profile signals for now.';
-} elseif ($matchPercentage !== null && $matchPercentage >= 80) {
-    $matchGuideSummary = 'This is a strong fit score because several major DSS signals line up well with this scholarship.';
-} elseif ($matchPercentage !== null && $matchPercentage >= 60) {
-    $matchGuideSummary = 'This is a moderate fit score. Some major DSS signals line up, but a few areas are weaker or still incomplete.';
-} elseif ($matchPercentage !== null) {
-    $matchGuideSummary = 'This is a lower fit score right now because the scholarship and your current record are not aligning strongly yet.';
-} else {
-    $matchGuideSummary = 'The DSS uses your current academic and profile details to build a fit score for each scholarship.';
-}
+$matchGuideSummary = '';
 
 $matchGuideNote = 'This percentage ranks fit only. Required documents affect whether you can submit, and final approval still depends on provider review.';
 
@@ -1129,12 +1154,18 @@ if ($requiredGwa !== null) {
     } elseif (empty($userAcademicScore)) {
         $pushReason($matchScoreLimitingReasons, 'Your academic record is missing, so the score is only partly estimated right now.');
     } elseif ((float) $userAcademicScore <= (float) $requiredGwa) {
-        $pushReason($matchScorePositiveReasons, 'Your ' . strtolower($academicMetricLabel) . ' is within the required range for this scholarship.');
+        $pushReason(
+            $matchScorePositiveReasons,
+            'Passed academic check because your ' . strtolower($academicMetricLabel) . ' of ' . number_format((float) $userAcademicScore, 2) . ' meets the scholarship limit of ' . $requiredGwaLabel . ' or better.'
+        );
     } else {
-        $pushReason($matchScoreLimitingReasons, 'Your current ' . strtolower($academicMetricLabel) . ' is above the scholarship limit.');
+        $pushReason(
+            $matchScoreLimitingReasons,
+            'Academic check does not pass because your ' . strtolower($academicMetricLabel) . ' of ' . number_format((float) $userAcademicScore, 2) . ' is above the scholarship limit of ' . $requiredGwaLabel . '.'
+        );
     }
 } else {
-    $pushReason($matchScorePositiveReasons, 'This scholarship does not require a fixed ' . strtolower($academicMetricLabel) . ' cutoff.');
+    $pushReason($matchScorePositiveReasons, 'Passed academic check automatically because this scholarship does not use a fixed ' . strtolower($academicMetricLabel) . ' cutoff.');
 }
 
 if (is_array($coursePathwayCheck)) {
@@ -1147,25 +1178,32 @@ if (is_array($coursePathwayCheck)) {
     }
 }
 
-if (($profileEvaluation['total'] ?? 0) > 0) {
-    if (($profileEvaluation['failed'] ?? 0) > 0) {
-        $pushReason($matchScoreLimitingReasons, 'Some applicant profile rules do not match this scholarship audience yet.');
-    } elseif (($profileEvaluation['pending'] ?? 0) > 0) {
-        $pushReason($matchScoreLimitingReasons, 'Some audience-fit details are still missing from your profile.');
-    } else {
-        $pushReason($matchScorePositiveReasons, 'Your applicant profile matches the target audience rules.');
+if (!empty($profileChecks)) {
+    foreach ($profileChecks as $profileCheck) {
+        $profileCheckStatus = strtolower(trim((string) ($profileCheck['status'] ?? 'pending')));
+        if ($profileCheckStatus === 'met') {
+            $pushReason($matchScorePositiveReasons, scholarshipMatchGuideReasonFromCheck($profileCheck));
+        } elseif (in_array($profileCheckStatus, ['failed', 'pending'], true)) {
+            $pushReason($matchScoreLimitingReasons, scholarshipMatchGuideReasonFromCheck($profileCheck));
+        }
     }
 } else {
     $pushReason($matchScorePositiveReasons, 'The scholarship is open to a broader set of applicants, which helps your fit score.');
 }
 
 if ($currentInfoTotal > 0) {
-    if ($currentInfoPending > 0) {
-        $pushReason($matchScoreLimitingReasons, 'Some current student details are still missing, so the DSS cannot use the full context yet.');
-    } elseif ($currentInfoWarn > 0) {
-        $pushReason($matchScoreLimitingReasons, 'Some current student signals only partially support this scholarship focus.');
-    } elseif ($currentInfoMet > 0) {
-        $pushReason($matchScorePositiveReasons, 'Your current student details support this scholarship focus.');
+    foreach ($currentInfoChecks as $currentInfoCheck) {
+        $currentInfoKey = strtolower(trim((string) ($currentInfoCheck['key'] ?? '')));
+        if ($currentInfoKey === 'course_pathway') {
+            continue;
+        }
+
+        $currentInfoStatus = strtolower(trim((string) ($currentInfoCheck['status'] ?? 'pending')));
+        if ($currentInfoStatus === 'met') {
+            $pushReason($matchScorePositiveReasons, scholarshipMatchGuideReasonFromCheck($currentInfoCheck));
+        } elseif (in_array($currentInfoStatus, ['warn', 'pending'], true)) {
+            $pushReason($matchScoreLimitingReasons, scholarshipMatchGuideReasonFromCheck($currentInfoCheck));
+        }
     }
 }
 
@@ -1192,6 +1230,12 @@ $matchScoreLimitingItems = !empty($matchScoreLimitingReasons)
     ? array_slice($matchScoreLimitingReasons, 0, 4)
     : ['No major factor is pulling the match score down right now.'];
 
+$matchGuideSummary = scholarshipMatchGuideSummary(
+    $matchPercentage !== null ? (int) $matchPercentage : null,
+    $requiresGwa,
+    !$isLoggedIn
+);
+
 $matchScoreFactors = [
     [
         'label' => 'Academic fit',
@@ -1217,7 +1261,7 @@ $matchScoreFactors = [
     [
         'label' => 'Student context',
         'value' => $studentContextValue,
-        'detail' => $currentInfoDetail,
+        'detail' => $studentContextDetail,
         'class' => $studentContextClass,
         'icon' => 'fa-id-card',
     ],
@@ -1261,6 +1305,7 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
     <title>Scholarship Details - <?php echo htmlspecialchars($scholarship['name']); ?></title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/style.css')); ?>">
+    <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/document.css')); ?>">
     <link rel="stylesheet" href="<?php echo htmlspecialchars(assetUrl('public/css/scholarship-details.css')); ?>">
 </head>
 <body>
@@ -1447,9 +1492,11 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
                         <div class="scholarship-doc-list">
                             <?php foreach ($requiredDocuments as $doc): ?>
                                 <?php
+                                $docTypeCode = (string) ($doc['document_type'] ?? '');
                                 $docName = $doc['name'] ?? $doc['document_type'];
                                 $docStatus = 'missing';
                                 $statusLabel = $isLoggedIn ? 'Missing' : 'Login to track';
+                                $isAcademicRequirement = in_array(strtolower(trim($docTypeCode)), ['grades', 'form_138'], true);
                                 $docDetail = trim((string) ($doc['description'] ?? ''));
                                 if ($isLoggedIn) {
                                     foreach (($documentSummary['requirements'] ?? []) as $req) {
@@ -1464,16 +1511,33 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
                                     }
                                 }
                                 if ($docDetail === '') {
-                                    $docDetail = 'Check or manage this file in your documents page.';
+                                    $docDetail = 'This document is part of the scholarship requirements and may be checked during review.';
                                 }
                                 ?>
-                                <a class="scholarship-doc-item state-<?php echo htmlspecialchars($docStatus); ?>" href="documents.php#doc-card-<?php echo htmlspecialchars((string) $doc['document_type']); ?>">
+                                <?php if ($isAcademicRequirement): ?>
+                                <a
+                                    class="scholarship-doc-item state-<?php echo htmlspecialchars($docStatus); ?>"
+                                    href="upload.php?from=documents&amp;document_type=<?php echo urlencode($docTypeCode); ?>"
+                                >
+                                <?php else: ?>
+                                <button
+                                    type="button"
+                                    class="scholarship-doc-item state-<?php echo htmlspecialchars($docStatus); ?>"
+                                    onclick='openUploadModal(<?php echo json_encode($docTypeCode); ?>, <?php echo json_encode((string) $docName); ?>, <?php echo json_encode($docStatus === "missing" ? "upload" : "update"); ?>)'
+                                    aria-haspopup="dialog"
+                                    aria-controls="uploadModal"
+                                >
+                                <?php endif; ?>
                                     <div class="scholarship-doc-main">
                                         <strong><?php echo htmlspecialchars((string) $docName); ?></strong>
                                         <p><?php echo htmlspecialchars($docDetail); ?></p>
                                     </div>
                                     <span class="scholarship-doc-status"><?php echo htmlspecialchars($statusLabel); ?></span>
+                                <?php if ($isAcademicRequirement): ?>
                                 </a>
+                                <?php else: ?>
+                                </button>
+                                <?php endif; ?>
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
@@ -1569,7 +1633,7 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
 
                 <div class="scholarship-rules-grid">
                     <section class="scholarship-rules-card">
-                        <h3>Main reasons helping this score</h3>
+                            <h3>Why it passed</h3>
                         <ul class="scholarship-bullet-list tone-positive">
                             <?php foreach ($matchScorePositiveItems as $matchScorePositiveItem): ?>
                                 <li><?php echo htmlspecialchars($matchScorePositiveItem); ?></li>
@@ -1578,7 +1642,7 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
                     </section>
 
                     <section class="scholarship-rules-card scholarship-rules-card-warning">
-                        <h3>What is limiting the score right now</h3>
+                            <h3>What is still limiting this score</h3>
                         <ul class="scholarship-bullet-list tone-warning">
                             <?php foreach ($matchScoreLimitingItems as $matchScoreLimitingItem): ?>
                                 <li><?php echo htmlspecialchars($matchScoreLimitingItem); ?></li>
@@ -1625,11 +1689,55 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
                 </div>
             </div>
         </div>
+
+        <div class="modal-overlay" id="uploadModal">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h3><i class="fas fa-cloud-upload-alt"></i> <span id="modalTitle">Upload Document</span></h3>
+                    <button class="modal-close" onclick="closeUploadModal()"><i class="fas fa-times"></i></button>
+                </div>
+
+                <form id="uploadForm" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" id="documentType" name="document_type">
+
+                    <div class="modal-body">
+                        <div class="upload-mode-note" id="uploadModeNote" hidden></div>
+
+                        <div class="upload-zone" id="uploadArea">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <h4>Click to browse or drag & drop</h4>
+                            <p>Supported formats: JPG, PNG, PDF (Max: 5MB)</p>
+                            <input type="file" id="fileInput" name="document_file" accept=".jpg,.jpeg,.png,.pdf" style="display: none;" required>
+                            <div id="fileName" class="file-info" style="display: none;"></div>
+                        </div>
+
+                        <div class="requirements-list">
+                            <h6><i class="fas fa-clipboard-check"></i> Document Requirements:</h6>
+                            <ul id="requirementsList">
+                                <li><i class="fas fa-check"></i> File must be clear and readable</li>
+                                <li><i class="fas fa-check"></i> All information must be visible</li>
+                                <li><i class="fas fa-check"></i> No alterations or edits</li>
+                                <li><i class="fas fa-check"></i> Valid and not expired</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline" onclick="closeUploadModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="uploadBtn">
+                            <i class="fas fa-upload"></i> Upload Document
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 </section>
 
 <?php include 'layout/footer.php'; ?>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/script.js')); ?>"></script>
+<script src="<?php echo htmlspecialchars(assetUrl('public/js/document.js')); ?>"></script>
 <script>
 (function () {
     const modalConfigs = [

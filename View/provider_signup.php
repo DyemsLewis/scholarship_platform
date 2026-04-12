@@ -323,11 +323,11 @@ $providerSignupCssVersion = @filemtime(__DIR__ . '/../public/css/provider-signup
                             <div class="consent-card provider-consent-card">
                                 <div class="consent-card-header">
                                     <div class="consent-card-icon">
-                                        <i class="fas fa-building-columns"></i>
+                                        <i class="fas fa-shield-halved"></i>
                                     </div>
                                     <div class="consent-card-copy">
-                                        <h3>Review the provider terms before submission</h3>
-                                        <p>This organization account will go through admin review before it can sign in. Please review the provider terms and privacy notice before creating the account.</p>
+                                        <h3>Review the terms before creating your account</h3>
+                                        <p>We only use your organization details for provider verification, account access, scholarship posting, and application processing. Please review the agreement and privacy notice before you continue.</p>
                                     </div>
                                 </div>
 
@@ -337,15 +337,15 @@ $providerSignupCssVersion = @filemtime(__DIR__ . '/../public/css/provider-signup
                                         <i class="fas fa-check"></i>
                                     </span>
                                     <span class="consent-check-copy provider-confirm-copy">
-                                        <strong>
-                                            I have reviewed the
-                                            <a href="#" class="consent-inline-link" onclick="event.preventDefault(); event.stopPropagation(); showProviderTerms();">Provider Terms and Conditions</a>
-                                            and
-                                            <a href="#" class="consent-inline-link" onclick="event.preventDefault(); event.stopPropagation(); showProviderPrivacy();">Privacy Policy</a>.
-                                        </strong>
-                                        <span>I confirm that the organization information entered above is accurate and I understand that this provider account will require admin review before it can sign in.</span>
+                                        I have read the
+                                        <a href="#" class="consent-inline-link" onclick="event.preventDefault(); event.stopPropagation(); showProviderTerms();">Terms and Conditions</a>
+                                        and
+                                        <a href="#" class="consent-inline-link" onclick="event.preventDefault(); event.stopPropagation(); showProviderPrivacy();">Privacy Policy</a>,
+                                        and I agree to continue with provider account creation.
                                     </span>
                                 </label>
+
+                                <p class="consent-footnote provider-consent-footnote">Click the highlighted policy names in the checkbox if you want to review them before submitting. Provider accounts still need admin approval before they can sign in.</p>
                             </div>
                         </div>
                     </div>

@@ -164,7 +164,7 @@ class OcrService
         if ($maxUploadBytes > 0 && filesize($inputPath) > $maxUploadBytes) {
             return $this->errorResult(
                 'The current scanner service limit is ' . number_format($maxUploadBytes / 1048576, 2) .
-                ' MB per file. Compress the TOR file or contact the administrator to increase the scanner upload limit.',
+                ' MB per file. The upload was still accepted and saved to documents, but automatic scanning will not finish until the file is compressed or the scanner upload limit is increased.',
                 'ocr_space'
             );
         }

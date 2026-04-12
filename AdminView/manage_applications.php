@@ -136,6 +136,7 @@ function queueBuildMatchGuidePayload(array $application, ScholarshipService $sch
     $matchGuideScore = $application['probability_score'] !== null
         ? (int) round((float) $application['probability_score'])
         : (isset($matchAssessment['percentage']) ? (int) $matchAssessment['percentage'] : null);
+    $matchProfileChecks = is_array($matchAssessment['profile_checks'] ?? null) ? $matchAssessment['profile_checks'] : [];
     $matchProfileTotal = (int) ($matchAssessment['profile_requirement_total'] ?? 0);
     $matchProfileMet = (int) ($matchAssessment['profile_requirement_met'] ?? 0);
     $matchProfilePending = (int) ($matchAssessment['profile_requirement_pending'] ?? 0);
@@ -193,10 +194,10 @@ function queueBuildMatchGuidePayload(array $application, ScholarshipService $sch
         $matchCourseStatus = strtolower(trim((string) ($matchCoursePathwayCheck['status'] ?? 'pending')));
         $matchCourseDetail = trim((string) ($matchCoursePathwayCheck['detail'] ?? $matchCourseDetail));
         if ($matchCourseStatus === 'met') {
-            $matchCourseValue = 'Strong course alignment';
+            $matchCourseValue = 'Passed course check';
             $matchCourseClass = 'good';
         } elseif ($matchCourseStatus === 'warn') {
-            $matchCourseValue = 'Partial course alignment';
+            $matchCourseValue = 'Course check needs review';
             $matchCourseClass = 'warn';
         }
     } elseif (queueHasValue($application['course'] ?? null) || queueHasValue($application['target_course'] ?? null)) {
@@ -215,10 +216,10 @@ function queueBuildMatchGuidePayload(array $application, ScholarshipService $sch
         }
     }
     $matchProfileValue = $matchProfileTotal > 0
-        ? ($matchProfileMet . '/' . $matchProfileTotal . ' audience rules aligned')
+        ? ($matchProfileMet . '/' . $matchProfileTotal . ' audience checks passed')
         : 'No extra audience filters';
     $matchProfileDetail = $matchProfileTotal > 0
-        ? ($matchProfileMet . '/' . $matchProfileTotal . ' configured profile filters are aligned.')
+        ? ($matchProfileMet . ' of ' . $matchProfileTotal . ' scholarship audience checks are already passing.')
         : 'This scholarship does not require extra profile filters.';
 
     $matchStudentContextClass = 'info';
@@ -230,10 +231,10 @@ function queueBuildMatchGuidePayload(array $application, ScholarshipService $sch
         }
     }
     $matchStudentContextValue = $matchCurrentInfoTotal > 0
-        ? ($matchCurrentInfoMet . '/' . $matchCurrentInfoTotal . ' support signals aligned')
+        ? ($matchCurrentInfoMet . '/' . $matchCurrentInfoTotal . ' support checks passed')
         : 'No extra context checks';
     $matchStudentContextDetail = $matchCurrentInfoTotal > 0
-        ? ($matchCurrentInfoMet . '/' . $matchCurrentInfoTotal . ' current student signals are aligned.')
+        ? ($matchCurrentInfoMet . ' of ' . $matchCurrentInfoTotal . ' current student support checks are already passing.')
         : 'No additional current-information checks are required.';
 
     $matchApplicationNotYetOpen = false;
@@ -314,17 +315,7 @@ function queueBuildMatchGuidePayload(array $application, ScholarshipService $sch
         $matchProviderClass = 'good';
     }
 
-    if ($matchRequiresGwa) {
-        $matchGuideSummary = 'This score is still partly estimated because the applicant academic record is missing. The DSS is using the other profile signals for now.';
-    } elseif ($matchGuideScore !== null && $matchGuideScore >= 80) {
-        $matchGuideSummary = 'This is a strong fit score because several major DSS signals line up well with this scholarship.';
-    } elseif ($matchGuideScore !== null && $matchGuideScore >= 60) {
-        $matchGuideSummary = 'This is a moderate fit score. Some major DSS signals line up, but a few areas are weaker or still incomplete.';
-    } elseif ($matchGuideScore !== null) {
-        $matchGuideSummary = 'This is a lower fit score right now because the scholarship and the applicant record are not aligning strongly yet.';
-    } else {
-        $matchGuideSummary = 'The DSS uses the applicant academic and profile details to build a fit score for each scholarship.';
-    }
+    $matchGuideSummary = '';
 
     $matchGuideNote = 'This percentage ranks fit only. Required documents affect approval readiness, and the final decision still depends on provider review.';
     $matchPositiveReasons = [];
@@ -334,12 +325,18 @@ function queueBuildMatchGuidePayload(array $application, ScholarshipService $sch
         if ($applicantGwaValue === null) {
             $pushReason($matchLimitingReasons, 'The academic record is missing, so the score is only partly estimated right now.');
         } elseif ($applicantGwaValue <= $matchRequiredGwa) {
-            $pushReason($matchPositiveReasons, 'The applicant GWA is within the required range for this scholarship.');
+            $pushReason(
+                $matchPositiveReasons,
+                'Passed academic check because the recorded GWA of ' . number_format((float) $applicantGwaValue, 2) . ' meets the scholarship limit of ' . number_format((float) $matchRequiredGwa, 2) . ' or better.'
+            );
         } else {
-            $pushReason($matchLimitingReasons, 'The current GWA is above the scholarship limit.');
+            $pushReason(
+                $matchLimitingReasons,
+                'Academic check does not pass because the recorded GWA of ' . number_format((float) $applicantGwaValue, 2) . ' is above the scholarship limit of ' . number_format((float) $matchRequiredGwa, 2) . '.'
+            );
         }
     } else {
-        $pushReason($matchPositiveReasons, 'This scholarship does not require a fixed GWA cutoff.');
+        $pushReason($matchPositiveReasons, 'Passed academic check automatically because this scholarship does not use a fixed GWA cutoff.');
     }
 
     if (is_array($matchCoursePathwayCheck)) {
@@ -352,25 +349,32 @@ function queueBuildMatchGuidePayload(array $application, ScholarshipService $sch
         }
     }
 
-    if ($matchProfileTotal > 0) {
-        if ($matchProfileFailed > 0) {
-            $pushReason($matchLimitingReasons, 'Some applicant profile rules do not match this scholarship audience yet.');
-        } elseif ($matchProfilePending > 0) {
-            $pushReason($matchLimitingReasons, 'Some audience-fit details are still missing from the applicant profile.');
-        } else {
-            $pushReason($matchPositiveReasons, 'The applicant profile matches the target audience rules.');
+    if (!empty($matchProfileChecks)) {
+        foreach ($matchProfileChecks as $matchProfileCheck) {
+            $matchProfileCheckStatus = strtolower(trim((string) ($matchProfileCheck['status'] ?? 'pending')));
+            if ($matchProfileCheckStatus === 'met') {
+                $pushReason($matchPositiveReasons, scholarshipMatchGuideReasonFromCheck($matchProfileCheck));
+            } elseif (in_array($matchProfileCheckStatus, ['failed', 'pending'], true)) {
+                $pushReason($matchLimitingReasons, scholarshipMatchGuideReasonFromCheck($matchProfileCheck));
+            }
         }
     } else {
         $pushReason($matchPositiveReasons, 'The scholarship is open to a broader set of applicants, which helps the fit score.');
     }
 
     if ($matchCurrentInfoTotal > 0) {
-        if ($matchCurrentInfoPending > 0) {
-            $pushReason($matchLimitingReasons, 'Some current student details are still missing, so the DSS cannot use the full context yet.');
-        } elseif ($matchCurrentInfoWarn > 0) {
-            $pushReason($matchLimitingReasons, 'Some current student signals only partially support this scholarship focus.');
-        } elseif ($matchCurrentInfoMet > 0) {
-            $pushReason($matchPositiveReasons, 'The current student details support this scholarship focus.');
+        foreach ($matchCurrentInfoChecks as $matchCurrentInfoCheck) {
+            $matchCurrentInfoKey = strtolower(trim((string) ($matchCurrentInfoCheck['key'] ?? '')));
+            if ($matchCurrentInfoKey === 'course_pathway') {
+                continue;
+            }
+
+            $matchCurrentInfoStatus = strtolower(trim((string) ($matchCurrentInfoCheck['status'] ?? 'pending')));
+            if ($matchCurrentInfoStatus === 'met') {
+                $pushReason($matchPositiveReasons, scholarshipMatchGuideReasonFromCheck($matchCurrentInfoCheck));
+            } elseif (in_array($matchCurrentInfoStatus, ['warn', 'pending'], true)) {
+                $pushReason($matchLimitingReasons, scholarshipMatchGuideReasonFromCheck($matchCurrentInfoCheck));
+            }
         }
     }
 
@@ -389,6 +393,8 @@ function queueBuildMatchGuidePayload(array $application, ScholarshipService $sch
     } elseif ($matchProviderClass === 'good') {
         $pushReason($matchPositiveReasons, 'The provider receives an academic-institution ranking signal in the DSS.');
     }
+
+    $matchGuideSummary = scholarshipMatchGuideSummary($matchGuideScore, $matchRequiresGwa);
 
     return [
         'buttonLabel' => $matchGuideScore !== null ? ('Why ' . $matchGuideScore . '% match?') : 'How match works',
@@ -808,12 +814,12 @@ unset($_SESSION['success'], $_SESSION['error']);
 
             <div class="queue-match-reason-grid">
                 <section class="queue-match-reason-card">
-                    <h3>Main reasons helping this score</h3>
+                        <h3>Why it passed</h3>
                     <ul id="applicationMatchModalPositive" class="queue-match-list tone-positive"></ul>
                 </section>
 
                 <section class="queue-match-reason-card queue-match-reason-card-warning">
-                    <h3>What is limiting the score right now</h3>
+                        <h3>What is still limiting this score</h3>
                     <ul id="applicationMatchModalLimiting" class="queue-match-list tone-warning"></ul>
                 </section>
             </div>

@@ -400,6 +400,19 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
         }
 
         /* Document Requirements Section */
+        .requirements-card-header {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .requirements-card-header small {
+            color: var(--gray-500);
+            font-size: 0.88rem;
+            line-height: 1.45;
+            margin-left: 34px;
+        }
+
         .requirements-list {
             max-height: 400px;
             overflow-y: auto;
@@ -943,9 +956,9 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
 
                         <!-- Document Requirements Card -->
                         <div class="form-card-modern">
-                            <div class="card-header">
+                            <div class="card-header requirements-card-header">
                                 <h3><i class="fas fa-file-alt"></i> Document Requirements</h3>
-                                <small style="color: var(--gray-500);">Required documents for applicants</small>
+                                <small>Required documents for applicants</small>
                             </div>
                             <div class="card-body">
                                 <div class="requirements-list" id="documentTypesList">
@@ -1070,26 +1083,13 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
                 if (data.success && data.documentTypes) {
                     container.innerHTML = '';
                     data.documentTypes.forEach(doc => {
-                        // Determine icon based on document code
-                        let iconClass = 'file-alt';
-                        const iconMap = {
-                            'id': 'id-card',
-                            'birth_certificate': 'baby-carriage',
-                            'grades': 'graduation-cap',
-                            'good_moral': 'hand-peace',
-                            'enrollment': 'school',
-                            'income_tax': 'file-invoice-dollar',
-                            'citizenship_proof': 'contract',
-                            'income_proof': 'invoice-dollar',
-                            'special_category_proof': 'signature'
-                        };
-                        iconClass = iconMap[doc.code] || 'file-alt';
-                        
+                        const iconClass = resolveRequirementIconClass(doc);
+
                         const itemDiv = document.createElement('div');
                         itemDiv.className = 'requirement-item';
                         itemDiv.innerHTML = `
                             <div class="requirement-info">
-                                <i class="fas fa-file-${iconClass}"></i>
+                                <i class="${iconClass}" aria-hidden="true"></i>
                                 <div>
                                     <div class="requirement-name">${escapeHtml(doc.name)}</div>
                                     <div class="requirement-desc">${escapeHtml(doc.description || '')}</div>
@@ -1122,6 +1122,59 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
+        }
+
+        function resolveRequirementIconClass(doc) {
+            const code = String(doc && doc.code ? doc.code : '').trim().toLowerCase();
+            const name = String(doc && doc.name ? doc.name : '').trim().toLowerCase();
+            const description = String(doc && doc.description ? doc.description : '').trim().toLowerCase();
+            const haystack = `${code} ${name} ${description}`;
+
+            const directMap = {
+                id: 'fas fa-id-card',
+                birth_certificate: 'fas fa-certificate',
+                grades: 'fas fa-scroll',
+                form_138: 'fas fa-file-lines',
+                good_moral: 'fas fa-circle-check',
+                enrollment: 'fas fa-user-graduate',
+                income_tax: 'fas fa-file-invoice-dollar',
+                citizenship_proof: 'fas fa-flag',
+                income_proof: 'fas fa-wallet',
+                special_category_proof: 'fas fa-users',
+                certificate_of_indigency: 'fas fa-file-contract',
+                voters_id: 'fas fa-id-badge',
+                barangay_clearance: 'fas fa-file-circle-check',
+                medical_certificate: 'fas fa-file-medical',
+                essay: 'fas fa-pen',
+                recommendation: 'fas fa-envelope-open-text'
+            };
+
+            if (directMap[code]) {
+                return directMap[code];
+            }
+
+            const keywordMap = [
+                { icon: 'fas fa-id-card', keywords: ['valid id', 'government id', 'school id', 'passport', 'license'] },
+                { icon: 'fas fa-certificate', keywords: ['birth', 'certificate'] },
+                { icon: 'fas fa-scroll', keywords: ['grades', 'grade slip', 'transcript', 'tor', 'academic record', 'report card', 'form 138'] },
+                { icon: 'fas fa-circle-check', keywords: ['good moral', 'moral'] },
+                { icon: 'fas fa-user-graduate', keywords: ['enrollment', 'enrolment', 'registration form', 'admission'] },
+                { icon: 'fas fa-file-invoice-dollar', keywords: ['income tax', 'itr', 'tax return', 'payslip'] },
+                { icon: 'fas fa-wallet', keywords: ['income proof', 'household income', 'indigency', 'financial'] },
+                { icon: 'fas fa-flag', keywords: ['citizenship', 'residency', 'resident', 'voter'] },
+                { icon: 'fas fa-file-medical', keywords: ['medical', 'health'] },
+                { icon: 'fas fa-envelope-open-text', keywords: ['recommendation', 'reference letter'] },
+                { icon: 'fas fa-pen', keywords: ['essay', 'statement'] },
+                { icon: 'fas fa-users', keywords: ['special category', 'pwd', 'solo parent', '4ps', 'ofw', 'indigenous'] }
+            ];
+
+            for (const entry of keywordMap) {
+                if (entry.keywords.some((keyword) => haystack.includes(keyword))) {
+                    return entry.icon;
+                }
+            }
+
+            return 'fas fa-file-lines';
         }
 
         function createRemoteExamSiteRow(site = {}) {

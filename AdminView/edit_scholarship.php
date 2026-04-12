@@ -94,6 +94,60 @@ function scholarshipOldSelected(array $oldInput, string $key, string $expected, 
     return $value === $expected ? 'selected' : '';
 }
 
+function scholarshipRequirementIconClass(string $code, string $name = '', string $description = ''): string
+{
+    $normalizedCode = strtolower(trim($code));
+    $haystack = strtolower(trim($normalizedCode . ' ' . $name . ' ' . $description));
+
+    $directMap = [
+        'id' => 'fas fa-id-card',
+        'birth_certificate' => 'fas fa-certificate',
+        'grades' => 'fas fa-scroll',
+        'form_138' => 'fas fa-file-lines',
+        'good_moral' => 'fas fa-circle-check',
+        'enrollment' => 'fas fa-user-graduate',
+        'income_tax' => 'fas fa-file-invoice-dollar',
+        'citizenship_proof' => 'fas fa-flag',
+        'income_proof' => 'fas fa-wallet',
+        'special_category_proof' => 'fas fa-users',
+        'certificate_of_indigency' => 'fas fa-file-contract',
+        'voters_id' => 'fas fa-id-badge',
+        'barangay_clearance' => 'fas fa-file-circle-check',
+        'medical_certificate' => 'fas fa-file-medical',
+        'essay' => 'fas fa-pen',
+        'recommendation' => 'fas fa-envelope-open-text',
+    ];
+
+    if (isset($directMap[$normalizedCode])) {
+        return $directMap[$normalizedCode];
+    }
+
+    $keywordMap = [
+        'fas fa-id-card' => [' valid id', 'government id', 'school id', 'passport', 'license'],
+        'fas fa-certificate' => ['birth', 'certificate'],
+        'fas fa-scroll' => ['grades', 'grade slip', 'transcript', 'tor', 'academic record', 'report card', 'form 138'],
+        'fas fa-circle-check' => ['good moral', 'moral'],
+        'fas fa-user-graduate' => ['enrollment', 'enrolment', 'registration form', 'admission'],
+        'fas fa-file-invoice-dollar' => ['income tax', 'itr', 'tax return', 'payslip'],
+        'fas fa-wallet' => ['income proof', 'household income', 'indigency', 'financial'],
+        'fas fa-flag' => ['citizenship', 'residency', 'resident', 'voter'],
+        'fas fa-file-medical' => ['medical', 'health'],
+        'fas fa-envelope-open-text' => ['recommendation', 'reference letter'],
+        'fas fa-pen' => ['essay', 'statement'],
+        'fas fa-users' => ['special category', 'pwd', 'solo parent', '4ps', 'ofw', 'indigenous'],
+    ];
+
+    foreach ($keywordMap as $iconClass => $keywords) {
+        foreach ($keywords as $keyword) {
+            if ($keyword !== '' && str_contains($haystack, $keyword)) {
+                return $iconClass;
+            }
+        }
+    }
+
+    return 'fas fa-file-lines';
+}
+
 function scholarshipReviewWorkflowReady(PDO $pdo): bool
 {
     static $ready = null;
@@ -531,6 +585,19 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
         }
 
         /* Document Requirements Section */
+        .requirements-card-header {
+            align-items: flex-start;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .requirements-card-header small {
+            color: var(--gray-500);
+            font-size: 0.88rem;
+            line-height: 1.45;
+            margin-left: 34px;
+        }
+
         .requirements-list {
             max-height: 400px;
             overflow-y: auto;
@@ -1132,29 +1199,16 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
 
                         <!-- Document Requirements Card -->
                         <div class="form-card-modern">
-                            <div class="card-header">
+                            <div class="card-header requirements-card-header">
                                 <h3><i class="fas fa-file-alt"></i> Document Requirements</h3>
-                                <small style="color: var(--gray-500);">Required documents for applicants</small>
+                                <small>Required documents for applicants</small>
                             </div>
                             <div class="card-body">
                                 <div class="requirements-list">
                                     <?php foreach($documentTypes as $doc): ?>
                                     <div class="requirement-item">
                                         <div class="requirement-info">
-                                            <i class="fas fa-file-<?php 
-                                                echo match($doc['code']) {
-                                                    'id' => 'id-card',
-                                                    'birth_certificate' => 'baby-carriage',
-                                                    'grades' => 'graduation-cap',
-                                                    'good_moral' => 'hand-peace',
-                                                    'enrollment' => 'school',
-                                                    'income_tax' => 'file-invoice-dollar',
-                                                    'citizenship_proof' => 'contract',
-                                                    'income_proof' => 'invoice-dollar',
-                                                    'special_category_proof' => 'signature',
-                                                    default => 'file-alt'
-                                                };
-                                            ?>"></i>
+                                            <i class="<?php echo htmlspecialchars(scholarshipRequirementIconClass((string) ($doc['code'] ?? ''), (string) ($doc['name'] ?? ''), (string) ($doc['description'] ?? ''))); ?>" aria-hidden="true"></i>
                                             <div>
                                                 <div class="requirement-name"><?php echo htmlspecialchars($doc['name']); ?></div>
                                                 <div class="requirement-desc"><?php echo htmlspecialchars($doc['description'] ?? ''); ?></div>

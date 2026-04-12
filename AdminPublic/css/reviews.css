@@ -751,60 +751,98 @@
 
 .provider-review-board {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 12px;
 }
 
 .provider-review-card {
     border: 1px solid #dbe6f4;
-    border-radius: 18px;
+    border-radius: 16px;
     background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-    padding: 18px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 14px;
-    box-shadow: 0 12px 26px rgba(32, 58, 97, 0.07);
+    gap: 12px;
+    box-shadow: 0 10px 24px rgba(32, 58, 97, 0.06);
     scroll-margin-top: 110px;
 }
 
 .provider-review-card-top {
     display: flex;
     justify-content: space-between;
-    gap: 14px;
+    gap: 12px;
     align-items: flex-start;
+}
+
+.provider-review-card-head {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .provider-review-label {
     display: inline-flex;
     align-items: center;
-    padding: 5px 10px;
+    align-self: flex-start;
+    padding: 4px 10px;
     border-radius: 999px;
     background: #eef4fb;
     color: #355d95;
-    font-size: 0.72rem;
+    font-size: 0.69rem;
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
 
 .provider-review-card h2 {
-    margin: 8px 0 4px;
+    margin: 2px 0 0;
     color: #20324f;
-    font-size: 1.12rem;
+    font-size: 1.02rem;
+    line-height: 1.35;
 }
 
 .provider-review-card p {
     margin: 0;
     color: #667085;
-    line-height: 1.5;
-    font-size: 0.9rem;
+    line-height: 1.45;
+    font-size: 0.86rem;
+}
+
+.provider-review-contact {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.provider-review-contact i {
+    color: #4f7bb9;
+    font-size: 0.82rem;
+}
+
+.provider-review-contact-name {
+    color: #415874;
+    font-weight: 600;
+}
+
+.provider-review-contact-position {
+    color: #667085;
+}
+
+.provider-review-contact-position::before {
+    content: "\2022";
+    margin-right: 6px;
+    color: #9aa9bd;
 }
 
 .provider-review-badges {
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: flex-end;
     align-items: flex-end;
-    gap: 8px;
+    gap: 6px;
+    max-width: 44%;
 }
 
 .provider-review-status,
@@ -812,11 +850,12 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 7px 10px;
+    padding: 6px 10px;
     border-radius: 999px;
-    font-size: 0.76rem;
+    font-size: 0.73rem;
     font-weight: 700;
     text-align: center;
+    white-space: nowrap;
 }
 
 .provider-review-status-active,
@@ -876,9 +915,45 @@
 }
 
 .provider-meta-item strong {
+    display: block;
     color: #20324f;
     line-height: 1.4;
     font-size: 0.95rem;
+    word-break: break-word;
+}
+
+.provider-review-summary-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.provider-review-summary-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 10px 12px;
+    min-width: 0;
+}
+
+.provider-review-summary-item span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #64748b;
+    font-size: 0.75rem;
+    margin-bottom: 5px;
+}
+
+.provider-review-summary-item i {
+    color: #4f7bb9;
+}
+
+.provider-review-summary-item strong {
+    display: block;
+    color: #20324f;
+    line-height: 1.45;
+    font-size: 0.92rem;
     word-break: break-word;
 }
 
@@ -886,16 +961,48 @@
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    padding-top: 2px;
 }
 
 .provider-review-check {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 10px;
+    padding: 7px 10px;
     border-radius: 999px;
-    font-size: 0.78rem;
+    font-size: 0.76rem;
     font-weight: 600;
+}
+
+.provider-review-footer-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    padding-top: 4px;
+    border-top: 1px solid #edf2f8;
+}
+
+.provider-review-footer-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #667085;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    text-decoration: none;
+}
+
+.provider-review-footer-item i {
+    color: #4f7bb9;
+}
+
+.provider-review-footer-link {
+    color: #355d95;
+    font-weight: 600;
+}
+
+.provider-review-footer-link:hover {
+    color: #214d89;
 }
 
 .provider-review-actions {
@@ -910,6 +1017,8 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
+    flex: 1 1 160px;
+    padding: 11px 14px;
 }
 
 .gwa-report-select-wrap {
@@ -1417,6 +1526,7 @@
 
     .provider-review-board,
     .provider-review-meta-grid,
+    .provider-review-summary-list,
     .scholarship-review-board {
         grid-template-columns: 1fr;
     }
@@ -1428,6 +1538,7 @@
     .provider-review-badges {
         width: 100%;
         align-items: flex-start;
+        max-width: none;
     }
 
     .review-file-preview-wrap,
