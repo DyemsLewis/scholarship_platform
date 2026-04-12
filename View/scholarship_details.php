@@ -1,7 +1,9 @@
 <?php
 require_once __DIR__ . '/../app/Config/init.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
 require_once __DIR__ . '/../app/Config/url_token.php';
 require_once __DIR__ . '/../app/Controllers/scholarshipResultController.php';
+require_once __DIR__ . '/../app/Models/Application.php';
 require_once __DIR__ . '/../app/Models/Scholarship.php';
 require_once __DIR__ . '/../app/Models/UserDocument.php';
 
@@ -63,6 +65,8 @@ $documentSummary = [
     'pending' => 0,
     'missing' => []
 ];
+$acceptedScholarshipSummary = null;
+$userAcademicDocumentStatus = 'missing';
 
 $requiredDocuments = [];
 try {
@@ -150,7 +154,23 @@ if ($isLoggedIn) {
 
     $documentModel = new UserDocument($pdo);
     $documentSummary = $documentModel->checkScholarshipRequirements($_SESSION['user_id'], $scholarshipId);
+    $userAcademicDocumentStatus = resolveApplicantAcademicDocumentStatus(
+        $userApplicantType,
+        $documentModel->getUserDocuments($_SESSION['user_id'], true)
+    );
+
+    $allowsAcceptedScholarshipApplicants = (int) ($scholarship['allow_if_already_accepted'] ?? 1) === 1;
+    if (!$allowsAcceptedScholarshipApplicants) {
+        try {
+            $applicationModel = new Application($pdo);
+            $acceptedScholarshipSummary = $applicationModel->getAcceptedScholarshipSummary((int) $_SESSION['user_id'], $scholarshipId);
+        } catch (Throwable $e) {
+            $acceptedScholarshipSummary = null;
+        }
+    }
 }
+
+$academicDocumentState = describeAcademicDocumentStatus($userAcademicDocumentStatus, $academicDocumentLabel, $academicMetricLabel);
 
 $profileEvaluation = $scholarshipService->evaluateProfileRequirements($scholarship, [
     'applicant_type' => $userApplicantType,
@@ -204,7 +224,7 @@ if ($requiredGwa !== null) {
         $academicDecision = 'Login to evaluate against required ' . strtolower($academicMetricLabel);
         $academicClass = 'warn';
     } elseif (empty($userAcademicScore)) {
-        $academicDecision = 'Pending: upload ' . strtolower($academicDocumentLabel);
+        $academicDecision = $academicDocumentState['decision'];
         $academicClass = 'warn';
     } elseif ((float) $userAcademicScore <= (float) $requiredGwa) {
         $academicDecision = 'Passed';
@@ -318,6 +338,12 @@ if ($deadlineClass === 'bad') {
     $applicationWindowDetail = 'Applications are open now. The current deadline is ' . $deadlineDisplay . '.';
 }
 
+$hasAcceptedScholarshipConflict = $acceptedScholarshipSummary !== null;
+$acceptedScholarshipName = trim((string) ($acceptedScholarshipSummary['scholarship_name'] ?? ''));
+if ($acceptedScholarshipName === '') {
+    $acceptedScholarshipName = 'another scholarship';
+}
+
 $assessmentLabel = 'None';
 if ($assessmentRequirement === 'online_exam') $assessmentLabel = 'Online Exam';
 if ($assessmentRequirement === 'remote_examination') $assessmentLabel = 'Remote Examination';
@@ -382,13 +408,22 @@ if (!$isLoggedIn) {
     $readinessHeadline = 'Login required';
     $readinessClass = 'info';
     $readinessMessage = 'Sign in to compare this scholarship against your profile and document records.';
+} elseif ($hasAcceptedScholarshipConflict) {
+    $primaryActionHref = 'applications.php';
+    $primaryActionLabel = 'View My Applications';
+    $primaryActionIcon = 'fa-award';
+    $readinessHeadline = 'Accepted scholarship on file';
+    $readinessClass = 'warn';
+    $readinessMessage = 'You already accepted ' . $acceptedScholarshipName . '. This scholarship only accepts applicants who have not yet accepted another scholarship offer.';
 } elseif ($requiresGwa) {
     $primaryActionHref = 'upload.php';
-    $primaryActionLabel = 'Upload ' . $academicDocumentLabel;
-    $primaryActionIcon = 'fa-upload';
-    $readinessHeadline = 'Needs academic record';
+    $primaryActionLabel = $academicDocumentState['action_label'];
+    $primaryActionIcon = in_array($userAcademicDocumentStatus, ['pending', 'verified'], true) ? 'fa-folder-open' : 'fa-upload';
+    $readinessHeadline = $userAcademicDocumentStatus === 'missing'
+        ? 'Needs academic record'
+        : ($userAcademicDocumentStatus === 'rejected' ? 'Academic re-upload needed' : 'Academic review pending');
     $readinessClass = 'warn';
-    $readinessMessage = 'Upload your ' . $academicDocumentLabel . ' so the system can verify your recorded ' . strtolower($academicMetricLabel) . '.';
+    $readinessMessage = $academicDocumentState['summary'];
 } elseif ($profileNeedsAttention) {
     $primaryActionHref = 'profile.php';
     $primaryActionLabel = 'Update Profile';
@@ -774,12 +809,15 @@ $remoteExamMapUrl = ($assessmentRequirement === 'remote_examination' && !empty($
     ? buildEntityUrl('remote_exam_map.php', 'scholarship', $scholarshipId, 'view', ['id' => $scholarshipId])
     : '';
 
-$readyToApplyNow = $isLoggedIn && $isEligible && $hasAllRequired && !$requiresGwa && !$applicationNotYetOpen && $deadlineClass !== 'bad';
+$readyToApplyNow = $isLoggedIn && $isEligible && $hasAllRequired && !$requiresGwa && !$hasAcceptedScholarshipConflict && !$applicationNotYetOpen && $deadlineClass !== 'bad';
 $detailCardStatusClass = 'ineligible';
 $detailCardStatusLabel = 'Not Eligible';
 if ($deadlineClass === 'bad') {
     $detailCardStatusClass = 'expired';
     $detailCardStatusLabel = 'Expired';
+} elseif ($hasAcceptedScholarshipConflict) {
+    $detailCardStatusClass = 'ineligible';
+    $detailCardStatusLabel = 'Accepted Elsewhere';
 } elseif ($applicationNotYetOpen) {
     $detailCardStatusClass = 'estimated';
     $detailCardStatusLabel = 'Not Open Yet';
@@ -802,6 +840,8 @@ if ($detailCardStatusClass === 'expired') {
     $detailStatusIcon = 'fa-clock';
 } elseif ($detailCardStatusClass === 'ready') {
     $detailStatusIcon = 'fa-check-circle';
+} elseif ($hasAcceptedScholarshipConflict) {
+    $detailStatusIcon = 'fa-award';
 } elseif ($applicationNotYetOpen) {
     $detailStatusIcon = 'fa-hourglass-half';
 } elseif ($requiresGwa) {
@@ -834,7 +874,7 @@ if ($requiredGwa !== null) {
             $pushReason($attentionReasons, 'Your current ' . strtolower($academicMetricLabel) . ' is above the allowed limit');
         }
     } else {
-        $pushReason($attentionReasons, 'Upload your academic record so the system can verify your ' . strtolower($academicMetricLabel));
+        $pushReason($attentionReasons, $academicDocumentState['reason']);
     }
 } else {
     $pushReason($matchedReasons, 'No fixed ' . strtolower($academicMetricLabel) . ' cutoff is required for this scholarship');
@@ -846,6 +886,10 @@ if ($deadlineClass === 'bad') {
     $pushReason($attentionReasons, 'Applications open on ' . $applicationOpenDateDisplay);
 } else {
     $pushReason($matchedReasons, 'The scholarship is currently open for applications');
+}
+
+if ($hasAcceptedScholarshipConflict) {
+    $pushReason($attentionReasons, 'You already accepted ' . $acceptedScholarshipName . ', and this scholarship only accepts applicants who have not yet accepted another scholarship offer');
 }
 
 if ($requirementsCount > 0) {
@@ -909,14 +953,26 @@ if ($deadlineClass === 'bad') {
     $primaryActionClass = 'btn-disabled-modern';
     $primaryActionIcon = 'fa-calendar-times';
     $primaryActionLabel = 'Closed';
-} elseif ($requiresGwa) {
+} elseif ($hasAcceptedScholarshipConflict) {
     $nextStepTone = 'warning';
-    $nextStepIcon = 'fa-chart-line';
-    $nextStepMessage = $openingDatePrepPrefix . 'Upload your ' . $academicDocumentLabel . ' to complete the academic requirement check.';
+    $nextStepIcon = 'fa-award';
+    $nextStepMessage = 'You already accepted ' . $acceptedScholarshipName . '. This scholarship only accepts applicants who have not yet accepted another scholarship offer.';
+    $primaryActionHref = 'applications.php';
+    $primaryActionClass = 'btn-outline-modern';
+    $primaryActionIcon = 'fa-award';
+    $primaryActionLabel = 'View My Applications';
+} elseif ($requiresGwa) {
+    $nextStepTone = in_array($userAcademicDocumentStatus, ['pending', 'verified'], true) ? 'info' : 'warning';
+    $nextStepIcon = $userAcademicDocumentStatus === 'pending'
+        ? 'fa-clock'
+        : ($userAcademicDocumentStatus === 'verified'
+            ? 'fa-circle-info'
+            : ($userAcademicDocumentStatus === 'rejected' ? 'fa-rotate-right' : 'fa-chart-line'));
+    $nextStepMessage = $openingDatePrepPrefix . $academicDocumentState['summary'];
     $primaryActionHref = 'upload.php';
-    $primaryActionClass = 'btn-warning-modern';
-    $primaryActionIcon = 'fa-upload';
-    $primaryActionLabel = 'Upload ' . $academicDocumentLabel;
+    $primaryActionClass = in_array($userAcademicDocumentStatus, ['pending', 'verified'], true) ? 'btn-outline-modern' : 'btn-warning-modern';
+    $primaryActionIcon = in_array($userAcademicDocumentStatus, ['pending', 'verified'], true) ? 'fa-folder-open' : 'fa-upload';
+    $primaryActionLabel = $academicDocumentState['action_label'];
 } elseif ($profileRequirementPending > 0) {
     $nextStepTone = 'warning';
     $nextStepIcon = 'fa-user-gear';
@@ -973,6 +1029,9 @@ $eligibilityStatusSummary = $nextStepMessage;
 if ($detailCardStatusClass === 'ready') {
     $eligibilityStatusTitle = 'Yes, you can apply now.';
     $eligibilityStatusSummary = 'Your profile, academic record, and listed requirements currently line up with this scholarship.';
+} elseif ($hasAcceptedScholarshipConflict) {
+    $eligibilityStatusTitle = 'Not yet. You already accepted another scholarship.';
+    $eligibilityStatusSummary = 'This scholarship only accepts applicants who have not yet accepted another scholarship offer.';
 } elseif ($applicationNotYetOpen) {
     $eligibilityStatusTitle = 'Not yet. Applications open on ' . $applicationOpenDateDisplay . '.';
     $eligibilityStatusSummary = 'Use this time to prepare your profile and required documents so you are ready once the application window starts.';
@@ -985,8 +1044,14 @@ if ($detailCardStatusClass === 'ready') {
         ? $buildProfileMismatchSummary($profileChecks)
         : 'Complete the missing profile fields first so the system can finish checking your eligibility.';
 } elseif ($detailCardStatusClass === 'estimated') {
-    $eligibilityStatusTitle = 'Not yet. The system still needs your academic record.';
-    $eligibilityStatusSummary = 'Upload your academic record first so the system can verify your ' . strtolower($academicMetricLabel) . ' and finish the scholarship check.';
+    if ($userAcademicDocumentStatus === 'missing') {
+        $eligibilityStatusTitle = 'Not yet. The system still needs your academic record.';
+    } elseif ($userAcademicDocumentStatus === 'rejected') {
+        $eligibilityStatusTitle = 'Not yet. A clearer academic record is needed.';
+    } else {
+        $eligibilityStatusTitle = 'Not yet. Your academic check is still pending.';
+    }
+    $eligibilityStatusSummary = $academicDocumentState['summary'];
 } elseif ($detailCardStatusClass === 'expired') {
     $eligibilityStatusTitle = 'This scholarship is already closed.';
     $eligibilityStatusSummary = 'You can still review the details, but new applications are no longer accepted.';
@@ -1031,6 +1096,9 @@ $canApplyRuleItems = [
         ? ('Your recorded ' . strtolower($academicMetricLabel) . ' must be ' . $requiredGwaLabel . '.')
         : ('This scholarship does not use a fixed ' . strtolower($academicMetricLabel) . ' cutoff.'),
     'Your profile should match the target audience: ' . $audienceLabel . '.',
+    ((int) ($scholarship['allow_if_already_accepted'] ?? 1) === 1)
+        ? 'Applicants may still apply even if they already accepted another scholarship offer.'
+        : 'Applicants must not have an already accepted scholarship offer on file.',
     $requirementsCount > 0
         ? 'All listed required documents should be uploaded and not rejected.'
         : 'No extra required documents are listed for this scholarship right now.',
@@ -1044,6 +1112,9 @@ $cantApplyRuleItems = [
         ? ('You cannot apply yet if your ' . strtolower($academicMetricLabel) . ' is missing or above ' . $requiredGwaLabel . '.')
         : (strtolower($academicMetricLabel) . ' alone does not block this scholarship, but other checks can still do so.'),
     'You cannot apply yet if your applicant profile is incomplete or does not match the scholarship audience.',
+    ((int) ($scholarship['allow_if_already_accepted'] ?? 1) === 1)
+        ? 'An already accepted scholarship offer does not block this scholarship.'
+        : 'You cannot apply yet if you already accepted another scholarship offer.',
     $requirementsCount > 0
         ? 'You cannot apply yet if required files are missing, rejected, or still waiting for review.'
         : 'If the provider adds required documents later, those will need to be completed before submission.',
@@ -1152,7 +1223,7 @@ if ($requiredGwa !== null) {
     if (!$isLoggedIn) {
         $pushReason($matchScoreLimitingReasons, 'Log in so the system can compare your ' . strtolower($academicMetricLabel) . ' with the scholarship requirement.');
     } elseif (empty($userAcademicScore)) {
-        $pushReason($matchScoreLimitingReasons, 'Your academic record is missing, so the score is only partly estimated right now.');
+        $pushReason($matchScoreLimitingReasons, $academicDocumentState['reason']);
     } elseif ((float) $userAcademicScore <= (float) $requiredGwa) {
         $pushReason(
             $matchScorePositiveReasons,
@@ -1358,12 +1429,12 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
                     </div>
 
                     <div class="scholarship-hero-tools">
-                        <button type="button" class="scholarship-rules-trigger" id="detailMatchOpen" aria-haspopup="dialog" aria-controls="detailMatchModal">
+                        <button type="button" class="scholarship-rules-trigger" id="detailMatchOpen" onclick="scholarshipDetailOpenModal('detailMatchModal')" aria-haspopup="dialog" aria-controls="detailMatchModal">
                             <i class="fas fa-percent"></i>
                             <?php echo htmlspecialchars($matchGuideButtonLabel); ?>
                         </button>
 
-                        <button type="button" class="scholarship-rules-trigger" id="detailRulesOpen" aria-haspopup="dialog" aria-controls="detailRulesModal">
+                        <button type="button" class="scholarship-rules-trigger" id="detailRulesOpen" onclick="scholarshipDetailOpenModal('detailRulesModal')" aria-haspopup="dialog" aria-controls="detailRulesModal">
                             <i class="fas fa-circle-info"></i>
                             Rules Guide
                         </button>
@@ -1523,7 +1594,11 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
                                 <button
                                     type="button"
                                     class="scholarship-doc-item state-<?php echo htmlspecialchars($docStatus); ?>"
-                                    onclick='openUploadModal(<?php echo json_encode($docTypeCode); ?>, <?php echo json_encode((string) $docName); ?>, <?php echo json_encode($docStatus === "missing" ? "upload" : "update"); ?>)'
+                                    onclick="scholarshipDetailOpenUploadModal(this.dataset.documentType, this.dataset.documentName, this.dataset.uploadMode)"
+                                    data-upload-modal-trigger="true"
+                                    data-document-type="<?php echo htmlspecialchars($docTypeCode, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-document-name="<?php echo htmlspecialchars((string) $docName, ENT_QUOTES, 'UTF-8'); ?>"
+                                    data-upload-mode="<?php echo htmlspecialchars($docStatus === 'missing' ? 'upload' : 'update', ENT_QUOTES, 'UTF-8'); ?>"
                                     aria-haspopup="dialog"
                                     aria-controls="uploadModal"
                                 >
@@ -1598,14 +1673,14 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
         </div>
 
         <div class="scholarship-rules-modal" id="detailMatchModal" hidden>
-            <div class="scholarship-rules-backdrop" data-close-detail-match></div>
+            <div class="scholarship-rules-backdrop" data-close-detail-match onclick="scholarshipDetailCloseModal('detailMatchModal')"></div>
             <div class="scholarship-rules-dialog" role="dialog" aria-modal="true" aria-labelledby="detailMatchTitle">
                 <div class="scholarship-rules-header">
                     <div>
                         <span class="scholarship-detail-eyebrow">Match Guide</span>
                         <h2 id="detailMatchTitle"><?php echo htmlspecialchars($matchGuideTitle); ?></h2>
                     </div>
-                    <button type="button" class="scholarship-rules-close" data-close-detail-match aria-label="Close match guide">
+                    <button type="button" class="scholarship-rules-close" data-close-detail-match onclick="scholarshipDetailCloseModal('detailMatchModal')" aria-label="Close match guide">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1654,14 +1729,14 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
         </div>
 
         <div class="scholarship-rules-modal" id="detailRulesModal" hidden>
-            <div class="scholarship-rules-backdrop" data-close-detail-rules></div>
+            <div class="scholarship-rules-backdrop" data-close-detail-rules onclick="scholarshipDetailCloseModal('detailRulesModal')"></div>
             <div class="scholarship-rules-dialog" role="dialog" aria-modal="true" aria-labelledby="detailRulesTitle">
                 <div class="scholarship-rules-header">
                     <div>
                         <span class="scholarship-detail-eyebrow">Rules Guide</span>
                         <h2 id="detailRulesTitle">How the system decides if you can apply</h2>
                     </div>
-                    <button type="button" class="scholarship-rules-close" data-close-detail-rules aria-label="Close rules guide">
+                    <button type="button" class="scholarship-rules-close" data-close-detail-rules onclick="scholarshipDetailCloseModal('detailRulesModal')" aria-label="Close rules guide">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -1741,6 +1816,101 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/document.js')); ?>"></script>
 <script>
 (function () {
+    const detailModalIds = ['detailMatchModal', 'detailRulesModal'];
+
+    function syncBodyState() {
+        const hasOpenModal = detailModalIds.some(function (modalId) {
+            const modal = document.getElementById(modalId);
+            return modal && !modal.hidden;
+        });
+
+        document.body.classList.toggle('scholarship-detail-modal-open', hasOpenModal);
+    }
+
+    window.scholarshipDetailOpenModal = function (modalId) {
+        detailModalIds.forEach(function (currentModalId) {
+            const modal = document.getElementById(currentModalId);
+            if (modal) {
+                modal.hidden = currentModalId !== modalId;
+            }
+        });
+        syncBodyState();
+    };
+
+    window.scholarshipDetailCloseModal = function (modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.hidden = true;
+        }
+        syncBodyState();
+    };
+
+    window.scholarshipDetailOpenUploadModal = function (docType, docName, mode) {
+        if (typeof window.openUploadModal === 'function') {
+            window.openUploadModal(docType, docName, mode);
+            return;
+        }
+
+        const uploadModal = document.getElementById('uploadModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const documentTypeInput = document.getElementById('documentType');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const uploadModeNote = document.getElementById('uploadModeNote');
+        const requirementsList = document.getElementById('requirementsList');
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const isUpdateMode = mode === 'update';
+
+        if (!uploadModal) {
+            return;
+        }
+
+        if (modalTitle) {
+            modalTitle.textContent = (isUpdateMode ? 'Update ' : 'Upload ') + (docName || 'Document');
+        }
+
+        if (documentTypeInput) {
+            documentTypeInput.value = docType || '';
+        }
+
+        if (uploadBtn) {
+            uploadBtn.innerHTML = isUpdateMode
+                ? '<i class="fas fa-rotate"></i> Update Document'
+                : '<i class="fas fa-upload"></i> Upload Document';
+        }
+
+        if (uploadModeNote) {
+            if (isUpdateMode) {
+                uploadModeNote.innerHTML = '<i class="fas fa-circle-info"></i> Uploading a new file here will replace your current document and send it back for review.';
+                uploadModeNote.hidden = false;
+            } else {
+                uploadModeNote.hidden = true;
+                uploadModeNote.textContent = '';
+            }
+        }
+
+        if (requirementsList) {
+            requirementsList.innerHTML = [
+                '<li><i class="fas fa-check"></i> File must be clear and readable</li>',
+                '<li><i class="fas fa-check"></i> All information must be visible</li>',
+                '<li><i class="fas fa-check"></i> No alterations or edits</li>',
+                '<li><i class="fas fa-check"></i> Valid and not expired</li>'
+            ].join('');
+        }
+
+        if (fileInput) {
+            fileInput.value = '';
+        }
+
+        if (fileName) {
+            fileName.style.display = 'none';
+            fileName.textContent = '';
+        }
+
+        uploadModal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    };
+
     const modalConfigs = [
         {
             modalId: 'detailMatchModal',
@@ -1754,35 +1924,6 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
         }
     ];
 
-    const allModals = modalConfigs
-        .map(function (config) {
-            return document.getElementById(config.modalId);
-        })
-        .filter(Boolean);
-
-    function syncBodyState() {
-        const hasOpenModal = allModals.some(function (modal) {
-            return !modal.hidden;
-        });
-
-        document.body.classList.toggle('scholarship-detail-modal-open', hasOpenModal);
-    }
-
-    function closeModal(modal) {
-        if (!modal) {
-            return;
-        }
-        modal.hidden = true;
-        syncBodyState();
-    }
-
-    function openModal(targetModal) {
-        allModals.forEach(function (modal) {
-            modal.hidden = modal !== targetModal;
-        });
-        syncBodyState();
-    }
-
     modalConfigs.forEach(function (config) {
         const modal = document.getElementById(config.modalId);
         const openButton = document.getElementById(config.openId);
@@ -1793,20 +1934,37 @@ $attentionReasonListClass = !empty($attentionReasons) ? 'warning' : 'positive';
         const closeElements = modal.querySelectorAll(config.closeSelector);
 
         openButton.addEventListener('click', function () {
-            openModal(modal);
+            window.scholarshipDetailOpenModal(config.modalId);
         });
 
         closeElements.forEach(function (element) {
             element.addEventListener('click', function () {
-                closeModal(modal);
+                window.scholarshipDetailCloseModal(config.modalId);
             });
         });
     });
 
+    document.addEventListener('click', function (event) {
+        const uploadTrigger = event.target.closest('[data-upload-modal-trigger]');
+        if (!uploadTrigger || typeof window.openUploadModal !== 'function') {
+            return;
+        }
+
+        event.preventDefault();
+        window.openUploadModal(
+            uploadTrigger.dataset.documentType || '',
+            uploadTrigger.dataset.documentName || 'Document',
+            uploadTrigger.dataset.uploadMode || 'upload'
+        );
+    });
+
     document.addEventListener('keydown', function (event) {
         if (event.key === 'Escape') {
-            allModals.forEach(function (modal) {
-                modal.hidden = true;
+            detailModalIds.forEach(function (modalId) {
+                const modal = document.getElementById(modalId);
+                if (modal) {
+                    modal.hidden = true;
+                }
             });
             syncBodyState();
         }

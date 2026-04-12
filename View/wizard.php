@@ -55,6 +55,21 @@ if (!function_exists('applicationTrackingFormatTimelineDate')) {
     }
 }
 
+if (!function_exists('applicationTrackingAssessmentTypeLabel')) {
+    function applicationTrackingAssessmentTypeLabel(string $value): string
+    {
+        $map = [
+            'online_exam' => 'Online Exam',
+            'remote_examination' => 'Remote Examination',
+            'assessment' => 'Online Assessment',
+            'evaluation' => 'Online Evaluation',
+        ];
+
+        $normalized = strtolower(trim($value));
+        return $map[$normalized] ?? 'Assessment';
+    }
+}
+
 if (!function_exists('applicationTrackingBuildTimelineData')) {
     function applicationTrackingBuildTimelineData(array $application, array $requirementsSummary): array
     {
@@ -93,7 +108,126 @@ if (!function_exists('applicationTrackingBuildTimelineData')) {
         $updatedAt = !empty($application['updated_at']) ? (string) $application['updated_at'] : (string) ($application['applied_at'] ?? '');
         $rejectionReason = trim((string) ($application['rejection_reason'] ?? ''));
 
-        if ($studentAccepted) {
+        $assessmentRequirement = strtolower(trim((string) ($application['assessment_requirement'] ?? 'none')));
+        $assessmentEnabled = in_array($assessmentRequirement, ['online_exam', 'remote_examination', 'assessment', 'evaluation'], true);
+        $assessmentTypeLabel = $assessmentEnabled ? applicationTrackingAssessmentTypeLabel($assessmentRequirement) : 'Assessment';
+        $assessmentStatus = strtolower(trim((string) ($application['assessment_status'] ?? '')));
+        if ($assessmentEnabled && $assessmentStatus === '') {
+            $assessmentStatus = 'not_started';
+        }
+
+        $assessmentLink = trim((string) ($application['assessment_link_override'] ?? ''));
+        if ($assessmentLink === '') {
+            $assessmentLink = trim((string) ($application['assessment_link'] ?? ''));
+        }
+        if ($assessmentLink !== '' && !filter_var($assessmentLink, FILTER_VALIDATE_URL)) {
+            $assessmentLink = '';
+        }
+
+        $assessmentNotes = trim((string) ($application['assessment_notes'] ?? ''));
+        $assessmentScheduleValue = !empty($application['assessment_schedule_at'])
+            ? (string) $application['assessment_schedule_at']
+            : '';
+        $assessmentScheduleLabel = applicationTrackingFormatTimelineDate($assessmentScheduleValue, 'Not scheduled yet');
+
+        $assessmentSiteParts = array_filter([
+            trim((string) ($application['assessment_site_name'] ?? '')),
+            trim((string) ($application['assessment_site_address'] ?? '')),
+            trim((string) ($application['assessment_site_city'] ?? '')),
+            trim((string) ($application['assessment_site_province'] ?? '')),
+        ], static fn(string $value): bool => $value !== '');
+        $assessmentSiteLabel = !empty($assessmentSiteParts)
+            ? implode(', ', $assessmentSiteParts)
+            : '';
+
+        $assessmentActionUrl = '';
+        $assessmentActionLabel = '';
+        $assessmentActionExternal = false;
+        if ($assessmentEnabled && $studentAccepted) {
+            if ($assessmentRequirement === 'remote_examination') {
+                $assessmentActionUrl = buildEntityUrl('remote_exam_map.php', 'scholarship', (int) ($application['scholarship_id'] ?? 0), 'view', [
+                    'id' => (int) ($application['scholarship_id'] ?? 0),
+                ]);
+                $assessmentActionLabel = 'View Exam Sites';
+            } elseif ($assessmentLink !== '') {
+                $assessmentActionUrl = $assessmentLink;
+                $assessmentActionLabel = 'Open Exam Portal';
+                $assessmentActionExternal = true;
+            }
+        }
+
+        $assessmentStatusLabel = '';
+        $assessmentStatusNote = '';
+        $assessmentStepState = 'upcoming';
+        $assessmentStepIcon = 'fa-file-signature';
+
+        if ($assessmentEnabled) {
+            if (!$studentAccepted) {
+                $assessmentStatusLabel = 'Waiting for acceptance';
+                $assessmentStatusNote = 'This stage opens after you accept the approved scholarship offer.';
+            } else {
+                switch ($assessmentStatus) {
+                    case 'scheduled':
+                        $assessmentStatusLabel = 'Scheduled';
+                        $assessmentStatusNote = $assessmentScheduleValue !== ''
+                            ? ($assessmentTypeLabel . ' scheduled for ' . $assessmentScheduleLabel . ($assessmentSiteLabel !== '' ? ' at ' . $assessmentSiteLabel . '.' : '.'))
+                            : ($assessmentTypeLabel . ' has been scheduled by the provider.');
+                        $assessmentStepState = 'current';
+                        $assessmentStepIcon = 'fa-calendar-check';
+                        break;
+                    case 'ready':
+                        $assessmentStatusLabel = 'Ready to take';
+                        $assessmentStatusNote = $assessmentRequirement === 'remote_examination'
+                            ? ($assessmentSiteLabel !== '' ? 'Review your assigned site and prepare for exam day.' : 'The provider marked your examination step as ready.')
+                            : ($assessmentActionUrl !== '' ? 'Your assessment link is available in this tracking card.' : 'The provider marked your assessment as ready.');
+                        $assessmentStepState = 'current';
+                        $assessmentStepIcon = $assessmentRequirement === 'remote_examination' ? 'fa-map-location-dot' : 'fa-laptop';
+                        break;
+                    case 'submitted':
+                        $assessmentStatusLabel = 'Submitted / attended';
+                        $assessmentStatusNote = $assessmentRequirement === 'remote_examination'
+                            ? 'Your attendance or exam completion was recorded. Wait for the result update.'
+                            : 'Your assessment submission was recorded. Wait for the result update.';
+                        $assessmentStepState = 'current';
+                        $assessmentStepIcon = 'fa-paper-plane';
+                        break;
+                    case 'under_review':
+                        $assessmentStatusLabel = 'Under review';
+                        $assessmentStatusNote = 'The provider is currently reviewing your assessment result.';
+                        $assessmentStepState = 'current';
+                        $assessmentStepIcon = 'fa-magnifying-glass';
+                        break;
+                    case 'passed':
+                        $assessmentStatusLabel = 'Passed';
+                        $assessmentStatusNote = 'You passed the post-acceptance assessment. Wait for the next provider update.';
+                        $assessmentStepState = 'success';
+                        $assessmentStepIcon = 'fa-circle-check';
+                        break;
+                    case 'failed':
+                        $assessmentStatusLabel = 'Did not pass';
+                        $assessmentStatusNote = 'The provider marked this assessment as not passed.';
+                        $assessmentStepState = 'rejected';
+                        $assessmentStepIcon = 'fa-circle-xmark';
+                        break;
+                    case 'not_started':
+                    default:
+                        $assessmentStatusLabel = 'Assessment required';
+                        $assessmentStatusNote = 'Your acceptance is recorded. Wait for the provider to post the assessment schedule or instructions.';
+                        $assessmentStepState = 'current';
+                        $assessmentStepIcon = 'fa-file-signature';
+                        break;
+                }
+
+                if ($assessmentNotes !== '') {
+                    $assessmentStatusNote .= ' Note: ' . $assessmentNotes;
+                }
+            }
+        }
+
+        if ($studentAccepted && $assessmentEnabled) {
+            $currentStageTitle = $assessmentStatusLabel !== '' ? $assessmentStatusLabel : 'Assessment required';
+            $currentStageNote = $assessmentStatusNote !== '' ? $assessmentStatusNote : 'Assessment updates will appear here after your acceptance is recorded.';
+        } elseif ($studentAccepted) {
             $currentStageTitle = 'Scholarship accepted';
             $currentStageNote = 'You confirmed your acceptance on ' . applicationTrackingFormatTimelineDate($studentRespondedAt, 'the latest update') . '.';
         } elseif ($applicationStatus === 'approved') {
@@ -147,7 +281,9 @@ if (!function_exists('applicationTrackingBuildTimelineData')) {
         }
 
         $decisionDetail = 'Final decision is still pending.';
-        if ($studentAccepted) {
+        if ($studentAccepted && $assessmentEnabled) {
+            $decisionDetail = 'Approved on ' . applicationTrackingFormatTimelineDate($updatedAt, 'the latest review date') . ' and accepted on ' . applicationTrackingFormatTimelineDate($studentRespondedAt, 'the latest response date') . '.';
+        } elseif ($studentAccepted) {
             $decisionDetail = 'Accepted on ' . applicationTrackingFormatTimelineDate($studentRespondedAt, 'the latest response date') . '.';
         } elseif ($applicationStatus === 'approved') {
             $decisionDetail = 'Approved on ' . applicationTrackingFormatTimelineDate($updatedAt, 'the latest review date') . '.';
@@ -155,6 +291,59 @@ if (!function_exists('applicationTrackingBuildTimelineData')) {
             $decisionDetail = $rejectionReason !== ''
                 ? $rejectionReason
                 : 'Rejected on ' . applicationTrackingFormatTimelineDate($updatedAt, 'the latest review date') . '.';
+        }
+
+        $timelineSteps = [
+            [
+                'label' => 'Submitted',
+                'detail' => 'Application sent on ' . applicationTrackingFormatTimelineDate($application['applied_at'] ?? null),
+                'state' => 'complete',
+                'icon' => 'fa-paper-plane',
+            ],
+            [
+                'label' => 'Documents Screening',
+                'detail' => $documentsDetail,
+                'state' => $documentsNeedAttention ? 'attention' : ($documentsCleared ? 'complete' : 'current'),
+                'icon' => 'fa-folder-open',
+            ],
+            [
+                'label' => 'Scholarship Review',
+                'detail' => $reviewDetail,
+                'state' => ($applicationStatus === 'approved' || $applicationStatus === 'rejected')
+                    ? 'complete'
+                    : (($documentsNeedAttention || !$documentsCleared) ? 'upcoming' : 'current'),
+                'icon' => 'fa-clipboard-check',
+            ],
+        ];
+
+        if ($assessmentEnabled) {
+            $timelineSteps[] = [
+                'label' => 'Student Confirmation',
+                'detail' => $studentAccepted
+                    ? ('Accepted on ' . applicationTrackingFormatTimelineDate($studentRespondedAt, 'the latest response date') . '.')
+                    : ($applicationStatus === 'approved'
+                        ? 'Approved and waiting for your confirmation.'
+                        : 'This step becomes available after approval.'),
+                'state' => $studentAccepted
+                    ? 'complete'
+                    : ($applicationStatus === 'approved' ? 'current' : 'upcoming'),
+                'icon' => 'fa-handshake',
+            ];
+            $timelineSteps[] = [
+                'label' => $assessmentTypeLabel,
+                'detail' => $assessmentStatusNote !== '' ? $assessmentStatusNote : 'Assessment updates will appear here after your confirmation.',
+                'state' => $studentAccepted ? $assessmentStepState : 'upcoming',
+                'icon' => $assessmentStepIcon,
+            ];
+        } else {
+            $timelineSteps[] = [
+                'label' => 'Final Decision',
+                'detail' => $decisionDetail,
+                'state' => ($applicationStatus === 'approved' || $studentAccepted)
+                    ? 'success'
+                    : ($applicationStatus === 'rejected' ? 'rejected' : 'upcoming'),
+                'icon' => 'fa-flag-checkered',
+            ];
         }
 
         return [
@@ -171,42 +360,25 @@ if (!function_exists('applicationTrackingBuildTimelineData')) {
             'student_response_status' => $studentResponseStatus,
             'student_responded_at' => $studentRespondedAt,
             'document_notes' => $documentNotes,
+            'assessment_enabled' => $assessmentEnabled,
+            'assessment_type' => $assessmentRequirement,
+            'assessment_type_label' => $assessmentTypeLabel,
+            'assessment_status' => $assessmentStatus !== '' ? $assessmentStatus : 'not_started',
+            'assessment_status_label' => $assessmentStatusLabel,
+            'assessment_status_note' => $assessmentStatusNote,
+            'assessment_schedule_label' => $assessmentScheduleLabel,
+            'assessment_site_label' => $assessmentSiteLabel,
+            'assessment_notes' => $assessmentNotes,
+            'assessment_action_url' => $assessmentActionUrl,
+            'assessment_action_label' => $assessmentActionLabel,
+            'assessment_action_external' => $assessmentActionExternal,
             'can_accept' => $applicationStatus === 'approved' && !$studentAccepted,
             'student_response_note' => $studentAccepted
                 ? 'Accepted on ' . applicationTrackingFormatTimelineDate($studentRespondedAt, 'the latest response date') . '.'
                 : ($applicationStatus === 'approved'
                     ? 'Waiting for your confirmation.'
                     : 'No response required yet.'),
-            'timeline_steps' => [
-                [
-                    'label' => 'Submitted',
-                    'detail' => 'Application sent on ' . applicationTrackingFormatTimelineDate($application['applied_at'] ?? null),
-                    'state' => 'complete',
-                    'icon' => 'fa-paper-plane',
-                ],
-                [
-                    'label' => 'Documents Screening',
-                    'detail' => $documentsDetail,
-                    'state' => $documentsNeedAttention ? 'attention' : ($documentsCleared ? 'complete' : 'current'),
-                    'icon' => 'fa-folder-open',
-                ],
-                [
-                    'label' => 'Scholarship Review',
-                    'detail' => $reviewDetail,
-                    'state' => ($applicationStatus === 'approved' || $applicationStatus === 'rejected')
-                        ? 'complete'
-                        : (($documentsNeedAttention || !$documentsCleared) ? 'upcoming' : 'current'),
-                    'icon' => 'fa-clipboard-check',
-                ],
-                [
-                    'label' => 'Final Decision',
-                    'detail' => $decisionDetail,
-                    'state' => ($applicationStatus === 'approved' || $studentAccepted)
-                        ? 'success'
-                        : ($applicationStatus === 'rejected' ? 'rejected' : 'upcoming'),
-                    'icon' => 'fa-flag-checkered',
-                ],
-            ],
+            'timeline_steps' => $timelineSteps,
         ];
     }
 }
@@ -228,6 +400,7 @@ include 'layout/header.php';
 
 $scholarship = null;
 $existingApplication = null;
+$acceptedScholarshipSummary = null;
 $remoteExamLocations = [];
 
 $applicantNameParts = array_filter([
@@ -295,6 +468,7 @@ $profileEvaluation = [
     'checks' => []
 ];
 $audienceLabel = 'Open to all applicants';
+$userAcademicDocumentStatus = 'missing';
 
 if ($isLoggedIn && $scholarshipId > 0) {
     try {
@@ -322,8 +496,11 @@ if ($isLoggedIn && $scholarshipId > 0) {
         $assessmentDetailsSelect = tableHasColumn($pdo, 'scholarship_data', 'assessment_details')
             ? 'sd.assessment_details'
             : 'NULL AS assessment_details';
+        $allowIfAlreadyAcceptedSelect = tableHasColumn($pdo, 'scholarship_data', 'allow_if_already_accepted')
+            ? 'sd.allow_if_already_accepted'
+            : '1 AS allow_if_already_accepted';
 
-        $stmt = $pdo->prepare("\n            SELECT\n                s.*,\n                sd.image AS scholarship_image,\n                sd.provider,\n                sd.benefits,\n                sd.address,\n                sd.city,\n                sd.province,\n                {$applicationOpenDateSelect},\n                sd.deadline,\n                {$applicationProcessLabelSelect},\n                {$assessmentRequirementSelect},\n                {$assessmentLinkSelect},\n                {$assessmentDetailsSelect},\n                {$postApplicationStepsSelect},\n                {$renewalConditionsSelect},\n                {$scholarshipRestrictionsSelect}\n            FROM scholarships s\n            LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id\n            WHERE s.id = ? AND s.status = 'active'\n            LIMIT 1\n        ");
+        $stmt = $pdo->prepare("\n            SELECT\n                s.*,\n                sd.image AS scholarship_image,\n                sd.provider,\n                sd.benefits,\n                sd.address,\n                sd.city,\n                sd.province,\n                {$applicationOpenDateSelect},\n                sd.deadline,\n                {$applicationProcessLabelSelect},\n                {$assessmentRequirementSelect},\n                {$assessmentLinkSelect},\n                {$assessmentDetailsSelect},\n                {$postApplicationStepsSelect},\n                {$renewalConditionsSelect},\n                {$scholarshipRestrictionsSelect},\n                {$allowIfAlreadyAcceptedSelect}\n            FROM scholarships s\n            LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id\n            WHERE s.id = ? AND s.status = 'active'\n            LIMIT 1\n        ");
         $stmt->execute([$scholarshipId]);
         $scholarship = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     } catch (Throwable $e) {
@@ -367,10 +544,24 @@ if ($isLoggedIn && $scholarship) {
         $existingApplication = null;
     }
 
+    $allowsAcceptedScholarshipApplicants = (int) ($scholarship['allow_if_already_accepted'] ?? 1) === 1;
+    if (!$allowsAcceptedScholarshipApplicants) {
+        try {
+            $applicationModel = new Application($pdo);
+            $acceptedScholarshipSummary = $applicationModel->getAcceptedScholarshipSummary((int) $_SESSION['user_id'], $scholarshipId);
+        } catch (Throwable $e) {
+            $acceptedScholarshipSummary = null;
+        }
+    }
+
     try {
         $documentModel = new UserDocument($pdo);
         $documentSummary = $documentModel->checkScholarshipRequirements((int) $_SESSION['user_id'], $scholarshipId);
         $docRequirements = $documentSummary['requirements'] ?? [];
+        $userAcademicDocumentStatus = resolveApplicantAcademicDocumentStatus(
+            $userApplicantType,
+            $documentModel->getUserDocuments((int) $_SESSION['user_id'], true)
+        );
     } catch (Throwable $e) {
         $docRequirements = [];
     }
@@ -409,6 +600,7 @@ if ($scholarship) {
 $academicMetricLabel = $userAcademicMetricLabel;
 $academicDocumentLabel = $userAcademicDocumentLabel;
 $minimumAcademicLabel = $academicMetricLabel === 'GWA' ? 'Minimum GWA' : 'Minimum Academic Score';
+$academicDocumentState = describeAcademicDocumentStatus($userAcademicDocumentStatus, $academicDocumentLabel, $academicMetricLabel);
 
 $profileHasGwa = ($userAcademicScore !== null && $userAcademicScore !== '');
 $gwaRequired = ($requiredGwa !== null);
@@ -443,12 +635,18 @@ if ($scholarship && !empty($scholarship['application_open_date'])) {
 }
 
 $alreadyApplied = $existingApplication !== null;
+$hasAcceptedScholarshipConflict = $acceptedScholarshipSummary !== null;
+$acceptedScholarshipName = trim((string) ($acceptedScholarshipSummary['scholarship_name'] ?? ''));
+if ($acceptedScholarshipName === '') {
+    $acceptedScholarshipName = 'another scholarship';
+}
 $documentsReady = ($missingRequired === 0 && $rejectedRequired === 0 && $pendingRequired === 0);
 $profileRulesReady = !empty($profileEvaluation['eligible']);
 
 $canSubmit = $isLoggedIn
     && $scholarship !== null
     && !$alreadyApplied
+    && !$hasAcceptedScholarshipConflict
     && !$applicationNotYetOpen
     && !$deadlinePassed
     && $documentsReady
@@ -462,6 +660,8 @@ if (!$isLoggedIn) {
     $blockReason = 'Scholarship not found or inactive.';
 } elseif ($alreadyApplied) {
     $blockReason = 'You already submitted this scholarship application.';
+} elseif ($hasAcceptedScholarshipConflict) {
+    $blockReason = 'You already accepted ' . $acceptedScholarshipName . '. This scholarship only accepts applicants who have not yet accepted another scholarship offer.';
 } elseif ($applicationNotYetOpen) {
     $blockReason = 'This scholarship opens on ' . $applicationOpenDateLabel . '.';
 } elseif ($deadlinePassed) {
@@ -477,7 +677,7 @@ if (!$isLoggedIn) {
 } elseif (($profileEvaluation['failed'] ?? 0) > 0) {
     $blockReason = 'Your profile does not match this scholarship policy.';
 } elseif ($gwaRequired && !$profileHasGwa) {
-    $blockReason = 'Upload your ' . $academicDocumentLabel . ' first to set your ' . strtolower($academicMetricLabel) . '.';
+    $blockReason = $academicDocumentState['block_reason'];
 } elseif ($gwaRequired && !$gwaWithinRequirement) {
     $blockReason = 'Your ' . strtolower($academicMetricLabel) . ' is above the required limit.';
 }
@@ -569,6 +769,10 @@ if ($alreadyApplied) {
     $wizardCardState = 'estimated';
     $wizardStatusLabel = 'Already Applied';
     $wizardStatusIcon = 'fa-check-double';
+} elseif ($hasAcceptedScholarshipConflict) {
+    $wizardCardState = 'ineligible';
+    $wizardStatusLabel = 'Accepted Elsewhere';
+    $wizardStatusIcon = 'fa-award';
 } elseif ($deadlinePassed) {
     $wizardCardState = 'expired';
     $wizardStatusLabel = 'Closed';
@@ -603,6 +807,9 @@ $wizardNextTone = 'info';
 $wizardNextMessage = 'Work through the three steps below to review your application before you submit.';
 if ($alreadyApplied && !empty($existingApplication['applied_at'])) {
     $wizardNextMessage = 'You already submitted this scholarship on ' . date('F d, Y h:i A', strtotime((string) $existingApplication['applied_at'])) . '.';
+} elseif ($hasAcceptedScholarshipConflict) {
+    $wizardNextTone = 'warning';
+    $wizardNextMessage = 'You already accepted ' . $acceptedScholarshipName . '. This scholarship only accepts applicants who have not yet accepted another scholarship offer.';
 } elseif ($canSubmit) {
     $wizardNextTone = 'success';
     $wizardNextMessage = 'Your profile and required documents are ready. Finish the final review when you are ready to submit.';
@@ -668,7 +875,7 @@ $wizardEligibilityChecks[] = [
     'detail' => !$gwaRequired
         ? ('This scholarship does not set a fixed minimum ' . strtolower($academicMetricLabel) . '.')
         : (!$profileHasGwa
-            ? ('Upload your ' . $academicDocumentLabel . ' so the system can read your ' . strtolower($academicMetricLabel) . '.')
+            ? $academicDocumentState['summary']
             : ($gwaWithinRequirement
                 ? ('Your current ' . strtolower($academicMetricLabel) . ' of ' . number_format((float) $userAcademicScore, 2) . ' meets the required ' . $formattedRequiredGwa . ' or better.')
                 : ('Your current ' . strtolower($academicMetricLabel) . ' of ' . number_format((float) $userAcademicScore, 2) . ' is above the required ' . $formattedRequiredGwa . '.')))
@@ -708,6 +915,14 @@ $wizardEligibilityChecks[] = [
             : ($applicationNotYetOpen
                 ? ('Applications open on ' . $applicationOpenDateLabel . '.')
                 : ('Applications are open until ' . $deadlineLabel . '.')))
+];
+$wizardEligibilityChecks[] = [
+    'title' => 'Accepted scholarship status',
+    'state' => $hasAcceptedScholarshipConflict ? 'blocked' : 'ok',
+    'icon' => $hasAcceptedScholarshipConflict ? 'fa-award' : 'fa-circle-check',
+    'detail' => $hasAcceptedScholarshipConflict
+        ? ('You already accepted ' . $acceptedScholarshipName . '. This scholarship only accepts applicants who have not yet accepted another scholarship offer.')
+        : 'This scholarship can still be applied to based on your current accepted-scholarship status.'
 ];
 
 $wizardProfileRuleCards = [];
@@ -1039,7 +1254,7 @@ if ($wizardProfileInitials === '') {
                                             </div>
                                             <div class="wizard-profile-meta-item">
                                                 <span><?php echo htmlspecialchars($academicMetricLabel); ?></span>
-                                                <strong><?php echo $profileHasGwa ? htmlspecialchars(number_format((float) $userAcademicScore, 2)) : 'Not uploaded'; ?></strong>
+                                                <strong><?php echo $profileHasGwa ? htmlspecialchars(number_format((float) $userAcademicScore, 2)) : htmlspecialchars($academicDocumentState['status_label']); ?></strong>
                                             </div>
                                             <div class="wizard-profile-meta-item wizard-profile-meta-item-wide">
                                                 <span>School</span>

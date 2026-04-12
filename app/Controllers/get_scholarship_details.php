@@ -57,6 +57,9 @@ try {
         'assessment_requirement' => $scholarship['assessment_requirement'] ?? 'none',
         'assessment_link' => $scholarship['assessment_link'] ?? '',
         'assessment_details' => $scholarship['assessment_details'] ?? '',
+        'allow_if_already_accepted' => isset($scholarship['allow_if_already_accepted'])
+            ? (int) $scholarship['allow_if_already_accepted']
+            : 1,
         'target_applicant_type' => $scholarship['target_applicant_type'] ?? 'all',
         'target_year_level' => $scholarship['target_year_level'] ?? 'any',
         'required_admission_status' => $scholarship['required_admission_status'] ?? 'any',

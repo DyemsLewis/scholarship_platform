@@ -10,7 +10,21 @@ function getProfileTabButtonId(tab) {
 
 function getProfileTabFromHash() {
     const hash = (window.location.hash || '').replace('#', '').toLowerCase();
-    return Object.prototype.hasOwnProperty.call(PROFILE_TAB_IDS, hash) ? hash : 'view';
+    if (Object.prototype.hasOwnProperty.call(PROFILE_TAB_IDS, hash)) {
+        return hash;
+    }
+
+    const urlTab = new URLSearchParams(window.location.search).get('tab') || '';
+    const normalizedUrlTab = urlTab.toLowerCase();
+    return Object.prototype.hasOwnProperty.call(PROFILE_TAB_IDS, normalizedUrlTab) ? normalizedUrlTab : 'view';
+}
+
+function buildProfileTabUrl(tab) {
+    const normalizedTab = Object.prototype.hasOwnProperty.call(PROFILE_TAB_IDS, tab) ? tab : 'view';
+    const url = new URL(window.location.href);
+    url.searchParams.delete('tab');
+    url.hash = normalizedTab === 'view' ? '#view' : `#${normalizedTab}`;
+    return `${url.pathname}${url.search}${url.hash}`;
 }
 
 function setProfileTab(tab, options = {}) {
@@ -36,9 +50,10 @@ function setProfileTab(tab, options = {}) {
     });
 
     if (shouldUpdateHash) {
-        const nextHash = normalizedTab === 'view' ? '#view' : `#${normalizedTab}`;
-        if (window.location.hash !== nextHash) {
-            history.replaceState(null, '', nextHash);
+        const nextUrl = buildProfileTabUrl(normalizedTab);
+        const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (currentUrl !== nextUrl) {
+            history.replaceState(null, '', nextUrl);
         }
     }
 
@@ -82,7 +97,7 @@ function isValidStaffMiddleInitial(value) {
 document.addEventListener('DOMContentLoaded', () => {
     bindProfileTabTriggers();
     setProfileTab(getProfileTabFromHash(), {
-        updateHash: false,
+        updateHash: true,
         scroll: false
     });
 

@@ -15,10 +15,10 @@ if (!is_dir($upload_dir)) {
     mkdir($upload_dir, 0777, true);
 }
 
-function tableHasColumn(PDO $pdo, string $tableName, string $columnName): bool {
+function tableHasColumn(PDO $pdo, string $tableName, string $columnName, bool $refresh = false): bool {
     static $cache = [];
     $cacheKey = $tableName . '.' . $columnName;
-    if (isset($cache[$cacheKey])) {
+    if (!$refresh && isset($cache[$cacheKey])) {
         return $cache[$cacheKey];
     }
 
@@ -66,6 +66,7 @@ function ensureScholarshipStudentInfoColumns(PDO $pdo): void {
         'post_application_steps' => "ALTER TABLE scholarship_data ADD COLUMN post_application_steps TEXT NULL",
         'renewal_conditions' => "ALTER TABLE scholarship_data ADD COLUMN renewal_conditions TEXT NULL",
         'scholarship_restrictions' => "ALTER TABLE scholarship_data ADD COLUMN scholarship_restrictions TEXT NULL",
+        'allow_if_already_accepted' => "ALTER TABLE scholarship_data ADD COLUMN allow_if_already_accepted TINYINT(1) NOT NULL DEFAULT 1",
     ];
 
     foreach ($columnDefinitions as $columnName => $sql) {
@@ -74,6 +75,7 @@ function ensureScholarshipStudentInfoColumns(PDO $pdo): void {
         }
 
         $pdo->exec($sql);
+        tableHasColumn($pdo, 'scholarship_data', $columnName, true);
     }
 }
 
@@ -152,6 +154,7 @@ function storeScholarshipOldInput(array $input): void {
         'post_application_steps',
         'renewal_conditions',
         'scholarship_restrictions',
+        'allow_if_already_accepted',
         'target_applicant_type',
         'target_year_level',
         'required_admission_status',
@@ -425,6 +428,10 @@ function buildScholarshipDataPayload(PDO $pdo, array $input, ?string $image): ar
     }
     if (tableHasColumn($pdo, 'scholarship_data', 'target_special_category')) {
         $payload['target_special_category'] = nullableString($input['target_special_category'] ?? '');
+    }
+    if (tableHasColumn($pdo, 'scholarship_data', 'allow_if_already_accepted')) {
+        $rawValue = strtolower(trim((string) ($input['allow_if_already_accepted'] ?? '1')));
+        $payload['allow_if_already_accepted'] = in_array($rawValue, ['0', 'false', 'no'], true) ? 0 : 1;
     }
     if (array_key_exists('review_status', $input) && tableHasColumn($pdo, 'scholarship_data', 'review_status')) {
         $payload['review_status'] = strtolower(trim((string) $input['review_status'])) ?: 'approved';
@@ -910,13 +917,18 @@ $allowedAdmissionStatuses = ['any', 'not_yet_applied', 'applied', 'admitted', 'e
 $allowedTargetCitizenships = ['all', 'filipino', 'dual_citizen', 'permanent_resident', 'other'];
 $allowedIncomeBrackets = ['any', 'below_10000', '10000_20000', '20001_40000', '40001_80000', 'above_80000'];
 $allowedSpecialCategories = ['any', 'pwd', 'indigenous_peoples', 'solo_parent_dependent', 'working_student', 'child_of_ofw', 'four_ps_beneficiary', 'orphan'];
+$allowedAcceptedScholarshipRules = ['0', '1'];
 $targetApplicantType = normalizeChoice($_POST['target_applicant_type'] ?? 'all', $allowedTargetApplicantTypes, 'all');
 $targetYearLevel = normalizeChoice($_POST['target_year_level'] ?? 'any', $allowedTargetYearLevels, 'any');
+$isCollegeTargetApplicantType = in_array($targetApplicantType, ['current_college', 'transferee', 'continuing_student'], true);
+$targetYearLevel = $isCollegeTargetApplicantType ? $targetYearLevel : 'any';
 $requiredAdmissionStatus = normalizeChoice($_POST['required_admission_status'] ?? 'any', $allowedAdmissionStatuses, 'any');
 $targetStrand = trim((string) ($_POST['target_strand'] ?? ''));
+$targetStrand = $targetApplicantType === 'incoming_freshman' ? $targetStrand : '';
 $targetCitizenship = normalizeChoice($_POST['target_citizenship'] ?? 'all', $allowedTargetCitizenships, 'all');
 $targetIncomeBracket = normalizeChoice($_POST['target_income_bracket'] ?? 'any', $allowedIncomeBrackets, 'any');
 $targetSpecialCategory = normalizeChoice($_POST['target_special_category'] ?? 'any', $allowedSpecialCategories, 'any');
+$allowIfAlreadyAccepted = normalizeChoice($_POST['allow_if_already_accepted'] ?? '1', $allowedAcceptedScholarshipRules, '1');
 
 $address = trim((string) ($_POST['address'] ?? ''));
 $city = trim((string) ($_POST['city'] ?? ''));
@@ -1118,6 +1130,7 @@ try {
         'target_citizenship' => $targetCitizenship,
         'target_income_bracket' => $targetIncomeBracket,
         'target_special_category' => $targetSpecialCategory,
+        'allow_if_already_accepted' => $allowIfAlreadyAccepted,
         'address' => $address,
         'city' => $city,
         'province' => $province,
@@ -1175,6 +1188,7 @@ try {
             'target_citizenship' => $targetCitizenship,
             'target_income_bracket' => $targetIncomeBracket,
             'target_special_category' => $targetSpecialCategory,
+            'allow_if_already_accepted' => (int) $allowIfAlreadyAccepted,
             'assessment_requirement' => $assessmentRequirement,
             'required_documents' => $requirementsCount,
             'remote_exam_sites' => $remoteExamCount,

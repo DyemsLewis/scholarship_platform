@@ -837,7 +837,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
 
                     <div>
                         <label for="editCitizenship" style="font-size: 0.75rem;">Citizenship</label>
-                        <select id="editCitizenship" name="citizenship" style="width: 100%; padding: 8px; font-size: 0.9rem;">
+                        <select id="editCitizenship" name="citizenship" disabled style="width: 100%; padding: 8px; font-size: 0.9rem; background: #f5f5f5; color: #526176;">
                             <option value="">Select citizenship</option>
                             <option value="filipino" <?php echo ($userCitizenship ?? '') === 'filipino' ? 'selected' : ''; ?>>Filipino</option>
                             <option value="dual_citizen" <?php echo ($userCitizenship ?? '') === 'dual_citizen' ? 'selected' : ''; ?>>Dual Citizen</option>
@@ -848,7 +848,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
 
                     <div>
                         <label for="editHouseholdIncomeBracket" style="font-size: 0.75rem;">Household Income Bracket</label>
-                        <select id="editHouseholdIncomeBracket" name="household_income_bracket" style="width: 100%; padding: 8px; font-size: 0.9rem;">
+                        <select id="editHouseholdIncomeBracket" name="household_income_bracket" disabled style="width: 100%; padding: 8px; font-size: 0.9rem; background: #f5f5f5; color: #526176;">
                             <option value="">Select income bracket</option>
                             <option value="below_10000" <?php echo ($userHouseholdIncomeBracket ?? '') === 'below_10000' ? 'selected' : ''; ?>>Below PHP 10,000 / month</option>
                             <option value="10000_20000" <?php echo ($userHouseholdIncomeBracket ?? '') === '10000_20000' ? 'selected' : ''; ?>>PHP 10,000 - 20,000 / month</option>
@@ -861,7 +861,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
 
                     <div>
                         <label for="editSpecialCategory" style="font-size: 0.75rem;">Special Scholarship Category</label>
-                        <select id="editSpecialCategory" name="special_category" style="width: 100%; padding: 8px; font-size: 0.9rem;">
+                        <select id="editSpecialCategory" name="special_category" disabled style="width: 100%; padding: 8px; font-size: 0.9rem; background: #f5f5f5; color: #526176;">
                             <option value="">Select category</option>
                             <option value="none" <?php echo ($userSpecialCategory ?? '') === 'none' ? 'selected' : ''; ?>>None</option>
                             <option value="pwd" <?php echo ($userSpecialCategory ?? '') === 'pwd' ? 'selected' : ''; ?>>Person with Disability (PWD)</option>
@@ -874,7 +874,7 @@ $editLocalMobileNumberValue = $normalizedEditMobileNumber !== null ? substr($nor
                         </select>
                     </div>
                 </div>
-                <small style="font-size: 0.7rem; display: block; margin-top: 8px;">These details are optional, but they help scholarship providers review eligibility and priority sectors.</small>
+                <small style="font-size: 0.7rem; display: block; margin-top: 8px;">These details are locked after registration so your scholarship background stays consistent during review.</small>
             </div>
 
             <div style="margin-bottom: 12px;">

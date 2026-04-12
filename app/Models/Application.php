@@ -6,6 +6,13 @@ class Application extends Model {
     protected $table = 'applications';
     protected $primaryKey = 'id';
     private static array $columnCache = [];
+    private static array $tableCache = [];
+
+    public function __construct($pdo)
+    {
+        parent::__construct($pdo);
+        $this->ensureAssessmentColumns();
+    }
 
     private function hasColumn(string $columnName): bool
     {
@@ -33,6 +40,98 @@ class Application extends Model {
 
         return self::$columnCache[$columnName];
     }
+
+    private function hasTable(string $tableName): bool
+    {
+        if (array_key_exists($tableName, self::$tableCache)) {
+            return self::$tableCache[$tableName];
+        }
+
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT COUNT(*)
+                FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = :table_name
+            ");
+            $stmt->execute([
+                ':table_name' => $tableName,
+            ]);
+            self::$tableCache[$tableName] = ((int) $stmt->fetchColumn()) > 0;
+        } catch (Throwable $e) {
+            error_log('Application hasTable error: ' . $e->getMessage());
+            self::$tableCache[$tableName] = false;
+        }
+
+        return self::$tableCache[$tableName];
+    }
+
+    public function ensureAssessmentColumns(): void
+    {
+        $columnDefinitions = [
+            'assessment_status' => "ALTER TABLE {$this->table} ADD COLUMN assessment_status VARCHAR(30) NULL DEFAULT NULL AFTER student_responded_at",
+            'assessment_schedule_at' => "ALTER TABLE {$this->table} ADD COLUMN assessment_schedule_at DATETIME NULL DEFAULT NULL AFTER assessment_status",
+            'assessment_link_override' => "ALTER TABLE {$this->table} ADD COLUMN assessment_link_override VARCHAR(255) NULL DEFAULT NULL AFTER assessment_schedule_at",
+            'assessment_site_id' => "ALTER TABLE {$this->table} ADD COLUMN assessment_site_id INT UNSIGNED NULL DEFAULT NULL AFTER assessment_link_override",
+            'assessment_notes' => "ALTER TABLE {$this->table} ADD COLUMN assessment_notes TEXT NULL DEFAULT NULL AFTER assessment_site_id",
+        ];
+
+        foreach ($columnDefinitions as $columnName => $sql) {
+            if ($this->hasColumn($columnName)) {
+                continue;
+            }
+
+            try {
+                $this->pdo->exec($sql);
+                self::$columnCache[$columnName] = true;
+            } catch (Throwable $e) {
+                error_log('Application ensureAssessmentColumns error (' . $columnName . '): ' . $e->getMessage());
+            }
+        }
+    }
+
+    public function getAllowedAssessmentStatuses(): array
+    {
+        return ['not_started', 'scheduled', 'ready', 'submitted', 'under_review', 'passed', 'failed'];
+    }
+
+    public function normalizeAssessmentStatus(?string $value): string
+    {
+        $status = strtolower(trim((string) $value));
+        return in_array($status, $this->getAllowedAssessmentStatuses(), true) ? $status : 'not_started';
+    }
+
+    public function updateAssessmentFields(int $applicationId, array $data): bool
+    {
+        if ($applicationId <= 0) {
+            return false;
+        }
+
+        $this->ensureAssessmentColumns();
+
+        $allowedColumns = [
+            'assessment_status',
+            'assessment_schedule_at',
+            'assessment_link_override',
+            'assessment_site_id',
+            'assessment_notes',
+        ];
+
+        $payload = [];
+        foreach ($allowedColumns as $columnName) {
+            if (!array_key_exists($columnName, $data) || !$this->hasColumn($columnName)) {
+                continue;
+            }
+
+            $payload[$columnName] = $data[$columnName];
+        }
+
+        if (empty($payload)) {
+            return false;
+        }
+
+        return $this->update($applicationId, $payload);
+    }
     
     /**
      * Get applications by user
@@ -51,6 +150,8 @@ class Application extends Model {
     }
 
     public function getTimelineByUser($userId, $limit = 5) {
+        $this->ensureAssessmentColumns();
+
         $selectParts = [
             'a.id',
             'a.user_id',
@@ -60,7 +161,10 @@ class Application extends Model {
             'a.applied_at',
             's.name as scholarship_name',
             'sd.provider',
-            'sd.deadline'
+            'sd.deadline',
+            'sd.assessment_requirement',
+            'sd.assessment_link',
+            'sd.assessment_details'
         ];
 
         $selectParts[] = $this->hasColumn('updated_at')
@@ -79,13 +183,50 @@ class Application extends Model {
             ? 'a.student_responded_at'
             : 'NULL AS student_responded_at';
 
+        $selectParts[] = $this->hasColumn('assessment_status')
+            ? 'a.assessment_status'
+            : 'NULL AS assessment_status';
+
+        $selectParts[] = $this->hasColumn('assessment_schedule_at')
+            ? 'a.assessment_schedule_at'
+            : 'NULL AS assessment_schedule_at';
+
+        $selectParts[] = $this->hasColumn('assessment_link_override')
+            ? 'a.assessment_link_override'
+            : 'NULL AS assessment_link_override';
+
+        $selectParts[] = $this->hasColumn('assessment_site_id')
+            ? 'a.assessment_site_id'
+            : 'NULL AS assessment_site_id';
+
+        $selectParts[] = $this->hasColumn('assessment_notes')
+            ? 'a.assessment_notes'
+            : 'NULL AS assessment_notes';
+
+        if ($this->hasTable('scholarship_remote_exam_locations')) {
+            $selectParts[] = 'srel.site_name AS assessment_site_name';
+            $selectParts[] = 'srel.address AS assessment_site_address';
+            $selectParts[] = 'srel.city AS assessment_site_city';
+            $selectParts[] = 'srel.province AS assessment_site_province';
+        } else {
+            $selectParts[] = 'NULL AS assessment_site_name';
+            $selectParts[] = 'NULL AS assessment_site_address';
+            $selectParts[] = 'NULL AS assessment_site_city';
+            $selectParts[] = 'NULL AS assessment_site_province';
+        }
+
         $limit = max(1, min(10, (int) $limit));
+
+        $siteJoinSql = $this->hasTable('scholarship_remote_exam_locations')
+            ? 'LEFT JOIN scholarship_remote_exam_locations srel ON srel.id = a.assessment_site_id'
+            : '';
 
         $stmt = $this->pdo->prepare("
             SELECT " . implode(",\n                   ", $selectParts) . "
             FROM applications a
             JOIN scholarships s ON a.scholarship_id = s.id
             LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id
+            {$siteJoinSql}
             WHERE a.user_id = ?
             ORDER BY a.applied_at DESC, a.id DESC
             LIMIT {$limit}
@@ -150,6 +291,51 @@ class Application extends Model {
         ");
         $stmt->execute([$userId, $scholarshipId]);
         return $stmt->fetch()['count'] > 0;
+    }
+
+    public function getAcceptedScholarshipSummary(int $userId, ?int $excludeScholarshipId = null): ?array
+    {
+        if (
+            $userId <= 0
+            || !$this->hasColumn('student_response_status')
+            || !$this->hasColumn('student_responded_at')
+        ) {
+            return null;
+        }
+
+        $params = [$userId];
+        $excludeSql = '';
+        if ($excludeScholarshipId !== null && $excludeScholarshipId > 0) {
+            $excludeSql = ' AND a.scholarship_id <> ?';
+            $params[] = $excludeScholarshipId;
+        }
+
+        $stmt = $this->pdo->prepare("
+            SELECT
+                a.id,
+                a.scholarship_id,
+                a.student_responded_at,
+                s.name AS scholarship_name,
+                sd.provider
+            FROM {$this->table} a
+            JOIN scholarships s ON s.id = a.scholarship_id
+            LEFT JOIN scholarship_data sd ON sd.scholarship_id = s.id
+            WHERE a.user_id = ?
+              AND a.status = 'approved'
+              AND TRIM(COALESCE(a.student_response_status, '')) = 'accepted'
+              {$excludeSql}
+            ORDER BY COALESCE(a.student_responded_at, a.applied_at) DESC, a.id DESC
+            LIMIT 1
+        ");
+        $stmt->execute($params);
+
+        $acceptedScholarship = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $acceptedScholarship ?: null;
+    }
+
+    public function hasAcceptedScholarship(int $userId, ?int $excludeScholarshipId = null): bool
+    {
+        return $this->getAcceptedScholarshipSummary($userId, $excludeScholarshipId) !== null;
     }
     
     /**

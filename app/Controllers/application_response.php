@@ -9,6 +9,19 @@ require_once __DIR__ . '/../Models/ActivityLog.php';
 
 $mailConfig = require __DIR__ . '/../Config/mail_config.php';
 
+function applicationResponseAssessmentTypeLabel(?string $value): string
+{
+    $normalized = strtolower(trim((string) $value));
+    $map = [
+        'online_exam' => 'online exam',
+        'remote_examination' => 'remote examination',
+        'assessment' => 'online assessment',
+        'evaluation' => 'online evaluation',
+    ];
+
+    return $map[$normalized] ?? 'assessment';
+}
+
 function buildApplicationAcceptanceEmail(array $applicationDetails): array
 {
     $studentName = trim((string) ($applicationDetails['student_name'] ?? ''));
@@ -33,6 +46,11 @@ function buildApplicationAcceptanceEmail(array $applicationDetails): array
     $referenceLine = $applicationId > 0
         ? "Reference number: APP-" . str_pad((string) $applicationId, 5, '0', STR_PAD_LEFT) . "\n\n"
         : '';
+    $assessmentRequirement = strtolower(trim((string) ($applicationDetails['assessment_requirement'] ?? 'none')));
+    $assessmentEnabled = in_array($assessmentRequirement, ['online_exam', 'remote_examination', 'assessment', 'evaluation'], true);
+    $assessmentLine = $assessmentEnabled
+        ? "4. Check Application Tracking in Scholarship Finder for your " . applicationResponseAssessmentTypeLabel($assessmentRequirement) . " instructions.\n"
+        : '';
 
     $subject = 'Scholarship Finder Acceptance Received';
     $body = "Hello {$studentName},\n\n"
@@ -41,7 +59,8 @@ function buildApplicationAcceptanceEmail(array $applicationDetails): array
         . "What happens next:\n"
         . "1. Wait for further instructions from {$providerName}.\n"
         . "2. Keep your supporting documents ready in case additional confirmation is requested.\n"
-        . "3. Check your Scholarship Finder account and email regularly for follow-up updates.\n\n"
+        . "3. Check your Scholarship Finder account and email regularly for follow-up updates.\n"
+        . $assessmentLine . "\n"
         . "Thank you,\nScholarship Finder";
 
     return [$subject, $body];
@@ -150,6 +169,9 @@ $studentResponseStatusSelect = $hasStudentResponseStatus
 $studentRespondedAtSelect = $hasStudentRespondedAt
     ? 'a.student_responded_at AS student_responded_at,'
     : 'NULL AS student_responded_at,';
+$assessmentRequirementSelect = applicationResponseHasColumn($pdo, 'scholarship_data', 'assessment_requirement')
+    ? 'sd.assessment_requirement AS assessment_requirement,'
+    : 'NULL AS assessment_requirement,';
 
 try {
     $stmt = $pdo->prepare("
@@ -159,6 +181,7 @@ try {
             a.status,
             {$studentResponseStatusSelect}
             {$studentRespondedAtSelect}
+            {$assessmentRequirementSelect}
             u.username,
             u.email,
             s.id AS scholarship_id,
@@ -191,6 +214,8 @@ $studentResponseStatus = strtolower(trim((string) ($application['student_respons
 $scholarshipName = trim((string) ($application['scholarship_name'] ?? 'this scholarship'));
 $providerOrganization = trim((string) ($application['provider_name'] ?? ''));
 $providerName = $providerOrganization !== '' ? $providerOrganization : 'the provider';
+$assessmentRequirement = strtolower(trim((string) ($application['assessment_requirement'] ?? 'none')));
+$assessmentEnabled = in_array($assessmentRequirement, ['online_exam', 'remote_examination', 'assessment', 'evaluation'], true);
 $studentName = trim((string) ($_SESSION['user_firstname'] ?? '') . ' ' . (string) ($_SESSION['user_lastname'] ?? ''));
 if ($studentName === '') {
     $studentName = trim((string) ($_SESSION['user_username'] ?? 'Student'));
@@ -247,6 +272,7 @@ try {
         'email' => (string) ($application['email'] ?? ($_SESSION['user_email'] ?? '')),
         'scholarship_name' => $scholarshipName,
         'provider_name' => $providerName,
+        'assessment_requirement' => $assessmentRequirement,
     ]);
     if (!$emailNotice['success'] && empty($emailNotice['skipped'])) {
         error_log('application_response email error: ' . ($emailNotice['error'] ?? 'Unknown error'));
@@ -271,6 +297,9 @@ try {
     }
 
     $_SESSION['success'] = 'You accepted ' . $scholarshipName . '. Please wait for further instructions.';
+    if ($assessmentEnabled) {
+        $_SESSION['success'] .= ' Check Application Tracking for your ' . applicationResponseAssessmentTypeLabel($assessmentRequirement) . ' updates.';
+    }
     if (!empty($emailNotice['success'])) {
         $_SESSION['success'] .= ' A confirmation email has been sent to your inbox.';
     } elseif (!empty($emailNotice['error'])) {

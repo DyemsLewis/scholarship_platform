@@ -272,31 +272,80 @@ class DocumentManager {
         this.applyDocumentFilters();
     }
 
+    normalizeFilterText(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    getDocumentCards() {
+        this.elements.documentCards = Array.from(document.querySelectorAll('.doc-card'));
+        return this.elements.documentCards;
+    }
+
+    getDocumentSearchHaystack(card) {
+        const datasetText = [
+            card.dataset.documentName || '',
+            card.dataset.documentType || '',
+            card.dataset.documentDescription || '',
+            card.dataset.documentFile || '',
+            card.dataset.documentStatus || '',
+            card.dataset.documentKeywords || ''
+        ].join(' ');
+
+        const contentText = card.textContent || '';
+        return this.normalizeFilterText(`${datasetText} ${contentText}`);
+    }
+
+    matchesDocumentSearch(card, searchValue) {
+        const normalizedSearch = this.normalizeFilterText(searchValue);
+        if (normalizedSearch === '') {
+            return true;
+        }
+
+        const searchTokens = normalizedSearch.split(' ').filter(Boolean);
+        if (!searchTokens.length) {
+            return true;
+        }
+
+        const haystack = this.getDocumentSearchHaystack(card);
+        return searchTokens.every((token) => haystack.includes(token));
+    }
+
+    matchesDocumentStatus(card, statusValue) {
+        const normalizedStatus = this.normalizeFilterText(statusValue);
+        const documentStatus = this.normalizeFilterText(card.dataset.documentStatus || 'missing');
+
+        if (normalizedStatus === '' || normalizedStatus === 'all') {
+            return true;
+        }
+
+        if (normalizedStatus === 'uploaded') {
+            return documentStatus !== 'missing';
+        }
+
+        if (normalizedStatus === 'rejected') {
+            return documentStatus === 'rejected';
+        }
+
+        return documentStatus === normalizedStatus;
+    }
+
     applyDocumentFilters() {
-        if (!this.elements.documentCards.length) {
+        const cards = this.getDocumentCards();
+        if (!cards.length) {
             return;
         }
 
-        const searchValue = (this.elements.documentSearch?.value || '').trim().toLowerCase();
-        const statusValue = (this.elements.documentStatusFilter?.value || 'all').trim().toLowerCase();
-        const totalCards = this.elements.documentCards.length;
+        const searchValue = this.elements.documentSearch?.value || '';
+        const statusValue = this.elements.documentStatusFilter?.value || 'all';
+        const totalCards = cards.length;
         let visibleCount = 0;
 
-        this.elements.documentCards.forEach((card) => {
-            const keywords = (card.dataset.documentKeywords || '').toLowerCase();
-            const documentStatus = (card.dataset.documentStatus || 'missing').toLowerCase();
-            const matchesSearch = searchValue === '' || keywords.includes(searchValue);
-            let matchesStatus = statusValue === 'all';
-
-            if (!matchesStatus) {
-                if (statusValue === 'uploaded') {
-                    matchesStatus = documentStatus !== 'missing';
-                } else {
-                    matchesStatus = documentStatus === statusValue;
-                }
-            }
-
-            const shouldShow = matchesSearch && matchesStatus;
+        cards.forEach((card) => {
+            const shouldShow = this.matchesDocumentSearch(card, searchValue)
+                && this.matchesDocumentStatus(card, statusValue);
             card.dataset.filterVisible = shouldShow ? 'true' : 'false';
 
             if (shouldShow) {
@@ -316,6 +365,10 @@ class DocumentManager {
 
         if (window.CardPagination && typeof window.CardPagination.refresh === 'function' && this.elements.documentsGrid) {
             window.CardPagination.refresh(this.elements.documentsGrid.id, true);
+        } else {
+            cards.forEach((card) => {
+                card.style.display = card.dataset.filterVisible === 'false' ? 'none' : '';
+            });
         }
     }
 
@@ -489,16 +542,33 @@ class DocumentManager {
 // Initialize when DOM is ready
 let documentManager = null;
 
+function ensureDocumentManager() {
+    if (documentManager) {
+        return documentManager;
+    }
+
+    try {
+        documentManager = new DocumentManager();
+    } catch (error) {
+        console.error('Document manager initialization failed:', error);
+        documentManager = null;
+    }
+
+    return documentManager;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    documentManager = new DocumentManager();
+    ensureDocumentManager();
 });
 
 // Global functions for inline onclick handlers
 window.openUploadModal = function(docType, docName, mode) {
-    if (documentManager) documentManager.openUploadModal(docType, docName, mode);
+    const manager = ensureDocumentManager();
+    if (manager) manager.openUploadModal(docType, docName, mode);
 };
 
 window.closeUploadModal = function() {
-    if (documentManager) documentManager.closeUploadModal();
+    const manager = ensureDocumentManager();
+    if (manager) manager.closeUploadModal();
 };
 

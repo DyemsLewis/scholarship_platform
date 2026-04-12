@@ -342,9 +342,9 @@ class UserProfileController {
             $enrollmentStatus = $this->normalizeChoice($data['enrollment_status'] ?? null, $allowedEnrollmentStatuses);
             $academicStanding = $this->normalizeChoice($data['academic_standing'] ?? null, $allowedAcademicStandings);
             $gender = $this->normalizeChoice($data['gender'] ?? null, $allowedGenders);
-            $citizenship = $this->normalizeChoice($data['citizenship'] ?? null, $allowedCitizenships);
-            $householdIncomeBracket = $this->normalizeChoice($data['household_income_bracket'] ?? null, $allowedIncomeBrackets);
-            $specialCategory = $this->normalizeChoice($data['special_category'] ?? null, $allowedSpecialCategories);
+            $citizenship = $this->normalizeChoice($existingData['citizenship'] ?? null, $allowedCitizenships);
+            $householdIncomeBracket = $this->normalizeChoice($existingData['household_income_bracket'] ?? null, $allowedIncomeBrackets);
+            $specialCategory = $this->normalizeChoice($existingData['special_category'] ?? null, $allowedSpecialCategories);
             $mobileNumber = normalizePhilippineMobileNumber($data['mobile_number'] ?? null);
 
             if ($admissionStatus === null && $isCollegeApplicant) {
@@ -631,9 +631,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $enrollmentStatus = $normalizeChoice($_POST['enrollment_status'] ?? '', $allowedEnrollmentStatuses);
             $academicStanding = $normalizeChoice($_POST['academic_standing'] ?? '', $allowedAcademicStandings);
             $gender = $normalizeChoice($_POST['gender'] ?? '', $allowedGenders);
-            $citizenship = $normalizeChoice($_POST['citizenship'] ?? '', $allowedCitizenships);
-            $householdIncomeBracket = $normalizeChoice($_POST['household_income_bracket'] ?? '', $allowedIncomeBrackets);
-            $specialCategory = $normalizeChoice($_POST['special_category'] ?? '', $allowedSpecialCategories);
+            $citizenship = $normalizeChoice($existingStudentData['citizenship'] ?? '', $allowedCitizenships);
+            $householdIncomeBracket = $normalizeChoice($existingStudentData['household_income_bracket'] ?? '', $allowedIncomeBrackets);
+            $specialCategory = $normalizeChoice($existingStudentData['special_category'] ?? '', $allowedSpecialCategories);
             $shsSchool = trim((string) ($_POST['shs_school'] ?? ''));
             $shsStrand = trim((string) ($_POST['shs_strand'] ?? ''));
             $shsGraduationYear = trim((string) ($_POST['shs_graduation_year'] ?? ''));
@@ -746,18 +746,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             if (trim((string) ($_POST['gender'] ?? '')) !== '' && $gender === null) {
                 $errors[] = 'Invalid gender selected';
-            }
-
-            if (trim((string) ($_POST['citizenship'] ?? '')) !== '' && $citizenship === null) {
-                $errors[] = 'Invalid citizenship selected';
-            }
-
-            if (trim((string) ($_POST['household_income_bracket'] ?? '')) !== '' && $householdIncomeBracket === null) {
-                $errors[] = 'Invalid household income bracket selected';
-            }
-
-            if (trim((string) ($_POST['special_category'] ?? '')) !== '' && $specialCategory === null) {
-                $errors[] = 'Invalid scholarship category selected';
             }
 
             if ($shsGraduationYear !== '') {

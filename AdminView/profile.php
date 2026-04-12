@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../app/Config/session_bootstrap.php';
 require_once __DIR__ . '/../app/Config/db_config.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
 require_once __DIR__ . '/../app/Config/access_control.php';
 require_once __DIR__ . '/../app/Config/admin_account_options.php';
 require_once __DIR__ . '/../app/Config/password_policy.php';
@@ -54,6 +55,11 @@ function displayMobileValue($value, string $fallback = 'Not set'): string {
 function normalizeMiddleInitialInputValue($value): string {
     $lettersOnly = preg_replace('/[^A-Za-z]/', '', trim((string) $value)) ?? '';
     return strtoupper(substr($lettersOnly, 0, 1));
+}
+
+function normalizeProfileTabValue($value): string {
+    $normalized = strtolower(trim((string) $value));
+    return in_array($normalized, ['view', 'edit', 'password'], true) ? $normalized : 'view';
 }
 
 $currentRole = getCurrentSessionRole();
@@ -143,6 +149,13 @@ $responsibilityItems = [
 ];
 $enabledResponsibilities = array_values(array_keys(array_filter($responsibilityItems)));
 $enabledResponsibilityCount = count($enabledResponsibilities);
+$initialProfileTab = normalizeProfileTabValue($_GET['tab'] ?? 'view');
+$viewTabActive = $initialProfileTab === 'view';
+$editTabActive = $initialProfileTab === 'edit';
+$passwordTabActive = $initialProfileTab === 'password';
+$editTabHref = '#edit';
+$passwordTabHref = '#password';
+$viewTabHref = '#view';
 
 $_SESSION['user_display_name'] = $displayName;
 $_SESSION['admin_name'] = $displayName;
@@ -185,12 +198,12 @@ $profilePageDescription = $isProviderRole
 
         <div class="staff-profile-card">
             <div class="staff-profile-tab-bar">
-                <button type="button" class="staff-profile-tab active" id="tabView" data-profile-tab="view" aria-controls="profileViewContent" aria-selected="true"><i class="fas fa-user"></i> View Profile</button>
-                <button type="button" class="staff-profile-tab" id="tabEdit" data-profile-tab="edit" aria-controls="profileEditContent" aria-selected="false"><i class="fas fa-pen-to-square"></i> Edit Profile</button>
-                <button type="button" class="staff-profile-tab" id="tabPassword" data-profile-tab="password" aria-controls="profilePasswordContent" aria-selected="false"><i class="fas fa-lock"></i> Security</button>
+                <a href="<?php echo htmlspecialchars($viewTabHref); ?>" class="staff-profile-tab <?php echo $viewTabActive ? 'active' : ''; ?>" id="tabView" data-profile-tab="view" aria-controls="profileViewContent" aria-selected="<?php echo $viewTabActive ? 'true' : 'false'; ?>" role="tab"><i class="fas fa-user"></i> View Profile</a>
+                <a href="<?php echo htmlspecialchars($editTabHref); ?>" class="staff-profile-tab <?php echo $editTabActive ? 'active' : ''; ?>" id="tabEdit" data-profile-tab="edit" aria-controls="profileEditContent" aria-selected="<?php echo $editTabActive ? 'true' : 'false'; ?>" role="tab"><i class="fas fa-pen-to-square"></i> Edit Profile</a>
+                <a href="<?php echo htmlspecialchars($passwordTabHref); ?>" class="staff-profile-tab <?php echo $passwordTabActive ? 'active' : ''; ?>" id="tabPassword" data-profile-tab="password" aria-controls="profilePasswordContent" aria-selected="<?php echo $passwordTabActive ? 'true' : 'false'; ?>" role="tab"><i class="fas fa-lock"></i> Security</a>
             </div>
             <div class="staff-profile-tab-body">
-                <div id="profileViewContent" data-profile-panel="view">
+                <div id="profileViewContent" data-profile-panel="view" <?php echo $viewTabActive ? '' : 'hidden'; ?> aria-hidden="<?php echo $viewTabActive ? 'false' : 'true'; ?>">
                     <div class="staff-view-layout <?php echo !$isProviderRole ? 'is-admin-balance' : ''; ?>">
                         <aside class="staff-summary-column <?php echo !$isProviderRole ? 'is-single-card' : ''; ?>">
                             <div class="staff-summary-card">
@@ -224,8 +237,8 @@ $profilePageDescription = $isProviderRole
                                         </div>
                                     </div>
                                     <div class="staff-summary-actions">
-                                        <button type="button" class="btn btn-primary" data-profile-tab="edit"><i class="fas fa-pen-to-square"></i> Edit Profile</button>
-                                        <button type="button" class="btn btn-outline" data-profile-tab="password"><i class="fas fa-lock"></i> Security</button>
+                                        <a href="<?php echo htmlspecialchars($editTabHref); ?>" class="btn btn-primary" data-profile-tab="edit"><i class="fas fa-pen-to-square"></i> Edit Profile</a>
+                                        <a href="<?php echo htmlspecialchars($passwordTabHref); ?>" class="btn btn-outline" data-profile-tab="password"><i class="fas fa-lock"></i> Security</a>
                                     </div>
                                 </div>
                             </div>
@@ -368,7 +381,7 @@ $profilePageDescription = $isProviderRole
                     </div>
                 </div>
 
-                <div id="profileEditContent" data-profile-panel="edit" hidden>
+                <div id="profileEditContent" data-profile-panel="edit" <?php echo $editTabActive ? '' : 'hidden'; ?> aria-hidden="<?php echo $editTabActive ? 'false' : 'true'; ?>">
                     <?php if (!$storageReady): ?>
                     <div class="staff-profile-empty"><i class="fas fa-database"></i><div><strong>Profile editing is not available yet.</strong><br><?php echo htmlspecialchars($storageMessage); ?></div></div>
                     <?php else: ?>
@@ -424,14 +437,14 @@ $profilePageDescription = $isProviderRole
 
                             <div class="staff-form-actions">
                                 <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Profile</button>
-                                <button type="button" class="btn btn-outline" data-profile-tab="view"><i class="fas fa-times"></i> Cancel</button>
+                                <a href="<?php echo htmlspecialchars($viewTabHref); ?>" class="btn btn-outline" data-profile-tab="view"><i class="fas fa-times"></i> Cancel</a>
                             </div>
                         </form>
                     </div>
                     <?php endif; ?>
                 </div>
 
-                <div id="profilePasswordContent" data-profile-panel="password" hidden>
+                <div id="profilePasswordContent" data-profile-panel="password" <?php echo $passwordTabActive ? '' : 'hidden'; ?> aria-hidden="<?php echo $passwordTabActive ? 'false' : 'true'; ?>">
                     <div class="staff-panel-shell">
                         <div class="staff-panel-heading">
                             <div>
@@ -462,7 +475,7 @@ $profilePageDescription = $isProviderRole
                                 </div>
                                 <div class="staff-form-actions">
                                     <button type="submit" class="btn btn-primary"><i class="fas fa-key"></i> Update Password</button>
-                                    <button type="button" class="btn btn-outline" data-profile-tab="view"><i class="fas fa-arrow-left"></i> Back</button>
+                                    <a href="<?php echo htmlspecialchars($viewTabHref); ?>" class="btn btn-outline" data-profile-tab="view"><i class="fas fa-arrow-left"></i> Back</a>
                                 </div>
                             </form>
                         </div>

@@ -276,6 +276,92 @@ if (!function_exists('getApplicantAcademicDocumentLabel')) {
     }
 }
 
+if (!function_exists('getApplicantAcademicDocumentTypeCode')) {
+    function getApplicantAcademicDocumentTypeCode($applicantType): string
+    {
+        return isIncomingFreshmanApplicantType($applicantType) ? 'form_138' : 'grades';
+    }
+}
+
+if (!function_exists('resolveApplicantAcademicDocumentStatus')) {
+    function resolveApplicantAcademicDocumentStatus($applicantType, array $documentsByType): string
+    {
+        $documentType = getApplicantAcademicDocumentTypeCode($applicantType);
+        $rawStatus = $documentsByType[$documentType] ?? null;
+
+        if (is_array($rawStatus)) {
+            $rawStatus = $rawStatus['status'] ?? '';
+        }
+
+        $status = strtolower(trim((string) $rawStatus));
+        return in_array($status, ['pending', 'verified', 'rejected'], true) ? $status : 'missing';
+    }
+}
+
+if (!function_exists('describeAcademicDocumentStatus')) {
+    function describeAcademicDocumentStatus(string $documentStatus, string $documentLabel, string $metricLabel): array
+    {
+        $status = strtolower(trim($documentStatus));
+        if (!in_array($status, ['missing', 'pending', 'verified', 'rejected'], true)) {
+            $status = 'missing';
+        }
+
+        $metricLabelLower = strtolower($metricLabel);
+        $documentLabelLower = strtolower($documentLabel);
+
+        switch ($status) {
+            case 'pending':
+                return [
+                    'status' => 'pending',
+                    'headline' => $documentLabel . ' uploaded',
+                    'summary' => 'Your ' . $documentLabel . ' is already uploaded and pending review. The scanner may not have detected your ' . $metricLabelLower . ' yet, so the academic check will update once the review team records it or you upload a clearer copy.',
+                    'reason' => 'Your ' . $documentLabel . ' is already uploaded and pending review, so your recorded ' . $metricLabelLower . ' is still unavailable.',
+                    'action_label' => 'Open Uploads',
+                    'status_label' => $metricLabel . ' Pending',
+                    'decision' => 'Pending: ' . $documentLabelLower . ' uploaded, waiting for review',
+                    'block_reason' => 'Your ' . $documentLabel . ' is already uploaded and pending review. Please wait for your recorded ' . $metricLabelLower . ' to be added or upload a clearer copy.'
+                ];
+
+            case 'verified':
+                return [
+                    'status' => 'verified',
+                    'headline' => $documentLabel . ' uploaded',
+                    'summary' => 'Your ' . $documentLabel . ' is already uploaded, but your recorded ' . $metricLabelLower . ' is not available yet. The scan may have missed it, so check your uploads or upload a clearer copy if needed.',
+                    'reason' => 'Your ' . $documentLabel . ' is uploaded, but your recorded ' . $metricLabelLower . ' is not available yet.',
+                    'action_label' => 'Open Uploads',
+                    'status_label' => 'Score Pending',
+                    'decision' => 'Pending: recorded ' . $metricLabelLower . ' not available yet',
+                    'block_reason' => 'Your ' . $documentLabel . ' is already uploaded, but your recorded ' . $metricLabelLower . ' is not available yet.'
+                ];
+
+            case 'rejected':
+                return [
+                    'status' => 'rejected',
+                    'headline' => $documentLabel . ' needs re-upload',
+                    'summary' => 'Your ' . $documentLabel . ' was uploaded, but it needs a clearer re-upload before the system can verify your recorded ' . $metricLabelLower . '.',
+                    'reason' => 'Your ' . $documentLabel . ' needs a clearer re-upload before the system can verify your recorded ' . $metricLabelLower . '.',
+                    'action_label' => 'Re-upload ' . $documentLabel,
+                    'status_label' => 'Re-upload ' . $documentLabel,
+                    'decision' => 'Pending: clearer ' . $documentLabelLower . ' needed',
+                    'block_reason' => 'Re-upload a clearer ' . $documentLabel . ' first so the system can verify your recorded ' . $metricLabelLower . '.'
+                ];
+
+            case 'missing':
+            default:
+                return [
+                    'status' => 'missing',
+                    'headline' => $documentLabel . ' not uploaded',
+                    'summary' => 'Upload your ' . $documentLabel . ' so the system can verify your recorded ' . $metricLabelLower . '.',
+                    'reason' => 'Upload your ' . $documentLabel . ' so the system can verify your recorded ' . $metricLabelLower . '.',
+                    'action_label' => 'Upload ' . $documentLabel,
+                    'status_label' => 'Needs ' . $metricLabel,
+                    'decision' => 'Pending: upload ' . $documentLabelLower,
+                    'block_reason' => 'Upload your ' . $documentLabel . ' first to set your ' . $metricLabelLower . '.'
+                ];
+        }
+    }
+}
+
 if (!function_exists('formatDateJoined')) {
     function formatDateJoined($dateString) {
         if (!$dateString) return 'N/A';

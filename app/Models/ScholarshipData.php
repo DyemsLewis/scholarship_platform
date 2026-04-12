@@ -5,6 +5,29 @@ require_once 'Model.php';
 class ScholarshipData extends Model {
     protected $table = 'scholarship_data';
     protected $primaryKey = 'id';
+    private array $columnCache = [];
+
+    private function hasColumn(string $columnName): bool
+    {
+        if (array_key_exists($columnName, $this->columnCache)) {
+            return $this->columnCache[$columnName];
+        }
+
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*)
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = :table_name
+              AND COLUMN_NAME = :column_name
+        ");
+        $stmt->execute([
+            ':table_name' => $this->table,
+            ':column_name' => $columnName,
+        ]);
+
+        $this->columnCache[$columnName] = ((int) $stmt->fetchColumn()) > 0;
+        return $this->columnCache[$columnName];
+    }
     
     /**
      * Get data by scholarship ID
@@ -38,6 +61,10 @@ class ScholarshipData extends Model {
             'required_admission_status' => $data['required_admission_status'] ?? null,
             'target_strand' => $data['target_strand'] ?? null
         ];
+
+        if ($this->hasColumn('allow_if_already_accepted')) {
+            $scholarshipData['allow_if_already_accepted'] = $data['allow_if_already_accepted'] ?? 1;
+        }
 
         foreach (['review_status', 'review_notes', 'reviewed_by_user_id', 'reviewed_at'] as $optionalField) {
             if (array_key_exists($optionalField, $data)) {

@@ -152,9 +152,12 @@ try {
     $applicationOpenDateSelect = tableHasColumn($pdo, 'scholarship_data', 'application_open_date')
         ? 'sd.application_open_date'
         : 'NULL AS application_open_date';
+    $allowIfAlreadyAcceptedSelect = tableHasColumn($pdo, 'scholarship_data', 'allow_if_already_accepted')
+        ? 'sd.allow_if_already_accepted'
+        : '1 AS allow_if_already_accepted';
 
     $stmt = $pdo->prepare("
-        SELECT s.id, s.name, s.status, sd.provider, sd.deadline, {$applicationOpenDateSelect}
+        SELECT s.id, s.name, s.status, sd.provider, sd.deadline, {$applicationOpenDateSelect}, {$allowIfAlreadyAcceptedSelect}
         FROM scholarships s
         LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id
         WHERE s.id = ?
@@ -168,6 +171,23 @@ try {
             'success' => false,
             'message' => 'Scholarship not found or inactive.'
         ]);
+    }
+
+    $applicationModel = new Application($pdo);
+    $allowsAcceptedScholarshipApplicants = (int) ($scholarship['allow_if_already_accepted'] ?? 1) === 1;
+    if (!$allowsAcceptedScholarshipApplicants) {
+        $acceptedScholarship = $applicationModel->getAcceptedScholarshipSummary($userId, $scholarshipId);
+        if ($acceptedScholarship) {
+            $acceptedScholarshipName = trim((string) ($acceptedScholarship['scholarship_name'] ?? 'another scholarship'));
+            if ($acceptedScholarshipName === '') {
+                $acceptedScholarshipName = 'another scholarship';
+            }
+
+            jsonResponse(422, [
+                'success' => false,
+                'message' => 'You already accepted ' . $acceptedScholarshipName . '. This scholarship only accepts applicants who have not yet accepted another scholarship offer.'
+            ]);
+        }
     }
 
     if (!empty($scholarship['application_open_date'])) {
@@ -308,7 +328,6 @@ try {
         $probabilityScore = null;
     }
 
-    $applicationModel = new Application($pdo);
     $result = $applicationModel->createApplication($userId, $scholarshipId, $probabilityScore);
 
     if (!$result['success']) {

@@ -184,6 +184,7 @@ if (array_key_exists('remote_exam_sites', $scholarshipOld)) {
 
 $statusValue = scholarshipOldValue($scholarshipOld, 'status', (string) ($scholarship['status'] ?? 'active'));
 $assessmentRequirementValue = scholarshipOldValue($scholarshipOld, 'assessment_requirement', strtolower((string) ($scholarshipData['assessment_requirement'] ?? 'none')));
+$allowIfAlreadyAcceptedValue = scholarshipOldValue($scholarshipOld, 'allow_if_already_accepted', (string) ((int) ($scholarshipData['allow_if_already_accepted'] ?? 1)));
 $currentImageValue = scholarshipOldValue($scholarshipOld, 'current_image', (string) ($scholarshipData['image'] ?? ''));
 $removeImageChecked = scholarshipOldValue($scholarshipOld, 'remove_image') !== '';
 $providerScope = getCurrentProviderScope($pdo);
@@ -885,7 +886,7 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
                                         <div class="form-row-modern">
                                             <div class="form-group-modern">
                                                 <label><i class="fas fa-users"></i> Target Applicant Type</label>
-                                                <select name="target_applicant_type">
+                                                <select name="target_applicant_type" id="targetApplicantTypeSelect">
                                                     <option value="all" <?php echo scholarshipOldSelected($scholarshipOld, 'target_applicant_type', 'all', (string) ($scholarshipData['target_applicant_type'] ?? 'all')); ?>>All Applicants</option>
                                                     <option value="incoming_freshman" <?php echo scholarshipOldSelected($scholarshipOld, 'target_applicant_type', 'incoming_freshman', (string) ($scholarshipData['target_applicant_type'] ?? 'all')); ?>>Incoming Freshman</option>
                                                     <option value="current_college" <?php echo scholarshipOldSelected($scholarshipOld, 'target_applicant_type', 'current_college', (string) ($scholarshipData['target_applicant_type'] ?? 'all')); ?>>Current College Student</option>
@@ -896,7 +897,7 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
                                             </div>
                                             <div class="form-group-modern">
                                                 <label><i class="fas fa-layer-group"></i> Target Year Level</label>
-                                                <select name="target_year_level">
+                                                <select name="target_year_level" id="targetYearLevelSelect">
                                                     <option value="any" <?php echo scholarshipOldSelected($scholarshipOld, 'target_year_level', 'any', (string) ($scholarshipData['target_year_level'] ?? 'any')); ?>>Any Year Level</option>
                                                     <option value="1st_year" <?php echo scholarshipOldSelected($scholarshipOld, 'target_year_level', '1st_year', (string) ($scholarshipData['target_year_level'] ?? 'any')); ?>>1st Year</option>
                                                     <option value="2nd_year" <?php echo scholarshipOldSelected($scholarshipOld, 'target_year_level', '2nd_year', (string) ($scholarshipData['target_year_level'] ?? 'any')); ?>>2nd Year</option>
@@ -904,6 +905,7 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
                                                     <option value="4th_year" <?php echo scholarshipOldSelected($scholarshipOld, 'target_year_level', '4th_year', (string) ($scholarshipData['target_year_level'] ?? 'any')); ?>>4th Year</option>
                                                     <option value="5th_year_plus" <?php echo scholarshipOldSelected($scholarshipOld, 'target_year_level', '5th_year_plus', (string) ($scholarshipData['target_year_level'] ?? 'any')); ?>>5th Year+</option>
                                                 </select>
+                                                <small class="helper-text" id="targetYearLevelHelper">Use this only when the scholarship is limited to a specific college year level.</small>
                                             </div>
                                         </div>
 
@@ -921,8 +923,19 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady && in_array($review
                                             </div>
                                             <div class="form-group-modern">
                                                 <label><i class="fas fa-sitemap"></i> Preferred SHS Strand</label>
-                                                <input type="text" name="target_strand" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'target_strand', (string) ($scholarshipData['target_strand'] ?? ''))); ?>" placeholder="Optional: STEM, ABM, HUMSS">
-                                                <small class="helper-text">Leave blank if the scholarship is open to any strand.</small>
+                                                <input type="text" id="targetStrandInput" name="target_strand" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'target_strand', (string) ($scholarshipData['target_strand'] ?? ''))); ?>" placeholder="Optional: STEM, ABM, HUMSS">
+                                                <small class="helper-text" id="targetStrandHelper">Leave blank if the scholarship is open to any strand.</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-row-modern">
+                                            <div class="form-group-modern">
+                                                <label><i class="fas fa-award"></i> Accepted Scholarship Rule</label>
+                                                <select name="allow_if_already_accepted" id="allowIfAcceptedSelect">
+                                                    <option value="1" <?php echo scholarshipOldSelected($scholarshipOld, 'allow_if_already_accepted', '1', $allowIfAlreadyAcceptedValue); ?>>Can still apply after accepting another scholarship</option>
+                                                    <option value="0" <?php echo scholarshipOldSelected($scholarshipOld, 'allow_if_already_accepted', '0', $allowIfAlreadyAcceptedValue); ?>>Cannot apply after accepting another scholarship</option>
+                                                </select>
+                                                <small class="helper-text" id="allowIfAcceptedHelper">Choose whether students who already accepted another scholarship offer may still submit to this scholarship.</small>
                                             </div>
                                         </div>
 
@@ -1535,6 +1548,47 @@ include 'partials/scholarship_location_modal.php';
         syncRemoteExamSites();
     }
 
+    function syncTargetApplicantFields() {
+        const applicantTypeSelect = document.getElementById('targetApplicantTypeSelect');
+        const yearLevelSelect = document.getElementById('targetYearLevelSelect');
+        const yearLevelHelper = document.getElementById('targetYearLevelHelper');
+        const targetStrandInput = document.getElementById('targetStrandInput');
+        const targetStrandHelper = document.getElementById('targetStrandHelper');
+        if (!applicantTypeSelect || !yearLevelSelect || !targetStrandInput) {
+            return;
+        }
+
+        const applicantType = applicantTypeSelect.value;
+        const isIncomingFreshman = applicantType === 'incoming_freshman';
+        const isCollegeApplicantType = ['current_college', 'transferee', 'continuing_student'].includes(applicantType);
+
+        if (!isCollegeApplicantType) {
+            yearLevelSelect.value = 'any';
+        }
+
+        yearLevelSelect.disabled = !isCollegeApplicantType;
+        yearLevelSelect.setAttribute('aria-disabled', !isCollegeApplicantType ? 'true' : 'false');
+
+        if (yearLevelHelper) {
+            yearLevelHelper.textContent = isCollegeApplicantType
+                ? 'Use this only when the scholarship is limited to a specific college year level.'
+                : 'Target Year Level only applies to current college, transferee, or continuing student scholarships.';
+        }
+
+        if (!isIncomingFreshman) {
+            targetStrandInput.value = '';
+        }
+
+        targetStrandInput.disabled = !isIncomingFreshman;
+        targetStrandInput.setAttribute('aria-disabled', !isIncomingFreshman ? 'true' : 'false');
+
+        if (targetStrandHelper) {
+            targetStrandHelper.textContent = isIncomingFreshman
+                ? 'Leave blank if the incoming-freshman scholarship is open to any strand.'
+                : 'Preferred SHS Strand only applies to incoming freshman scholarships.';
+        }
+    }
+
     function serializeScholarshipForm(form) {
         const snapshot = [];
         const elements = form.querySelectorAll('input, select, textarea');
@@ -1596,7 +1650,13 @@ include 'partials/scholarship_location_modal.php';
 
         const initialRemoteExamSites = <?php echo json_encode($initialRemoteExamSites, JSON_UNESCAPED_UNICODE); ?>;
         initializeRemoteExamSites(initialRemoteExamSites);
+        syncTargetApplicantFields();
         setStatus(document.getElementById('statusInput').value || 'active');
+
+        const applicantTypeSelect = document.getElementById('targetApplicantTypeSelect');
+        if (applicantTypeSelect) {
+            applicantTypeSelect.addEventListener('change', syncTargetApplicantFields);
+        }
 
         if (editScholarshipForm) {
             const initialFormSnapshot = serializeScholarshipForm(editScholarshipForm);

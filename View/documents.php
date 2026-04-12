@@ -425,7 +425,6 @@ $completion = $totalTypes > 0 ? round(($totalUploaded / $totalTypes) * 100) : 0;
     <script src="<?php echo htmlspecialchars(assetUrl('public/js/document.js')); ?>"></script>
     <script src="<?php echo htmlspecialchars(assetUrl('public/js/card-pagination.js')); ?>"></script>
 </body>
-</body>
 </html>
 
 

@@ -197,34 +197,30 @@ $manageScholarshipsUrl = normalizeAppUrl('AdminView/manage_scholarships.php');
         <?php endif; ?>
 
         <div class="scholarships-overview">
-            <div class="scholarship-metric-card">
-                <div class="scholarship-metric-icon"><i class="fas fa-graduation-cap"></i></div>
-                <div class="scholarship-metric-copy">
-                    <h3><?php echo $total; ?></h3>
-                    <p>Total Scholarships</p>
-                </div>
-            </div>
-            <div class="scholarship-metric-card">
-                <div class="scholarship-metric-icon"><i class="fas fa-check-circle"></i></div>
-                <div class="scholarship-metric-copy">
-                    <h3><?php echo $active_count; ?></h3>
-                    <p>Active</p>
-                </div>
-            </div>
-            <div class="scholarship-metric-card">
-                <div class="scholarship-metric-icon"><i class="fas fa-pause-circle"></i></div>
-                <div class="scholarship-metric-copy">
-                    <h3><?php echo $inactive_count; ?></h3>
-                    <p>Inactive</p>
-                </div>
-            </div>
-            <div class="scholarship-metric-card">
-                <div class="scholarship-metric-icon"><i class="fas <?php echo $reviewWorkflowReady ? 'fa-hourglass-half' : 'fa-calendar-alt'; ?>"></i></div>
-                <div class="scholarship-metric-copy">
-                    <h3><?php echo $reviewWorkflowReady ? $pending_review_count : $upcoming_deadlines; ?></h3>
-                    <p><?php echo $reviewWorkflowReady ? 'Pending Review' : 'Upcoming Deadlines'; ?></p>
-                </div>
-            </div>
+            <article class="scholarship-summary-card">
+                <span class="scholarship-summary-label">Total Scholarships</span>
+                <strong class="scholarship-summary-value"><?php echo number_format($total); ?></strong>
+                <p class="scholarship-summary-meta">Scholarship postings currently listed in this workspace.</p>
+            </article>
+            <article class="scholarship-summary-card">
+                <span class="scholarship-summary-label">Active</span>
+                <strong class="scholarship-summary-value"><?php echo number_format($active_count); ?></strong>
+                <p class="scholarship-summary-meta">Visible to students and available in scholarship listings.</p>
+            </article>
+            <article class="scholarship-summary-card">
+                <span class="scholarship-summary-label">Inactive</span>
+                <strong class="scholarship-summary-value"><?php echo number_format($inactive_count); ?></strong>
+                <p class="scholarship-summary-meta">Saved postings that are currently hidden from students.</p>
+            </article>
+            <article class="scholarship-summary-card">
+                <span class="scholarship-summary-label"><?php echo $reviewWorkflowReady ? 'Pending Review' : 'Upcoming Deadlines'; ?></span>
+                <strong class="scholarship-summary-value"><?php echo number_format($reviewWorkflowReady ? $pending_review_count : $upcoming_deadlines); ?></strong>
+                <p class="scholarship-summary-meta">
+                    <?php echo $reviewWorkflowReady
+                        ? 'Scholarships still waiting for review before publication.'
+                        : 'Scholarships closing within the next 30 days.'; ?>
+                </p>
+            </article>
         </div>
 
         <div class="scholarships-control-panel">

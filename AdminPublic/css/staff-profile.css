@@ -99,6 +99,7 @@
     font-size: 0.95rem;
     font-weight: 700;
     cursor: pointer;
+    text-decoration: none;
     transition: 0.2s ease;
 }
 

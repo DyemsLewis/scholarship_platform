@@ -79,6 +79,7 @@ class Scholarship extends Model {
             'post_application_steps',
             'renewal_conditions',
             'scholarship_restrictions',
+            'allow_if_already_accepted',
             'target_applicant_type',
             'target_year_level',
             'required_admission_status',

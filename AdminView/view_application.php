@@ -37,6 +37,19 @@ function appDate(?string $value, string $format = 'M d, Y h:i A', string $fallba
     return $timestamp ? date($format, $timestamp) : $fallback;
 }
 
+function appDateTimeLocalValue(?string $value): string
+{
+    if (empty($value)) {
+        return '';
+    }
+
+    try {
+        return (new DateTime((string) $value))->format('Y-m-d\TH:i');
+    } catch (Throwable $e) {
+        return '';
+    }
+}
+
 function appAddress(array $row): string
 {
     $parts = array_filter([
@@ -83,6 +96,27 @@ function appTableHasColumn(PDO $pdo, string $tableName, string $columnName): boo
     return $cache[$key];
 }
 
+function appTableExists(PDO $pdo, string $tableName): bool
+{
+    static $cache = [];
+    if (array_key_exists($tableName, $cache)) {
+        return $cache[$tableName];
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT COUNT(*)
+        FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = :table_name
+    ");
+    $stmt->execute([
+        ':table_name' => $tableName
+    ]);
+
+    $cache[$tableName] = ((int) $stmt->fetchColumn()) > 0;
+    return $cache[$tableName];
+}
+
 function appOptionalColumnSelect(PDO $pdo, string $tableAlias, string $tableName, string $columnName, ?string $alias = null): string
 {
     $selectAlias = $alias ?? $columnName;
@@ -94,6 +128,35 @@ function appOptionalColumnSelect(PDO $pdo, string $tableAlias, string $tableName
     return $tableAlias . '.' . $columnName . ' AS ' . $selectAlias . ',';
 }
 
+function appAssessmentTypeLabel(?string $value): string
+{
+    $normalized = strtolower(trim((string) $value));
+    $map = [
+        'online_exam' => 'Online Exam',
+        'remote_examination' => 'Remote Examination',
+        'assessment' => 'Online Assessment',
+        'evaluation' => 'Online Evaluation',
+    ];
+
+    return $map[$normalized] ?? 'Assessment';
+}
+
+function appAssessmentStatusLabel(?string $value): string
+{
+    $normalized = strtolower(trim((string) $value));
+    $map = [
+        'not_started' => 'Assessment required',
+        'scheduled' => 'Scheduled',
+        'ready' => 'Ready to take',
+        'submitted' => 'Submitted / attended',
+        'under_review' => 'Under review',
+        'passed' => 'Passed',
+        'failed' => 'Did not pass',
+    ];
+
+    return $map[$normalized] ?? 'Assessment required';
+}
+
 $applicationRejectionReasonSelect = appTableHasColumn($pdo, 'applications', 'rejection_reason')
     ? 'a.rejection_reason AS application_rejection_reason,'
     : 'NULL AS application_rejection_reason,';
@@ -103,6 +166,11 @@ $applicationStudentResponseStatusSelect = appTableHasColumn($pdo, 'applications'
 $applicationStudentRespondedAtSelect = appTableHasColumn($pdo, 'applications', 'student_responded_at')
     ? 'a.student_responded_at AS student_responded_at,'
     : 'NULL AS student_responded_at,';
+$applicationAssessmentStatusSelect = appOptionalColumnSelect($pdo, 'a', 'applications', 'assessment_status');
+$applicationAssessmentScheduleSelect = appOptionalColumnSelect($pdo, 'a', 'applications', 'assessment_schedule_at');
+$applicationAssessmentLinkOverrideSelect = appOptionalColumnSelect($pdo, 'a', 'applications', 'assessment_link_override');
+$applicationAssessmentSiteSelect = appOptionalColumnSelect($pdo, 'a', 'applications', 'assessment_site_id');
+$applicationAssessmentNotesSelect = appOptionalColumnSelect($pdo, 'a', 'applications', 'assessment_notes');
 $scholarshipEligibilitySelect = appOptionalColumnSelect($pdo, 's', 'scholarships', 'eligibility', 'scholarship_eligibility');
 $scholarshipMinGwaSelect = appOptionalColumnSelect($pdo, 's', 'scholarships', 'min_gwa', 'scholarship_min_gwa');
 $scholarshipAddressSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'address', 'scholarship_address');
@@ -116,6 +184,24 @@ $scholarshipTargetStrandSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarsh
 $scholarshipTargetCitizenshipSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_citizenship');
 $scholarshipTargetIncomeBracketSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_income_bracket');
 $scholarshipTargetSpecialCategorySelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_special_category');
+$scholarshipAssessmentRequirementSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'assessment_requirement');
+$scholarshipAssessmentLinkSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'assessment_link');
+$scholarshipAssessmentDetailsSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'assessment_details');
+$assessmentSiteJoin = (appTableHasColumn($pdo, 'applications', 'assessment_site_id') && appTableExists($pdo, 'scholarship_remote_exam_locations'))
+    ? 'LEFT JOIN scholarship_remote_exam_locations srel ON srel.id = a.assessment_site_id'
+    : '';
+$assessmentSiteNameSelect = $assessmentSiteJoin !== ''
+    ? 'srel.site_name AS assessment_site_name,'
+    : 'NULL AS assessment_site_name,';
+$assessmentSiteAddressSelect = $assessmentSiteJoin !== ''
+    ? 'srel.address AS assessment_site_address,'
+    : 'NULL AS assessment_site_address,';
+$assessmentSiteCitySelect = $assessmentSiteJoin !== ''
+    ? 'srel.city AS assessment_site_city,'
+    : 'NULL AS assessment_site_city,';
+$assessmentSiteProvinceSelect = $assessmentSiteJoin !== ''
+    ? 'srel.province AS assessment_site_province,'
+    : 'NULL AS assessment_site_province,';
 
 try {
     $stmt = $pdo->prepare("
@@ -126,6 +212,11 @@ try {
             {$applicationRejectionReasonSelect}
             {$applicationStudentResponseStatusSelect}
             {$applicationStudentRespondedAtSelect}
+            {$applicationAssessmentStatusSelect}
+            {$applicationAssessmentScheduleSelect}
+            {$applicationAssessmentLinkOverrideSelect}
+            {$applicationAssessmentSiteSelect}
+            {$applicationAssessmentNotesSelect}
             a.applied_at,
             a.updated_at,
             u.id AS user_id,
@@ -151,13 +242,21 @@ try {
             {$scholarshipTargetCitizenshipSelect}
             {$scholarshipTargetIncomeBracketSelect}
             {$scholarshipTargetSpecialCategorySelect}
+            {$scholarshipAssessmentRequirementSelect}
+            {$scholarshipAssessmentLinkSelect}
+            {$scholarshipAssessmentDetailsSelect}
             s.description AS scholarship_description,
+            {$assessmentSiteNameSelect}
+            {$assessmentSiteAddressSelect}
+            {$assessmentSiteCitySelect}
+            {$assessmentSiteProvinceSelect}
             sl.location_name AS student_location_name
         FROM applications a
         JOIN users u ON a.user_id = u.id
         LEFT JOIN student_data sd ON u.id = sd.student_id
         JOIN scholarships s ON a.scholarship_id = s.id
         LEFT JOIN scholarship_data sd2 ON s.id = sd2.scholarship_id
+        {$assessmentSiteJoin}
         LEFT JOIN student_location sl ON u.id = sl.student_id
         WHERE a.id = ?
         LIMIT 1
@@ -354,6 +453,155 @@ $requirementsRemainingLabel = $requirementsTotalCount > 0
         ? $requirementsRemainingCount . ' pending requirement' . ($requirementsRemainingCount === 1 ? '' : 's')
         : 'All required documents verified')
     : 'No required documents configured';
+$assessmentRequirement = strtolower(trim((string) ($application['assessment_requirement'] ?? 'none')));
+$assessmentEnabled = in_array($assessmentRequirement, ['online_exam', 'remote_examination', 'assessment', 'evaluation'], true);
+$assessmentTypeLabel = $assessmentEnabled ? appAssessmentTypeLabel($assessmentRequirement) : 'Assessment';
+$assessmentStatusChoices = [
+    'not_started' => 'Assessment required',
+    'scheduled' => 'Scheduled',
+    'ready' => 'Ready to take',
+    'submitted' => 'Submitted / attended',
+    'under_review' => 'Under review',
+    'passed' => 'Passed',
+    'failed' => 'Did not pass',
+];
+$assessmentStatus = strtolower(trim((string) ($application['assessment_status'] ?? '')));
+if ($assessmentEnabled && $assessmentStatus === '') {
+    $assessmentStatus = 'not_started';
+}
+$assessmentStatusLabel = $assessmentEnabled ? appAssessmentStatusLabel($assessmentStatus) : 'Not required';
+$assessmentStatusClass = match ($assessmentStatus) {
+    'passed' => 'approved',
+    'failed' => 'rejected',
+    'scheduled', 'under_review' => 'pending',
+    'ready', 'submitted' => 'info',
+    default => 'active',
+};
+$assessmentConfiguredLink = trim((string) ($application['assessment_link'] ?? ''));
+$assessmentOverrideLink = trim((string) ($application['assessment_link_override'] ?? ''));
+$assessmentEffectiveLink = $assessmentOverrideLink !== '' ? $assessmentOverrideLink : $assessmentConfiguredLink;
+if ($assessmentEffectiveLink !== '' && !filter_var($assessmentEffectiveLink, FILTER_VALIDATE_URL)) {
+    $assessmentEffectiveLink = '';
+}
+$assessmentScheduleAt = !empty($application['assessment_schedule_at']) ? (string) $application['assessment_schedule_at'] : null;
+$assessmentScheduleLabel = appDate($assessmentScheduleAt, 'F j, Y g:i A', 'Not scheduled yet');
+$assessmentScheduleInputValue = appDateTimeLocalValue($assessmentScheduleAt);
+$assessmentSiteParts = array_filter([
+    trim((string) ($application['assessment_site_name'] ?? '')),
+    trim((string) ($application['assessment_site_address'] ?? '')),
+    trim((string) ($application['assessment_site_city'] ?? '')),
+    trim((string) ($application['assessment_site_province'] ?? '')),
+]);
+$assessmentSiteLabel = !empty($assessmentSiteParts) ? implode(', ', $assessmentSiteParts) : 'No site selected yet';
+$assessmentNotes = trim((string) ($application['assessment_notes'] ?? ''));
+$assessmentDetails = trim((string) ($application['assessment_details'] ?? ''));
+$assessmentSiteId = (int) ($application['assessment_site_id'] ?? 0);
+$assessmentRemoteSites = [];
+if (
+    $assessmentEnabled
+    && $assessmentRequirement === 'remote_examination'
+    && appTableExists($pdo, 'scholarship_remote_exam_locations')
+) {
+    try {
+        $assessmentSiteStmt = $pdo->prepare("
+            SELECT id, site_name, address, city, province
+            FROM scholarship_remote_exam_locations
+            WHERE scholarship_id = ?
+            ORDER BY site_name ASC, id ASC
+        ");
+        $assessmentSiteStmt->execute([(int) ($application['scholarship_id'] ?? 0)]);
+        $assessmentRemoteSites = $assessmentSiteStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        error_log('view_application remote sites load failed: ' . $e->getMessage());
+    }
+}
+$assessmentManagementUnlocked = strtolower($applicationStatus) === 'approved' && $studentAccepted;
+$assessmentStatusNote = 'This scholarship does not have a post-acceptance assessment configured.';
+$assessmentTimelineState = 'upcoming';
+if ($assessmentEnabled) {
+    if (!$assessmentManagementUnlocked) {
+        $assessmentStatusNote = strtolower($applicationStatus) === 'approved'
+            ? 'This stage opens after the student accepts the approved scholarship offer.'
+            : 'Assessment updates become available after approval and student acceptance.';
+        $assessmentTimelineState = 'upcoming';
+    } else {
+        switch ($assessmentStatus) {
+            case 'scheduled':
+                $assessmentStatusNote = $assessmentTypeLabel . ' scheduled for ' . $assessmentScheduleLabel . ($assessmentRequirement === 'remote_examination' && $assessmentSiteLabel !== 'No site selected yet' ? ' at ' . $assessmentSiteLabel . '.' : '.');
+                $assessmentTimelineState = 'current';
+                break;
+            case 'ready':
+                $assessmentStatusNote = $assessmentRequirement === 'remote_examination'
+                    ? ($assessmentSiteLabel !== 'No site selected yet' ? 'Assigned site: ' . $assessmentSiteLabel . '.' : 'The student can now view the assigned exam sites.')
+                    : ($assessmentEffectiveLink !== '' ? 'The exam portal is ready for the student.' : 'The provider marked the exam stage as ready.');
+                $assessmentTimelineState = 'current';
+                break;
+            case 'submitted':
+                $assessmentStatusNote = $assessmentRequirement === 'remote_examination'
+                    ? 'Attendance or site completion was recorded. Wait for the result update.'
+                    : 'The exam submission was recorded. Wait for the result update.';
+                $assessmentTimelineState = 'current';
+                break;
+            case 'under_review':
+                $assessmentStatusNote = 'The assessment result is currently under review.';
+                $assessmentTimelineState = 'current';
+                break;
+            case 'passed':
+                $assessmentStatusNote = 'The student passed the post-acceptance assessment.';
+                $assessmentTimelineState = 'complete';
+                break;
+            case 'failed':
+                $assessmentStatusNote = 'The student did not pass the post-acceptance assessment.';
+                $assessmentTimelineState = 'rejected';
+                break;
+            default:
+                $assessmentStatusNote = 'Acceptance is recorded. Post the schedule, site, or portal details for the student here.';
+                $assessmentTimelineState = 'current';
+                break;
+        }
+    }
+
+    if ($assessmentNotes !== '') {
+        $assessmentStatusNote .= ' Note: ' . $assessmentNotes;
+    }
+}
+$assessmentStudentActionUrl = '';
+$assessmentStudentActionLabel = '';
+$assessmentStudentActionExternal = false;
+if ($assessmentEnabled) {
+    if ($assessmentRequirement === 'remote_examination') {
+        $assessmentStudentActionUrl = buildEntityUrl(
+            '../View/remote_exam_map.php',
+            'scholarship',
+            (int) ($application['scholarship_id'] ?? 0),
+            'view',
+            [
+                'id' => (int) ($application['scholarship_id'] ?? 0)
+            ]
+        );
+        $assessmentStudentActionLabel = 'Open Exam Map';
+    } elseif ($assessmentEffectiveLink !== '') {
+        $assessmentStudentActionUrl = $assessmentEffectiveLink;
+        $assessmentStudentActionLabel = 'Open Exam Portal';
+        $assessmentStudentActionExternal = true;
+    }
+}
+$assessmentSaveUrl = buildEntityUrl(
+    '../app/AdminControllers/application_assessment_process.php',
+    'application',
+    (int) ($application['application_id'] ?? 0),
+    'assessment',
+    [
+        'action' => 'save',
+        'id' => (int) ($application['application_id'] ?? 0)
+    ]
+);
+$studentConfirmationTimelineState = 'upcoming';
+if (strtolower($applicationStatus) === 'approved' && $studentAccepted) {
+    $studentConfirmationTimelineState = 'complete';
+} elseif (strtolower($applicationStatus) === 'approved') {
+    $studentConfirmationTimelineState = 'current';
+}
 $decisionReadinessTone = 'ready';
 $decisionReadinessLabel = 'Ready for review';
 $decisionReadinessNote = 'This application can proceed through the review workflow.';
@@ -365,6 +613,15 @@ if ($requirementsTotalCount > 0 && $requirementsVerifiedCount < $requirementsTot
 if ($studentAccepted) {
     $decisionReadinessLabel = 'Acceptance recorded';
     $decisionReadinessNote = 'The approved scholarship offer has already been accepted by the student.';
+    if ($assessmentEnabled) {
+        $decisionReadinessLabel = $assessmentStatus === 'passed'
+            ? $assessmentTypeLabel . ' passed'
+            : ($assessmentStatus === 'failed' ? $assessmentTypeLabel . ' not passed' : $assessmentTypeLabel . ' in progress');
+        $decisionReadinessNote = $assessmentStatusNote;
+        if ($assessmentStatus === 'failed') {
+            $decisionReadinessTone = 'attention';
+        }
+    }
 } elseif ($applicationStatus === 'approved') {
     $decisionReadinessLabel = 'Approved and waiting for student confirmation';
     $decisionReadinessNote = 'The application is approved. Waiting for the student to accept the scholarship.';
@@ -1274,13 +1531,29 @@ unset($_SESSION['success'], $_SESSION['error']);
                                     <span><?php echo htmlspecialchars($requirementsRemainingLabel); ?></span>
                                 </div>
                             </div>
-                            <div class="review-timeline-item <?php echo $applicationStatus === 'pending' ? 'upcoming' : 'complete'; ?>">
+                            <div class="review-timeline-item <?php echo $applicationStatus === 'pending' ? 'current' : 'complete'; ?>">
                                 <span class="review-timeline-marker"><i class="fas fa-gavel"></i></span>
                                 <div class="review-timeline-copy">
                                     <strong>Final decision</strong>
-                                    <span><?php echo htmlspecialchars($studentAccepted ? 'Accepted' : ucfirst($applicationStatus)); ?></span>
+                                    <span><?php echo htmlspecialchars(ucfirst($applicationStatus)); ?></span>
                                 </div>
                             </div>
+                            <?php if ($assessmentEnabled): ?>
+                                <div class="review-timeline-item <?php echo htmlspecialchars($studentConfirmationTimelineState); ?>">
+                                    <span class="review-timeline-marker"><i class="fas fa-handshake"></i></span>
+                                    <div class="review-timeline-copy">
+                                        <strong>Student confirmation</strong>
+                                        <span><?php echo htmlspecialchars($studentResponseNote); ?></span>
+                                    </div>
+                                </div>
+                                <div class="review-timeline-item <?php echo htmlspecialchars($assessmentTimelineState); ?>">
+                                    <span class="review-timeline-marker"><i class="fas <?php echo htmlspecialchars($assessmentRequirement === 'remote_examination' ? 'fa-map-location-dot' : 'fa-laptop-file'); ?>"></i></span>
+                                    <div class="review-timeline-copy">
+                                        <strong><?php echo htmlspecialchars($assessmentTypeLabel); ?></strong>
+                                        <span><?php echo htmlspecialchars($assessmentStatusNote); ?></span>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
 
@@ -1315,6 +1588,150 @@ unset($_SESSION['success'], $_SESSION['error']);
                         </div>
                     </div>
                     </div>
+                    <?php if ($assessmentEnabled): ?>
+                    <div class="review-panel review-panel-assessment app-review-panel">
+                        <div class="review-panel-header">
+                            <div>
+                                <h3><?php echo htmlspecialchars($assessmentTypeLabel); ?> Workspace</h3>
+                                <p>Manage the post-acceptance exam details that appear in the student's application tracking.</p>
+                            </div>
+                            <span class="status-pill <?php echo htmlspecialchars($assessmentStatusClass); ?>">
+                                <i class="fas <?php echo htmlspecialchars($assessmentRequirement === 'remote_examination' ? 'fa-map-location-dot' : 'fa-laptop-file'); ?>"></i>
+                                <?php echo htmlspecialchars($assessmentStatusLabel); ?>
+                            </span>
+                        </div>
+
+                        <div class="assessment-review-overview">
+                            <div class="assessment-review-overview-card">
+                                <span class="label">Assessment Type</span>
+                                <strong><?php echo htmlspecialchars($assessmentTypeLabel); ?></strong>
+                                <p><?php echo htmlspecialchars($assessmentRequirement === 'remote_examination' ? 'Use the site selector below to assign the exam location for this application.' : 'Use the schedule and link fields below to publish the exam access details for the student.'); ?></p>
+                            </div>
+                            <div class="assessment-review-overview-card">
+                                <span class="label">Current Student View</span>
+                                <strong><?php echo htmlspecialchars($assessmentStatusLabel); ?></strong>
+                                <p><?php echo htmlspecialchars($assessmentStatusNote); ?></p>
+                            </div>
+                            <div class="assessment-review-overview-card">
+                                <span class="label">Current Schedule</span>
+                                <strong><?php echo htmlspecialchars($assessmentScheduleLabel); ?></strong>
+                                <p>
+                                    <?php
+                                    if ($assessmentRequirement === 'remote_examination') {
+                                        echo htmlspecialchars(
+                                            $assessmentManagementUnlocked
+                                                ? $assessmentSiteLabel
+                                                : (!empty($assessmentRemoteSites)
+                                                    ? count($assessmentRemoteSites) . ' saved site' . (count($assessmentRemoteSites) === 1 ? '' : 's') . ' can be assigned after acceptance.'
+                                                    : 'No remote exam site has been saved yet.')
+                                        );
+                                    } else {
+                                        echo htmlspecialchars(
+                                            $assessmentEffectiveLink !== ''
+                                                ? ($assessmentManagementUnlocked
+                                                    ? 'The exam portal is ready for the student.'
+                                                    : 'The exam portal link is prepared and ready to publish after acceptance.')
+                                                : 'No student exam link is set yet.'
+                                        );
+                                    }
+                                    ?>
+                                </p>
+                            </div>
+                        </div>
+
+                        <?php if ($assessmentDetails !== ''): ?>
+                            <div class="review-note info"><?php echo nl2br(htmlspecialchars($assessmentDetails)); ?></div>
+                        <?php endif; ?>
+
+                        <?php if (!$assessmentManagementUnlocked): ?>
+                            <div class="review-note warning">
+                                <?php echo htmlspecialchars($studentAccepted
+                                    ? 'This assessment workspace will unlock once the application reaches the approved and accepted stage.'
+                                    : 'Wait for the student to accept the approved scholarship before posting exam instructions or assigning a remote exam site.'); ?>
+                            </div>
+                        <?php else: ?>
+                            <form method="POST" action="<?php echo htmlspecialchars($assessmentSaveUrl); ?>" class="assessment-review-form">
+                                <?php echo csrfInputField('application_assessment'); ?>
+                                <input type="hidden" name="action" value="save">
+                                <input type="hidden" name="id" value="<?php echo (int) ($application['application_id'] ?? 0); ?>">
+
+                                <div class="assessment-review-form-grid">
+                                    <label class="assessment-review-field">
+                                        <span>Status</span>
+                                        <select name="assessment_status" class="app-review-input">
+                                            <?php foreach ($assessmentStatusChoices as $assessmentStatusValue => $assessmentStatusChoiceLabel): ?>
+                                                <option value="<?php echo htmlspecialchars($assessmentStatusValue); ?>" <?php echo $assessmentStatus === $assessmentStatusValue ? 'selected' : ''; ?>>
+                                                    <?php echo htmlspecialchars($assessmentStatusChoiceLabel); ?>
+                                                </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </label>
+
+                                    <label class="assessment-review-field">
+                                        <span>Schedule</span>
+                                        <input
+                                            type="datetime-local"
+                                            name="assessment_schedule_at"
+                                            class="app-review-input"
+                                            value="<?php echo htmlspecialchars($assessmentScheduleInputValue); ?>">
+                                    </label>
+
+                                    <?php if ($assessmentRequirement === 'remote_examination'): ?>
+                                        <label class="assessment-review-field">
+                                            <span>Remote exam site</span>
+                                            <select name="assessment_site_id" class="app-review-input">
+                                                <option value="">Choose a site</option>
+                                                <?php foreach ($assessmentRemoteSites as $assessmentRemoteSite): ?>
+                                                    <?php
+                                                    $assessmentRemoteSiteLabel = implode(', ', array_filter([
+                                                        trim((string) ($assessmentRemoteSite['site_name'] ?? '')),
+                                                        trim((string) ($assessmentRemoteSite['city'] ?? '')),
+                                                        trim((string) ($assessmentRemoteSite['province'] ?? '')),
+                                                    ]));
+                                                    ?>
+                                                    <option value="<?php echo (int) ($assessmentRemoteSite['id'] ?? 0); ?>" <?php echo $assessmentSiteId === (int) ($assessmentRemoteSite['id'] ?? 0) ? 'selected' : ''; ?>>
+                                                        <?php echo htmlspecialchars($assessmentRemoteSiteLabel !== '' ? $assessmentRemoteSiteLabel : ('Site #' . (int) ($assessmentRemoteSite['id'] ?? 0))); ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </label>
+                                    <?php else: ?>
+                                        <label class="assessment-review-field">
+                                            <span>Student exam link</span>
+                                            <input
+                                                type="url"
+                                                name="assessment_link_override"
+                                                class="app-review-input"
+                                                placeholder="https://example.com/exam-link"
+                                                value="<?php echo htmlspecialchars($assessmentOverrideLink !== '' ? $assessmentOverrideLink : $assessmentEffectiveLink); ?>">
+                                        </label>
+                                    <?php endif; ?>
+                                </div>
+
+                                <label class="assessment-review-field is-full">
+                                    <span>Latest note for the student</span>
+                                    <textarea name="assessment_notes" class="app-textarea" placeholder="Add reminders, room instructions, or review updates that should appear in application tracking."><?php echo htmlspecialchars($assessmentNotes); ?></textarea>
+                                </label>
+
+                                <div class="assessment-review-actions">
+                                    <?php if ($assessmentStudentActionUrl !== '' && $assessmentStudentActionLabel !== ''): ?>
+                                        <a
+                                            href="<?php echo htmlspecialchars($assessmentStudentActionUrl); ?>"
+                                            class="btn btn-outline"
+                                            <?php echo $assessmentStudentActionExternal ? 'target="_blank" rel="noopener noreferrer"' : ''; ?>
+                                        >
+                                            <i class="fas <?php echo htmlspecialchars($assessmentStudentActionExternal ? 'fa-arrow-up-right-from-square' : 'fa-location-dot'); ?>"></i>
+                                            <?php echo htmlspecialchars($assessmentStudentActionLabel); ?>
+                                        </a>
+                                    <?php endif; ?>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-floppy-disk"></i> Save <?php echo htmlspecialchars($assessmentTypeLabel); ?> Details
+                                    </button>
+                                </div>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                    <?php endif; ?>
                     <div class="app-review-stage-actions">
                         <button type="button" class="btn btn-outline" data-review-prev-target="documents">
                             <i class="fas fa-arrow-left"></i> Back to Required Documents

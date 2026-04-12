@@ -3,6 +3,7 @@ require_once __DIR__ . '/../app/Config/init.php';
 require_once __DIR__ . '/../app/Config/db_config.php';
 require_once __DIR__ . '/../app/Config/url_token.php';
 require_once __DIR__ . '/../app/Controllers/scholarshipResultController.php';
+require_once __DIR__ . '/../app/Models/Application.php';
 require_once __DIR__ . '/../app/Models/UserDocument.php';
 
 $scholarshipsPageCssVersion = @filemtime(__DIR__ . '/../public/css/scholarships-page.css') ?: time();
@@ -40,20 +41,25 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
     // Initialize services
     $scholarshipService = new ScholarshipService($pdo);
     $documentModel = new UserDocument($pdo);
+    $applicationModel = $isLoggedIn ? new Application($pdo) : null;
     
     // Get user's documents for verification
     $userDocuments = [];
     $userDocStatus = [];
+    $userAcademicDocumentStatus = 'missing';
     if ($isLoggedIn) {
         $userDocs = $documentModel->getUserDocuments($_SESSION['user_id']);
         foreach ($userDocs as $doc) {
             $userDocStatus[$doc['document_type']] = $doc['status'];
         }
+        $userAcademicDocumentStatus = resolveApplicantAcademicDocumentStatus($userApplicantType, $userDocStatus);
     }
 
     $matchedScholarships = [];
     $matchedCount = 0;
     $eligibleScholarshipsCount = 0;
+    $acceptedScholarshipSummary = null;
+    $userAppliedScholarships = [];
     $documentVerifiedCount = count(array_filter($userDocStatus, function($status) {
         return $status === 'verified';
     }));
@@ -79,8 +85,20 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
 
     $uploadNoticeTitle = normalizeScannerNoticeCopy($uploadNoticeTitle);
     $uploadNoticeMessage = normalizeScannerNoticeCopy($uploadNoticeMessage);
+    $boardAcademicDocumentState = describeAcademicDocumentStatus($userAcademicDocumentStatus, $userAcademicDocumentLabel, $userAcademicMetricLabel);
 
     if ($isLoggedIn) {
+        $acceptedScholarshipSummary = $applicationModel ? $applicationModel->getAcceptedScholarshipSummary((int) $_SESSION['user_id']) : null;
+        if ($applicationModel) {
+            foreach ($applicationModel->getByUser((int) $_SESSION['user_id']) as $applicationRow) {
+                $appliedScholarshipId = (int) ($applicationRow['scholarship_id'] ?? 0);
+                if ($appliedScholarshipId <= 0 || isset($userAppliedScholarships[$appliedScholarshipId])) {
+                    continue;
+                }
+
+                $userAppliedScholarships[$appliedScholarshipId] = $applicationRow;
+            }
+        }
         $matchedScholarships = $scholarshipService->getMatchedScholarships(
             $userAcademicScore,
             $userCourse ?: $userTargetCourse,
@@ -116,8 +134,17 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
             return ($b['match_percentage'] ?? 0) <=> ($a['match_percentage'] ?? 0);
         });
         $matchedCount = count($matchedScholarships);
-        $eligibleScholarshipsCount = count(array_filter($matchedScholarships, function($scholarship) {
-            return !empty($scholarship['is_eligible']);
+        $eligibleScholarshipsCount = count(array_filter($matchedScholarships, function($scholarship) use ($acceptedScholarshipSummary) {
+            if (empty($scholarship['is_eligible'])) {
+                return false;
+            }
+
+            $allowsAcceptedScholarshipApplicants = (int) ($scholarship['allow_if_already_accepted'] ?? 1) === 1;
+            if ($allowsAcceptedScholarshipApplicants || $acceptedScholarshipSummary === null) {
+                return true;
+            }
+
+            return (int) ($acceptedScholarshipSummary['scholarship_id'] ?? 0) === (int) ($scholarship['id'] ?? 0);
         }));
     }
 
@@ -240,11 +267,11 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
             <div class="no-gwa-banner scholarship-panel" style="display: flex; align-items: center; gap: 16px; border-top: 5px solid #ed6c02;">
                 <i class="fas fa-chart-line"></i>
                 <div style="flex: 1;">
-                    <strong style="color: #ed6c02;"><?php echo htmlspecialchars($userAcademicSourceLabel); ?> Not Set</strong>
-                    <p style="margin: 5px 0 0 0; font-size: 0.85rem;">Your <?php echo htmlspecialchars(strtolower($userAcademicSourceLabel)); ?> has not been uploaded yet. Scholarships are still shown, but the requirements check will stay incomplete until you upload your <?php echo htmlspecialchars($userAcademicDocumentLabel); ?>.</p>
+                    <strong style="color: #ed6c02;"><?php echo htmlspecialchars($boardAcademicDocumentState['headline']); ?></strong>
+                    <p style="margin: 5px 0 0 0; font-size: 0.85rem;"><?php echo htmlspecialchars($boardAcademicDocumentState['summary']); ?></p>
                 </div>
                 <a href="upload.php" class="btn btn-primary" style="padding: 8px 20px;">
-                    <i class="fas fa-upload"></i> Upload <?php echo htmlspecialchars($userAcademicDocumentLabel); ?>
+                    <i class="fas fa-upload"></i> <?php echo htmlspecialchars($boardAcademicDocumentState['action_label']); ?>
                 </a>
             </div>
             <?php endif; ?>
@@ -297,6 +324,8 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
                         $assessmentRequirement = strtolower(trim((string)($scholarship['assessment_requirement'] ?? 'none')));
                         $hasAssessment = $assessmentRequirement !== '' && $assessmentRequirement !== 'none';
                         $remoteExamLocations = is_array($scholarship['remote_exam_locations'] ?? null) ? $scholarship['remote_exam_locations'] : [];
+                        $existingApplication = $userAppliedScholarships[(int) ($scholarship['id'] ?? 0)] ?? null;
+                        $hasUserAppliedToScholarship = is_array($existingApplication);
 
                         $requirementSummary = $documentModel->checkScholarshipRequirements($_SESSION['user_id'] ?? 0, $scholarship['id']);
                         $documentRequirements = $requirementSummary['requirements'] ?? [];
@@ -334,6 +363,7 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
                         $targetStrand = trim((string) ($scholarship['target_strand'] ?? ''));
                         $academicMetricLabel = (string) ($scholarship['academic_metric_label'] ?? $userAcademicMetricLabel);
                         $academicDocumentLabel = (string) ($scholarship['academic_document_label'] ?? $userAcademicDocumentLabel);
+                        $academicDocumentState = describeAcademicDocumentStatus($userAcademicDocumentStatus, $academicDocumentLabel, $academicMetricLabel);
                         $minimumAcademicLabel = $academicMetricLabel === 'GWA' ? 'Minimum GWA' : 'Minimum Academic Score';
 
                         $academicRequirementMet = true;
@@ -354,15 +384,19 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
                         $requirementsPercentage = $requirementsTotalChecks > 0
                             ? (int) round(($requirementsMetChecks / $requirementsTotalChecks) * 100)
                             : 100;
-                        $requirementsBadgeText = $requirementsTotalChecks > 0
-                            ? ($requirementsMetChecks . '/' . $requirementsTotalChecks)
-                            : 'Open';
-
-                        $badgeClass = 'low';
-                        if ($requirementsPercentage >= 100) {
-                            $badgeClass = 'high';
-                        } elseif ($requirementsPercentage >= 60) {
-                            $badgeClass = 'medium';
+                        $matchPercentage = isset($scholarship['match_percentage'])
+                            ? max(0, min(100, (int) round((float) ($scholarship['match_percentage'] ?? 0))))
+                            : null;
+                        $matchBadgeText = $matchPercentage !== null ? ($matchPercentage . '%') : 'Open';
+                        $matchBadgeClass = 'estimated';
+                        if ($matchPercentage !== null) {
+                            if ($matchPercentage >= 80) {
+                                $matchBadgeClass = 'high';
+                            } elseif ($matchPercentage >= 60) {
+                                $matchBadgeClass = 'medium';
+                            } else {
+                                $matchBadgeClass = 'low';
+                            }
                         }
 
                         $matchText = 'No listed requirements yet';
@@ -425,14 +459,25 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                 $applicationOpenDateLabel = 'Open now';
                             }
                         }
-                        $readyToApplyNow = !empty($scholarship['is_eligible']) && $hasAllRequired && empty($scholarship['is_expired']) && !$applicationNotYetOpen;
+                        $allowsAcceptedScholarshipApplicants = (int) ($scholarship['allow_if_already_accepted'] ?? 1) === 1;
+                        $hasAcceptedScholarshipConflict = !$allowsAcceptedScholarshipApplicants
+                            && $acceptedScholarshipSummary !== null
+                            && (int) ($acceptedScholarshipSummary['scholarship_id'] ?? 0) !== (int) $scholarship['id'];
+                        $acceptedScholarshipName = trim((string) ($acceptedScholarshipSummary['scholarship_name'] ?? ''));
+                        if ($acceptedScholarshipName === '') {
+                            $acceptedScholarshipName = 'another scholarship';
+                        }
+                        $readyToApplyNow = !empty($scholarship['is_eligible']) && $hasAllRequired && empty($scholarship['is_expired']) && !$applicationNotYetOpen && !$hasAcceptedScholarshipConflict;
 
-                        if ($applicationNotYetOpen) {
+                        if ($hasAcceptedScholarshipConflict) {
+                            $cardStatusClass = 'ineligible';
+                            $cardStatusLabel = 'Accepted Elsewhere';
+                        } elseif ($applicationNotYetOpen) {
                             $cardStatusClass = 'estimated';
                             $cardStatusLabel = 'Opens Soon';
                         } elseif ($requiresGwa) {
                             $cardStatusClass = 'estimated';
-                            $cardStatusLabel = 'Needs ' . $academicMetricLabel;
+                            $cardStatusLabel = $academicDocumentState['status_label'];
                         } elseif ($readyToApplyNow) {
                             $cardStatusClass = 'ready';
                             $cardStatusLabel = 'Ready to Apply';
@@ -457,6 +502,8 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                         $cardStatusIcon = 'fa-ban';
                         if ($cardStatusClass === 'expired') {
                             $cardStatusIcon = 'fa-clock';
+                        } elseif ($hasAcceptedScholarshipConflict) {
+                            $cardStatusIcon = 'fa-award';
                         } elseif ($applicationNotYetOpen) {
                             $cardStatusIcon = 'fa-hourglass-half';
                         } elseif ($requiresGwa) {
@@ -584,6 +631,222 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                 }
                             }
                         }
+
+                        $cardProfileChecks = is_array($scholarship['profile_checks'] ?? null) ? $scholarship['profile_checks'] : [];
+                        $cardMatchGuidePositiveReasons = [];
+                        $cardMatchGuideLimitingReasons = [];
+                        $cardMatchGuideTitle = $matchPercentage !== null
+                            ? ('Why this shows as ' . $matchPercentage . '% match')
+                            : 'How the match score works';
+
+                        if (!$isLoggedIn) {
+                            $cardMatchGuideSummary = 'This is a personalized fit score. Sign in and complete your student details to see exactly which scholarship checks you already pass.';
+                        } elseif ($requiredGwa !== null && empty($userAcademicScore)) {
+                            if (in_array($userAcademicDocumentStatus, ['pending', 'verified'], true)) {
+                                $cardMatchGuideSummary = 'This score is still conservative because your academic document is already uploaded, but the recorded academic score is not available yet.';
+                            } elseif ($userAcademicDocumentStatus === 'rejected') {
+                                $cardMatchGuideSummary = 'This score is still limited because the last academic upload needs to be updated before the recorded score can be used.';
+                            } else {
+                                $cardMatchGuideSummary = 'This score is still estimated because the academic record needed for this scholarship has not been uploaded yet.';
+                            }
+                        } elseif ($matchPercentage !== null && $matchPercentage >= 80) {
+                            $cardMatchGuideSummary = 'This score is high because several key scholarship checks are already passing.';
+                        } elseif ($matchPercentage !== null && $matchPercentage >= 60) {
+                            $cardMatchGuideSummary = 'This score passed because some major scholarship checks are already passing, even though a few other signals are still weaker or incomplete.';
+                        } elseif ($matchPercentage !== null) {
+                            $cardMatchGuideSummary = 'This score is lower because only some scholarship checks are passing right now, while other signals still need work.';
+                        } else {
+                            $cardMatchGuideSummary = 'The score is explained below by showing which scholarship checks already pass and which ones still limit the result.';
+                        }
+
+                        $cardMatchGuideNote = 'This percentage helps rank overall fit. Required documents still affect whether you can submit, and final approval still depends on provider review.';
+
+                        if ($requiredGwa !== null) {
+                            if (!$isLoggedIn) {
+                                $pushReason($cardMatchGuideLimitingReasons, 'Log in so the board can compare your ' . strtolower($academicMetricLabel) . ' with the scholarship limit.');
+                            } elseif (empty($userAcademicScore)) {
+                                $pushReason($cardMatchGuideLimitingReasons, $academicDocumentState['reason']);
+                            } elseif ((float) $userAcademicScore <= (float) $requiredGwa) {
+                                $pushReason(
+                                    $cardMatchGuidePositiveReasons,
+                                    'Passed academic check because your ' . strtolower($academicMetricLabel) . ' of ' . number_format((float) $userAcademicScore, 2) . ' meets the scholarship limit of ' . number_format((float) $requiredGwa, 2) . ' or better.'
+                                );
+                            } else {
+                                $pushReason(
+                                    $cardMatchGuideLimitingReasons,
+                                    'Academic check does not pass because your ' . strtolower($academicMetricLabel) . ' of ' . number_format((float) $userAcademicScore, 2) . ' is above the scholarship limit of ' . number_format((float) $requiredGwa, 2) . '.'
+                                );
+                            }
+                        } else {
+                            $pushReason($cardMatchGuidePositiveReasons, 'Passed academic check automatically because this scholarship does not use a fixed ' . strtolower($academicMetricLabel) . ' cutoff.');
+                        }
+
+                        if ($requirementsCount > 0) {
+                            if ($missingCount > 0) {
+                                $pushReason($cardMatchGuideLimitingReasons, $missingCount . ' required document' . ($missingCount === 1 ? ' is' : 's are') . ' still missing.');
+                            } elseif ($rejectedCount > 0) {
+                                $pushReason($cardMatchGuideLimitingReasons, 'Re-upload ' . $rejectedCount . ' rejected required document' . ($rejectedCount === 1 ? '' : 's') . ' so the board can count them again.');
+                            } elseif ($pendingCount > 0) {
+                                $pushReason($cardMatchGuideLimitingReasons, $pendingCount . ' required document' . ($pendingCount === 1 ? ' is' : 's are') . ' uploaded but still pending review.');
+                            } else {
+                                $pushReason($cardMatchGuidePositiveReasons, 'Passed document readiness because all listed required documents are already uploaded and verified.');
+                            }
+                        } else {
+                            $pushReason($cardMatchGuidePositiveReasons, 'Passed document readiness automatically because this scholarship does not list required uploads on the board.');
+                        }
+
+                        if (!empty($cardProfileChecks)) {
+                            foreach ($cardProfileChecks as $cardProfileCheck) {
+                                $cardProfileStatus = strtolower(trim((string) ($cardProfileCheck['status'] ?? 'pending')));
+                                $cardProfileReason = scholarshipMatchGuideReasonFromCheck($cardProfileCheck);
+
+                                if ($cardProfileStatus === 'met') {
+                                    $pushReason($cardMatchGuidePositiveReasons, $cardProfileReason);
+                                } elseif (in_array($cardProfileStatus, ['failed', 'pending'], true)) {
+                                    $pushReason($cardMatchGuideLimitingReasons, $cardProfileReason);
+                                }
+                            }
+                        } else {
+                            $pushReason($cardMatchGuidePositiveReasons, 'Passed applicant profile checks automatically because this scholarship is open to a broader set of applicants.');
+                        }
+
+                        foreach ($currentInfoChecks as $currentInfoCheck) {
+                            $currentInfoStatus = strtolower(trim((string) ($currentInfoCheck['status'] ?? 'pending')));
+                            $currentInfoReason = scholarshipMatchGuideReasonFromCheck($currentInfoCheck);
+
+                            if ($currentInfoStatus === 'met') {
+                                $pushReason($cardMatchGuidePositiveReasons, $currentInfoReason);
+                            } elseif (in_array($currentInfoStatus, ['pending', 'warn'], true)) {
+                                $pushReason($cardMatchGuideLimitingReasons, $currentInfoReason);
+                            }
+                        }
+
+                        if ($applicationNotYetOpen) {
+                            $pushReason($cardMatchGuideLimitingReasons, 'Applications have not opened yet, so the timing signal is weaker right now.');
+                        } elseif (!empty($scholarship['is_expired'])) {
+                            $pushReason($cardMatchGuideLimitingReasons, 'The application period has already closed.');
+                        } elseif ($deadlineFactorClass === 'warn') {
+                            $pushReason($cardMatchGuideLimitingReasons, 'The deadline is close, so the timing signal is smaller.');
+                        } else {
+                            $pushReason($cardMatchGuidePositiveReasons, 'The application window timing supports this recommendation.');
+                        }
+
+                        if ($hasUserAppliedToScholarship) {
+                            $pushReason($cardMatchGuidePositiveReasons, 'You already submitted an application for this scholarship.');
+                        }
+
+                        if ($hasAcceptedScholarshipConflict) {
+                            $pushReason($cardMatchGuideLimitingReasons, 'You already accepted ' . $acceptedScholarshipName . ', and this scholarship only accepts applicants who have not yet accepted another scholarship offer.');
+                        }
+
+                        $currentInfoFactorClass = 'info';
+                        $currentInfoFactorValue = $currentInfoTotal > 0 ? ($currentInfoMet . '/' . $currentInfoTotal . ' aligned') : 'Open';
+                        if ($currentInfoTotal > 0) {
+                            if ($currentInfoPending > 0 || $currentInfoWarn > 0) {
+                                $currentInfoFactorClass = 'warn';
+                            } else {
+                                $currentInfoFactorClass = 'good';
+                            }
+                        }
+
+                        if ($profileRequirementTotal === 0) {
+                            $profileFactorDetail = 'This scholarship does not restrict the applicant profile with narrow policy checks.';
+                        } elseif ($profileRequirementFailed > 0) {
+                            $profileFactorDetail = $buildProfileMismatchSummary($cardProfileChecks);
+                        } elseif ($profileRequirementPending > 0) {
+                            $profileFactorDetail = 'Complete the missing applicant details so the profile policy checks can finish.';
+                        } else {
+                            $profileFactorDetail = 'Your recorded applicant profile matches the scholarship policy checks on file.';
+                        }
+
+                        if ($requirementsCount === 0) {
+                            $documentFactorDetail = 'This scholarship does not list required uploads on the board.';
+                        } elseif ($missingCount > 0) {
+                            $documentFactorDetail = 'Upload the missing required file' . ($missingCount === 1 ? '' : 's') . ' so the application can move forward.';
+                        } elseif ($rejectedCount > 0) {
+                            $documentFactorDetail = 'One or more listed uploads were rejected and need to be updated.';
+                        } elseif ($pendingCount > 0) {
+                            $documentFactorDetail = 'Your required uploads are present, but review is still ongoing.';
+                        } else {
+                            $documentFactorDetail = 'All listed required documents are uploaded and verified.';
+                        }
+
+                        if ($requiredGwa === null) {
+                            $academicFactorDetail = 'This scholarship does not use a fixed ' . strtolower($academicMetricLabel) . ' cutoff.';
+                        } elseif (empty($userAcademicScore)) {
+                            $academicFactorDetail = $academicDocumentState['summary'];
+                        } elseif ((float) $userAcademicScore <= (float) $requiredGwa) {
+                            $academicFactorDetail = 'Your ' . strtolower($academicMetricLabel) . ' of ' . number_format((float) $userAcademicScore, 2) . ' meets the scholarship limit of ' . number_format((float) $requiredGwa, 2) . ' or better.';
+                        } else {
+                            $academicFactorDetail = 'Your ' . strtolower($academicMetricLabel) . ' of ' . number_format((float) $userAcademicScore, 2) . ' is above the scholarship limit of ' . number_format((float) $requiredGwa, 2) . '.';
+                        }
+
+                        if ($applicationNotYetOpen) {
+                            $timingFactorValue = 'Opens ' . $applicationOpenDateLabel;
+                            $timingFactorClass = 'warn';
+                            $timingFactorDetail = 'You can review the scholarship now, but submissions only start on the posted opening date.';
+                        } elseif (!empty($scholarship['is_expired'])) {
+                            $timingFactorValue = 'Closed';
+                            $timingFactorClass = 'bad';
+                            $timingFactorDetail = 'The deadline has already passed for this scholarship.';
+                        } elseif ($deadlineFactorClass === 'warn') {
+                            $timingFactorValue = $deadlineFactorLabel;
+                            $timingFactorClass = 'warn';
+                            $timingFactorDetail = 'The application window is still open, but the deadline is close.';
+                        } elseif ($deadlineFactorClass === 'good') {
+                            $timingFactorValue = 'Open now';
+                            $timingFactorClass = 'good';
+                            $timingFactorDetail = 'The application window is currently open and supports this recommendation.';
+                        } else {
+                            $timingFactorValue = 'Open';
+                            $timingFactorClass = 'info';
+                            $timingFactorDetail = 'No closing date is listed on this scholarship card.';
+                        }
+
+                        $cardMatchGuideFactors = [
+                            [
+                                'label' => 'Academic fit',
+                                'value' => $academicFactorLabel,
+                                'detail' => $academicFactorDetail,
+                                'class' => $academicFactorClass,
+                                'icon' => 'fa-chart-line',
+                            ],
+                            [
+                                'label' => 'Document readiness',
+                                'value' => $requirementsCount > 0 ? $requirementsSummary : 'No uploads required',
+                                'detail' => $documentFactorDetail,
+                                'class' => $documentFactorClass,
+                                'icon' => 'fa-file-lines',
+                            ],
+                            [
+                                'label' => 'Applicant fit',
+                                'value' => $profileFactorLabel,
+                                'detail' => $profileFactorDetail,
+                                'class' => $profileFactorClass,
+                                'icon' => 'fa-user-check',
+                            ],
+                            [
+                                'label' => 'Student context',
+                                'value' => $currentInfoFactorValue,
+                                'detail' => $currentInfoSummary,
+                                'class' => $currentInfoFactorClass,
+                                'icon' => 'fa-id-card',
+                            ],
+                            [
+                                'label' => 'Application timing',
+                                'value' => $timingFactorValue,
+                                'detail' => $timingFactorDetail,
+                                'class' => $timingFactorClass,
+                                'icon' => 'fa-calendar-days',
+                            ],
+                        ];
+
+                        $cardMatchGuidePositiveItems = !empty($cardMatchGuidePositiveReasons)
+                            ? array_slice($cardMatchGuidePositiveReasons, 0, 4)
+                            : ['The board has not confirmed strong positive scoring signals yet.'];
+                        $cardMatchGuideLimitingItems = !empty($cardMatchGuideLimitingReasons)
+                            ? array_slice($cardMatchGuideLimitingReasons, 0, 4)
+                            : ['No major factor is pulling the match score down right now.'];
                 ?>
                         <div class="scholarship-card scholarship-card-modern state-<?php echo $cardStatusClass; ?> <?php echo (!$scholarship['is_eligible'] && !$requiresGwa) ? 'not-eligible' : ''; ?>" 
                             data-id="<?php echo $scholarship['id']; ?>"
@@ -626,9 +889,22 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                         </div>
 
                                         <div class="scholarship-brand-meta">
-                                            <div class="match-badge-modern <?php echo $badgeClass; ?>">
-                                                <?php echo htmlspecialchars($requirementsBadgeText); ?>
-                                            </div>
+                                            <button
+                                                type="button"
+                                                class="match-badge-modern match-badge-trigger <?php echo htmlspecialchars($matchBadgeClass); ?>"
+                                                data-open-board-match
+                                                data-match-guide-title="<?php echo htmlspecialchars($cardMatchGuideTitle, ENT_QUOTES, 'UTF-8'); ?>"
+                                                data-match-guide-summary="<?php echo htmlspecialchars($cardMatchGuideSummary, ENT_QUOTES, 'UTF-8'); ?>"
+                                                data-match-guide-note="<?php echo htmlspecialchars($cardMatchGuideNote, ENT_QUOTES, 'UTF-8'); ?>"
+                                                data-match-guide-factors="<?php echo htmlspecialchars(json_encode($cardMatchGuideFactors, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>"
+                                                data-match-guide-positive="<?php echo htmlspecialchars(json_encode($cardMatchGuidePositiveItems, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>"
+                                                data-match-guide-limiting="<?php echo htmlspecialchars(json_encode($cardMatchGuideLimitingItems, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8'); ?>"
+                                                aria-haspopup="dialog"
+                                                aria-controls="scholarshipBoardMatchModal"
+                                                aria-label="<?php echo htmlspecialchars($matchPercentage !== null ? ('Open why ' . $matchPercentage . '% match guide') : 'Open match guide', ENT_QUOTES, 'UTF-8'); ?>"
+                                            >
+                                                <?php echo htmlspecialchars($matchBadgeText); ?>
+                                            </button>
                                         </div>
                                     </div>
                                     <div class="scholarship-topline">
@@ -737,7 +1013,7 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                                 $pushReason($attentionReasons, $academicMetricLabel . ' is above the required limit');
                                             }
                                         } else {
-                                            $pushReason($attentionReasons, 'Upload ' . $academicDocumentLabel . ' to verify ' . strtolower($academicMetricLabel));
+                                            $pushReason($attentionReasons, $academicDocumentState['reason']);
                                         }
                                     }
 
@@ -745,6 +1021,14 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                         $pushReason($attentionReasons, 'Applications open on ' . $applicationOpenDateLabel);
                                     } else {
                                         $pushReason($matchedReasons, 'The scholarship is currently open for applications');
+                                    }
+
+                                    if ($hasUserAppliedToScholarship) {
+                                        $pushReason($matchedReasons, 'You already submitted an application for this scholarship');
+                                    }
+
+                                    if ($hasAcceptedScholarshipConflict) {
+                                        $pushReason($attentionReasons, 'You already accepted ' . $acceptedScholarshipName . ', and this scholarship only accepts applicants who have not yet accepted another scholarship offer');
                                     }
 
                                     if ($requirementsCount > 0) {
@@ -795,7 +1079,15 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                         ? ('Applications open on ' . $applicationOpenDateLabel . '. ')
                                         : '';
 
-                                    if (!empty($scholarship['is_expired'])) {
+                                    if ($hasUserAppliedToScholarship) {
+                                        $nextStepTone = 'success';
+                                        $nextStepIcon = 'fa-circle-check';
+                                        $nextStepMessage = 'You already applied to this scholarship. Check your application tracking for the latest status.';
+                                        $primaryActionHref = 'applications.php';
+                                        $primaryActionClass = 'btn-outline-modern';
+                                        $primaryActionIcon = 'fa-circle-check';
+                                        $primaryActionLabel = 'Applied';
+                                    } elseif (!empty($scholarship['is_expired'])) {
                                         $nextStepTone = 'muted';
                                         $nextStepIcon = 'fa-calendar-times';
                                         $nextStepMessage = 'The application period for this scholarship has already closed.';
@@ -803,13 +1095,38 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                         $primaryActionClass = 'btn-disabled-modern';
                                         $primaryActionIcon = 'fa-calendar-times';
                                         $primaryActionLabel = 'Closed';
+                                    } elseif ($hasAcceptedScholarshipConflict) {
+                                        $nextStepTone = 'warning';
+                                        $nextStepIcon = 'fa-award';
+                                        $nextStepMessage = 'You already accepted ' . $acceptedScholarshipName . '. This scholarship only accepts applicants who have not yet accepted another scholarship offer.';
+                                        $primaryActionHref = 'applications.php';
+                                        $primaryActionClass = 'btn-outline-modern';
+                                        $primaryActionIcon = 'fa-award';
+                                        $primaryActionLabel = 'View My Applications';
                                     } elseif ($requiresGwa) {
-                                        $nextStepIcon = 'fa-chart-line';
-                                        $nextStepMessage = $openingDatePrepPrefix . 'Upload your ' . $academicDocumentLabel . ' to complete the academic requirement check.';
+                                        if ($userAcademicDocumentStatus === 'pending') {
+                                            $nextStepTone = 'info';
+                                            $nextStepIcon = 'fa-clock';
+                                            $primaryActionClass = 'btn-outline-modern';
+                                            $primaryActionIcon = 'fa-folder-open';
+                                        } elseif ($userAcademicDocumentStatus === 'verified') {
+                                            $nextStepTone = 'info';
+                                            $nextStepIcon = 'fa-circle-info';
+                                            $primaryActionClass = 'btn-outline-modern';
+                                            $primaryActionIcon = 'fa-folder-open';
+                                        } elseif ($userAcademicDocumentStatus === 'rejected') {
+                                            $nextStepTone = 'warning';
+                                            $nextStepIcon = 'fa-rotate-right';
+                                            $primaryActionClass = 'btn-warning-modern';
+                                            $primaryActionIcon = 'fa-upload';
+                                        } else {
+                                            $nextStepIcon = 'fa-chart-line';
+                                            $primaryActionClass = 'btn-warning-modern';
+                                            $primaryActionIcon = 'fa-upload';
+                                        }
+                                        $nextStepMessage = $openingDatePrepPrefix . $academicDocumentState['summary'];
                                         $primaryActionHref = 'upload.php';
-                                        $primaryActionClass = 'btn-warning-modern';
-                                        $primaryActionIcon = 'fa-upload';
-                                        $primaryActionLabel = 'Upload ' . $academicDocumentLabel;
+                                        $primaryActionLabel = $academicDocumentState['action_label'];
                                     } elseif ($profileRequirementPending > 0) {
                                         $nextStepIcon = 'fa-user-gear';
                                         $nextStepMessage = $openingDatePrepPrefix . 'Complete your applicant profile so the system can finish the scholarship policy check.';
@@ -980,6 +1297,37 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
             
             <!-- Decision Support System Info -->
             <?php include 'partials/dss.php'; ?>
+
+            <div class="scholarship-board-match-modal" id="scholarshipBoardMatchModal" hidden>
+                <div class="scholarship-board-match-backdrop" data-close-board-match-modal></div>
+                <div class="scholarship-board-match-dialog" role="dialog" aria-modal="true" aria-labelledby="scholarshipBoardMatchTitle">
+                    <div class="scholarship-board-match-header">
+                        <div>
+                            <span class="scholarship-board-match-eyebrow">Match Guide</span>
+                            <h2 id="scholarshipBoardMatchTitle">Why this shows as a match</h2>
+                        </div>
+                        <button type="button" class="scholarship-board-match-close" data-close-board-match-modal aria-label="Close match guide">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <p class="scholarship-board-match-summary" data-board-match-summary>These checks explain which parts of the scholarship already pass and which ones still limit the score.</p>
+                    <div class="scholarship-board-match-note" data-board-match-note></div>
+
+                    <div class="scholarship-board-match-factor-grid" data-board-match-factors></div>
+
+                    <div class="scholarship-board-match-reason-grid">
+                        <section class="scholarship-board-match-reason-card positive">
+                            <h3><i class="fas fa-arrow-trend-up"></i> Why it passed</h3>
+                            <ul class="scholarship-board-match-reason-list" data-board-match-positive></ul>
+                        </section>
+                        <section class="scholarship-board-match-reason-card warning">
+                            <h3><i class="fas fa-triangle-exclamation"></i> What is still limiting this score</h3>
+                            <ul class="scholarship-board-match-reason-list" data-board-match-limiting></ul>
+                        </section>
+                    </div>
+                </div>
+            </div>
             <?php endif; ?>
         </div>
     </section>
@@ -992,6 +1340,121 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/scholarship-filter.js')); ?>"></script>
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/card-pagination.js')); ?>"></script>
 <script src="<?php echo htmlspecialchars(assetUrl('public/js/script.js')); ?>"></script>
+    <script>
+        (function () {
+            const modal = document.getElementById('scholarshipBoardMatchModal');
+            if (!modal) {
+                return;
+            }
+
+            const title = document.getElementById('scholarshipBoardMatchTitle');
+            const summary = modal.querySelector('[data-board-match-summary]');
+            const note = modal.querySelector('[data-board-match-note]');
+            const factorsContainer = modal.querySelector('[data-board-match-factors]');
+            const positiveList = modal.querySelector('[data-board-match-positive]');
+            const limitingList = modal.querySelector('[data-board-match-limiting]');
+            const closeElements = modal.querySelectorAll('[data-close-board-match-modal]');
+
+            function escapeHtml(value) {
+                return String(value ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
+            function parseJsonList(value, fallback) {
+                try {
+                    const parsed = JSON.parse(value || '');
+                    return Array.isArray(parsed) ? parsed : fallback;
+                } catch (error) {
+                    return fallback;
+                }
+            }
+
+            function renderReasonList(target, items) {
+                if (!target) {
+                    return;
+                }
+
+                target.innerHTML = items.map(function (item) {
+                    return '<li>' + escapeHtml(item) + '</li>';
+                }).join('');
+            }
+
+            function renderFactors(items) {
+                if (!factorsContainer) {
+                    return;
+                }
+
+                factorsContainer.innerHTML = items.map(function (factor) {
+                    const stateClass = ['good', 'warn', 'bad', 'info'].includes(factor.class) ? factor.class : 'info';
+                    const iconClass = factor.icon || 'fa-circle-info';
+
+                    return '' +
+                        '<article class="scholarship-board-match-factor state-' + escapeHtml(stateClass) + '">' +
+                            '<span class="scholarship-board-match-factor-icon"><i class="fas ' + escapeHtml(iconClass) + '"></i></span>' +
+                            '<div class="scholarship-board-match-factor-copy">' +
+                                '<span class="scholarship-board-match-factor-label">' + escapeHtml(factor.label || 'Factor') + '</span>' +
+                                '<strong>' + escapeHtml(factor.value || 'Pending') + '</strong>' +
+                                '<p>' + escapeHtml(factor.detail || '') + '</p>' +
+                            '</div>' +
+                        '</article>';
+                }).join('');
+            }
+
+            function openModal(button) {
+                const positiveItems = parseJsonList(button.getAttribute('data-match-guide-positive'), []);
+                const limitingItems = parseJsonList(button.getAttribute('data-match-guide-limiting'), []);
+                const factorItems = parseJsonList(button.getAttribute('data-match-guide-factors'), []);
+
+                if (title) {
+                    title.textContent = button.getAttribute('data-match-guide-title') || 'How the match score works';
+                }
+
+                if (summary) {
+                    summary.textContent = button.getAttribute('data-match-guide-summary') || 'These checks explain which parts of the scholarship already pass and which ones still limit the score.';
+                }
+
+                if (note) {
+                    note.textContent = button.getAttribute('data-match-guide-note') || '';
+                }
+
+                renderFactors(factorItems);
+                renderReasonList(positiveList, positiveItems);
+                renderReasonList(limitingList, limitingItems);
+
+                modal.hidden = false;
+                document.body.classList.add('board-match-modal-open');
+            }
+
+            function closeModal() {
+                modal.hidden = true;
+                document.body.classList.remove('board-match-modal-open');
+            }
+
+            document.querySelectorAll('[data-open-board-match]').forEach(function (button) {
+                button.addEventListener('click', function (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    openModal(button);
+                });
+            });
+
+            closeElements.forEach(function (element) {
+                element.addEventListener('click', function () {
+                    closeModal();
+                });
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !modal.hidden) {
+                    closeModal();
+                }
+            });
+        })();
+    </script>
     <?php if ($uploadNoticeMessage !== ''): ?>
     <script>
         document.addEventListener('DOMContentLoaded', function() {

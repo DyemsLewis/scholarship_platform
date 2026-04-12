@@ -36,12 +36,60 @@
         <a href="scholarships.php" class="btn btn-primary">Browse Scholarships</a>
     </div>
     <?php else: ?>
-    <div class="application-tracking-list">
-        <?php foreach ($applicationTimeline as $applicationItem): ?>
+    <div class="application-tracking-browser" data-application-tracking-widget>
+        <div class="application-tracking-controls">
+            <label class="application-tracking-search">
+                <i class="fas fa-search"></i>
+                <input
+                    type="search"
+                    class="application-tracking-search-input"
+                    data-application-tracking-search
+                    placeholder="Search by scholarship, provider, or reference"
+                    aria-label="Search applications">
+            </label>
+
+            <div class="application-tracking-nav">
+                <span class="application-tracking-position" data-application-tracking-position>
+                    1 of <?php echo count($applicationTimeline); ?>
+                </span>
+                <button type="button" class="application-tracking-nav-btn" data-application-tracking-prev>
+                    <i class="fas fa-arrow-left"></i> Previous
+                </button>
+                <button type="button" class="application-tracking-nav-btn is-primary" data-application-tracking-next>
+                    Next <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="application-tracking-filter-state" data-application-tracking-empty hidden>
+            <i class="fas fa-search"></i>
+            <p>No application matches that search yet.</p>
+        </div>
+
+        <div class="application-tracking-list">
+        <?php foreach ($applicationTimeline as $applicationIndex => $applicationItem): ?>
         <?php
             $applicationStatus = strtolower(trim((string) ($applicationItem['status'] ?? 'pending')));
             $studentResponseStatus = strtolower(trim((string) ($applicationItem['student_response_status'] ?? '')));
             $studentAccepted = $applicationStatus === 'approved' && $studentResponseStatus === 'accepted';
+            $assessmentEnabled = !empty($applicationItem['assessment_enabled']);
+            $assessmentTypeLabel = trim((string) ($applicationItem['assessment_type_label'] ?? 'Assessment'));
+            $assessmentStatus = strtolower(trim((string) ($applicationItem['assessment_status'] ?? 'not_started')));
+            $assessmentStatusLabel = trim((string) ($applicationItem['assessment_status_label'] ?? 'Assessment required'));
+            $assessmentStatusNote = trim((string) ($applicationItem['assessment_status_note'] ?? 'Assessment updates will appear here after the provider posts them.'));
+            $assessmentScheduleLabel = trim((string) ($applicationItem['assessment_schedule_label'] ?? ''));
+            $assessmentSiteLabel = trim((string) ($applicationItem['assessment_site_label'] ?? ''));
+            $assessmentNotes = trim((string) ($applicationItem['assessment_notes'] ?? ''));
+            $assessmentActionUrl = trim((string) ($applicationItem['assessment_action_url'] ?? ''));
+            $assessmentActionLabel = trim((string) ($applicationItem['assessment_action_label'] ?? ''));
+            $assessmentActionExternal = !empty($applicationItem['assessment_action_external']);
+            $assessmentPillClass = in_array($assessmentStatus, ['passed'], true)
+                ? 'passed'
+                : (in_array($assessmentStatus, ['failed'], true)
+                    ? 'failed'
+                    : (in_array($assessmentStatus, ['scheduled', 'under_review'], true)
+                        ? 'scheduled'
+                        : (in_array($assessmentStatus, ['ready', 'submitted'], true) ? 'ready' : 'pending')));
             $statusPillLabel = $studentAccepted ? 'Accepted' : ucfirst($applicationStatus);
             $statusPillClass = $studentAccepted ? 'accepted' : $applicationStatus;
             $documentNotes = $applicationItem['document_notes'] ?? [];
@@ -64,8 +112,21 @@
                     'id' => (int) ($applicationItem['id'] ?? 0)
                 ]
             );
+            $searchText = strtolower(trim(preg_replace('/\s+/', ' ', implode(' ', [
+                $referenceNumber,
+                (string) ($applicationItem['scholarship_name'] ?? ''),
+                $providerName,
+                $statusPillLabel,
+                (string) ($applicationItem['current_stage_title'] ?? ''),
+                $assessmentTypeLabel,
+                $assessmentStatusLabel,
+            ])) ?? ''));
         ?>
-        <article class="application-timeline-item status-<?php echo htmlspecialchars($applicationStatus); ?>">
+        <article
+            class="application-timeline-item status-<?php echo htmlspecialchars($applicationStatus); ?><?php echo $applicationIndex === 0 ? ' is-active' : ''; ?>"
+            data-application-tracking-item
+            data-search-text="<?php echo htmlspecialchars($searchText); ?>"
+            <?php echo $applicationIndex === 0 ? '' : 'hidden'; ?>>
             <div class="application-timeline-top">
                 <div class="application-timeline-main">
                     <div class="application-timeline-head">
@@ -134,6 +195,47 @@
             </div>
             <?php endif; ?>
 
+            <?php if ($assessmentEnabled): ?>
+            <section class="application-assessment-row status-<?php echo htmlspecialchars($assessmentPillClass); ?>">
+                <div class="application-assessment-copy">
+                    <div class="application-assessment-head">
+                        <span class="application-assessment-pill status-<?php echo htmlspecialchars($assessmentPillClass); ?>">
+                            <i class="fas <?php echo htmlspecialchars($assessmentTypeLabel === 'Remote Examination' ? 'fa-map-location-dot' : 'fa-laptop-file'); ?>"></i>
+                            <?php echo htmlspecialchars($assessmentTypeLabel); ?>
+                        </span>
+                        <strong><?php echo htmlspecialchars($assessmentStatusLabel); ?></strong>
+                    </div>
+                    <p><?php echo htmlspecialchars($assessmentStatusNote); ?></p>
+
+                    <div class="application-assessment-meta">
+                        <?php if ($studentAccepted && $assessmentScheduleLabel !== '' && strtolower($assessmentScheduleLabel) !== 'not scheduled yet'): ?>
+                        <span>
+                            <i class="fas fa-calendar-day"></i>
+                            Schedule: <?php echo htmlspecialchars($assessmentScheduleLabel); ?>
+                        </span>
+                        <?php endif; ?>
+                        <?php if ($studentAccepted && $assessmentSiteLabel !== '' && strtolower($assessmentSiteLabel) !== 'no site selected yet'): ?>
+                        <span>
+                            <i class="fas fa-location-dot"></i>
+                            Site: <?php echo htmlspecialchars($assessmentSiteLabel); ?>
+                        </span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <?php if ($studentAccepted && $assessmentActionUrl !== '' && $assessmentActionLabel !== ''): ?>
+                    <a
+                        href="<?php echo htmlspecialchars($assessmentActionUrl); ?>"
+                        class="btn btn-primary application-assessment-action"
+                        <?php echo $assessmentActionExternal ? 'target="_blank" rel="noopener noreferrer"' : ''; ?>
+                    >
+                        <i class="fas <?php echo htmlspecialchars($assessmentActionExternal ? 'fa-arrow-up-right-from-square' : 'fa-arrow-right'); ?>"></i>
+                        <?php echo htmlspecialchars($assessmentActionLabel); ?>
+                    </a>
+                <?php endif; ?>
+            </section>
+            <?php endif; ?>
+
             <?php if (!empty($documentNotes)): ?>
             <details class="application-document-notes">
                 <summary>
@@ -174,6 +276,98 @@
             </div>
         </article>
         <?php endforeach; ?>
+        </div>
     </div>
     <?php endif; ?>
 </div>
+
+<?php if (!empty($applicationTimeline)): ?>
+<script>
+    (function () {
+        const widgets = document.querySelectorAll('[data-application-tracking-widget]');
+        if (!widgets.length) {
+            return;
+        }
+
+        const normalizeSearch = (value) => (value || '')
+            .toLowerCase()
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        widgets.forEach((widget) => {
+            const searchInput = widget.querySelector('[data-application-tracking-search]');
+            const prevButton = widget.querySelector('[data-application-tracking-prev]');
+            const nextButton = widget.querySelector('[data-application-tracking-next]');
+            const positionLabel = widget.querySelector('[data-application-tracking-position]');
+            const emptyState = widget.querySelector('[data-application-tracking-empty]');
+            const items = Array.from(widget.querySelectorAll('[data-application-tracking-item]'));
+
+            if (!searchInput || !prevButton || !nextButton || !positionLabel || !emptyState || !items.length) {
+                return;
+            }
+
+            let filteredItems = items.slice();
+            let activeIndex = 0;
+
+            const render = () => {
+                items.forEach((item) => {
+                    item.hidden = true;
+                    item.classList.remove('is-active');
+                });
+
+                if (!filteredItems.length) {
+                    emptyState.hidden = false;
+                    positionLabel.textContent = '0 of 0';
+                    prevButton.disabled = true;
+                    nextButton.disabled = true;
+                    return;
+                }
+
+                emptyState.hidden = true;
+                if (activeIndex >= filteredItems.length) {
+                    activeIndex = 0;
+                }
+
+                const activeItem = filteredItems[activeIndex];
+                activeItem.hidden = false;
+                activeItem.classList.add('is-active');
+
+                positionLabel.textContent = (activeIndex + 1) + ' of ' + filteredItems.length;
+                prevButton.disabled = filteredItems.length <= 1;
+                nextButton.disabled = filteredItems.length <= 1;
+            };
+
+            const applyFilter = () => {
+                const query = normalizeSearch(searchInput.value);
+                filteredItems = items.filter((item) => {
+                    const searchText = normalizeSearch(item.dataset.searchText || '');
+                    return query === '' || searchText.includes(query);
+                });
+                activeIndex = 0;
+                render();
+            };
+
+            prevButton.addEventListener('click', () => {
+                if (filteredItems.length <= 1) {
+                    return;
+                }
+
+                activeIndex = (activeIndex - 1 + filteredItems.length) % filteredItems.length;
+                render();
+            });
+
+            nextButton.addEventListener('click', () => {
+                if (filteredItems.length <= 1) {
+                    return;
+                }
+
+                activeIndex = (activeIndex + 1) % filteredItems.length;
+                render();
+            });
+
+            searchInput.addEventListener('input', applyFilter);
+            render();
+        });
+    })();
+</script>
+<?php endif; ?>

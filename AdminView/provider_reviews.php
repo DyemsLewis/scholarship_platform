@@ -197,7 +197,9 @@ foreach ($providerUsers as $providerUser) {
         'created_label' => !empty($providerUser['created_at']) ? date('M d, Y', strtotime((string) $providerUser['created_at'])) : 'Not recorded',
         'website_label' => providerReviewsWebsiteLabel($website),
         'review_url' => $reviewUrl,
-        'needs_activation' => $needsActivation
+        'needs_activation' => $needsActivation,
+        'status_label' => ucwords(str_replace('_', ' ', $currentStatus)),
+        'review_state_label' => $isVerified ? 'Profile checked' : 'Needs profile review'
     ];
 }
 
@@ -250,7 +252,7 @@ if ($filter !== 'all') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../public/css/admin_style.css">
     <link rel="stylesheet" href="../public/css/card-pagination.css">
-    <link rel="stylesheet" href="../AdminPublic/css/reviews.css?v=3">
+    <link rel="stylesheet" href="../AdminPublic/css/reviews.css?v=5">
 </head>
 <body>
     <?php include 'layouts/admin_header.php'; ?>
@@ -365,52 +367,19 @@ if ($filter !== 'all') {
                                         <span class="provider-review-contact-position"><?php echo htmlspecialchars($provider['contact_position']); ?></span>
                                     <?php endif; ?>
                                 </p>
+                                <div class="provider-review-meta-inline">
+                                    <span class="provider-review-meta-pill">
+                                        <i class="fas fa-calendar-days"></i>
+                                        Registered <?php echo htmlspecialchars($provider['created_label']); ?>
+                                    </span>
+                                </div>
                             </div>
-                            <div class="provider-review-badges">
+                            <div class="provider-review-status-stack">
                                 <span class="provider-review-status provider-review-status-<?php echo htmlspecialchars($provider['status']); ?>">
-                                    <?php echo htmlspecialchars(ucfirst($provider['status'])); ?>
+                                    <?php echo htmlspecialchars($provider['status_label']); ?>
                                 </span>
-                                <?php if ($provider['is_verified']): ?>
-                                <span class="provider-review-chip good">Verified</span>
-                                <?php else: ?>
-                                <span class="provider-review-chip warning">Needs manual review</span>
-                                <?php endif; ?>
+                                <span class="provider-review-state"><?php echo htmlspecialchars($provider['review_state_label']); ?></span>
                             </div>
-                        </div>
-
-                        <div class="provider-review-summary-list">
-                            <div class="provider-review-summary-item">
-                                <span><i class="fas fa-envelope"></i> Organization email</span>
-                                <strong><?php echo htmlspecialchars($provider['organization_email']); ?></strong>
-                            </div>
-                            <div class="provider-review-summary-item">
-                                <span><i class="fas fa-location-dot"></i> Location</span>
-                                <strong><?php echo htmlspecialchars($provider['location']); ?></strong>
-                            </div>
-                        </div>
-
-                        <div class="provider-review-checks">
-                            <span class="provider-review-check <?php echo $provider['verification_uploaded'] ? 'good' : 'warning'; ?>">
-                                <i class="fas <?php echo $provider['verification_uploaded'] ? 'fa-file-circle-check' : 'fa-file-circle-xmark'; ?>"></i>
-                                <?php echo $provider['verification_uploaded'] ? 'Verification file uploaded' : 'Verification file missing'; ?>
-                            </span>
-                            <span class="provider-review-check <?php echo $provider['needs_activation'] ? 'warning' : 'good'; ?>">
-                                <i class="fas <?php echo $provider['needs_activation'] ? 'fa-user-clock' : 'fa-user-check'; ?>"></i>
-                                <?php echo $provider['needs_activation'] ? 'Needs activation' : 'Already active'; ?>
-                            </span>
-                        </div>
-
-                        <div class="provider-review-footer-meta">
-                            <span class="provider-review-footer-item">
-                                <i class="fas fa-calendar-days"></i>
-                                Registered <?php echo htmlspecialchars($provider['created_label']); ?>
-                            </span>
-                            <?php if ($provider['website'] !== '' && filter_var($provider['website'], FILTER_VALIDATE_URL)): ?>
-                            <a href="<?php echo htmlspecialchars($provider['website']); ?>" class="provider-review-footer-item provider-review-footer-link" target="_blank" rel="noopener noreferrer">
-                                <i class="fas fa-globe"></i>
-                                <?php echo htmlspecialchars($provider['website_label']); ?>
-                            </a>
-                            <?php endif; ?>
                         </div>
 
                         <div class="provider-review-actions">

@@ -170,6 +170,135 @@
     text-transform: uppercase;
 }
 
+.wizard-application-tracking .application-tracking-browser {
+    display: grid;
+    gap: 14px;
+}
+
+.wizard-application-tracking .application-tracking-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 16px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    background: #fbfcfe;
+}
+
+.wizard-application-tracking .application-tracking-search {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.wizard-application-tracking .application-tracking-search i {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    color: #64748b;
+    font-size: 0.88rem;
+}
+
+.wizard-application-tracking .application-tracking-search-input {
+    width: 100%;
+    min-height: 46px;
+    padding: 0 14px 0 40px;
+    border: 1px solid #d7e1ef;
+    border-radius: 12px;
+    background: #fff;
+    color: #0f172a;
+    font-size: 0.92rem;
+}
+
+.wizard-application-tracking .application-tracking-search-input:focus {
+    outline: none;
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.wizard-application-tracking .application-tracking-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.wizard-application-tracking .application-tracking-position {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.wizard-application-tracking .application-tracking-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    background: #fff;
+    color: #1e3a5f;
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.wizard-application-tracking .application-tracking-nav-btn:hover:not(:disabled) {
+    border-color: #93c5fd;
+    color: #1d4ed8;
+}
+
+.wizard-application-tracking .application-tracking-nav-btn.is-primary {
+    background: #2c5aa0;
+    border-color: #2c5aa0;
+    color: #fff;
+}
+
+.wizard-application-tracking .application-tracking-nav-btn.is-primary:hover:not(:disabled) {
+    background: #244b84;
+    border-color: #244b84;
+    color: #fff;
+}
+
+.wizard-application-tracking .application-tracking-nav-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.wizard-application-tracking .application-tracking-filter-state {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 14px;
+    background: #f8fafc;
+    color: #475569;
+}
+
+.wizard-application-tracking .application-tracking-filter-state i {
+    color: #2c5aa0;
+}
+
+.wizard-application-tracking .application-tracking-filter-state p {
+    margin: 0;
+    font-size: 0.88rem;
+}
+
 .wizard-application-tracking .application-tracking-empty {
     padding: 28px 22px;
     border: 1px dashed #d6dbe5;
@@ -207,6 +336,14 @@
     background: #ffffff;
     padding: 18px;
     box-shadow: 0 10px 26px rgba(15, 23, 42, 0.04);
+}
+
+.wizard-application-tracking .application-timeline-item.is-active {
+    box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+}
+
+.wizard-application-tracking .application-timeline-item[hidden] {
+    display: none !important;
 }
 
 .wizard-application-tracking .application-timeline-top {
@@ -387,6 +524,132 @@
     white-space: nowrap;
 }
 
+.wizard-application-tracking .application-assessment-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 0 14px;
+    padding: 15px 16px;
+    border-radius: 16px;
+    border: 1px solid #dbeafe;
+    background: #f8fbff;
+}
+
+.wizard-application-tracking .application-assessment-row.status-scheduled {
+    border-color: #fde68a;
+    background: #fffaf0;
+}
+
+.wizard-application-tracking .application-assessment-row.status-ready {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+}
+
+.wizard-application-tracking .application-assessment-row.status-passed {
+    border-color: #86efac;
+    background: #f0fdf4;
+}
+
+.wizard-application-tracking .application-assessment-row.status-failed {
+    border-color: #fca5a5;
+    background: #fef2f2;
+}
+
+.wizard-application-tracking .application-assessment-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.wizard-application-tracking .application-assessment-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.wizard-application-tracking .application-assessment-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 0 12px;
+    border-radius: 999px;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+.wizard-application-tracking .application-assessment-pill.status-scheduled {
+    border-color: #fde68a;
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.wizard-application-tracking .application-assessment-pill.status-ready,
+.wizard-application-tracking .application-assessment-pill.status-pending {
+    border-color: #bfdbfe;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.wizard-application-tracking .application-assessment-pill.status-passed {
+    border-color: #bbf7d0;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.wizard-application-tracking .application-assessment-pill.status-failed {
+    border-color: #fecaca;
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.wizard-application-tracking .application-assessment-head strong {
+    color: #0f172a;
+    font-size: 0.92rem;
+}
+
+.wizard-application-tracking .application-assessment-copy > p {
+    margin: 0;
+    color: #475569;
+    font-size: 0.85rem;
+    line-height: 1.6;
+}
+
+.wizard-application-tracking .application-assessment-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.wizard-application-tracking .application-assessment-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 11px;
+    border-radius: 999px;
+    border: 1px solid #dbe7f6;
+    background: rgba(255, 255, 255, 0.78);
+    color: #355d95;
+    font-size: 0.8rem;
+    line-height: 1.45;
+}
+
+.wizard-application-tracking .application-assessment-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 190px;
+    white-space: nowrap;
+    align-self: center;
+}
+
 .wizard-application-tracking .application-document-notes {
     margin: 0 0 14px;
     border: 1px solid #dbe6f4;
@@ -498,7 +761,7 @@
 
 .wizard-application-tracking .application-stage-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 12px;
 }
 
@@ -590,6 +853,16 @@
 .wizard-application-tracking .application-stage-item.state-rejected .application-stage-marker {
     background: #fee2e2;
     color: #b91c1c;
+}
+
+@media (max-width: 900px) {
+    .wizard-application-tracking .application-assessment-row {
+        flex-direction: column;
+    }
+
+    .wizard-application-tracking .application-assessment-action {
+        width: 100%;
+    }
 }
 
 .wizard-empty-shell {
@@ -2749,6 +3022,16 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .wizard-application-tracking .application-tracking-controls {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .wizard-application-tracking .application-tracking-nav {
+        justify-content: space-between;
+        width: 100%;
+    }
+
     .wizard-application-tracking .application-response-row {
         align-items: flex-start;
         flex-direction: column;
@@ -2791,6 +3074,17 @@
     .wizard-application-tracking .application-meta-strip,
     .wizard-application-tracking .application-stage-grid {
         grid-template-columns: 1fr;
+    }
+
+    .wizard-application-tracking .application-tracking-nav {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .wizard-application-tracking .application-tracking-position,
+    .wizard-application-tracking .application-tracking-nav-btn {
+        justify-content: center;
+        width: 100%;
     }
 
     .wizard-application-tracking .application-overview-item,
