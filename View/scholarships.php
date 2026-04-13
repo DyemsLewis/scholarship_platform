@@ -18,6 +18,11 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
         );
     }
 }
+
+if (!$isLoggedIn) {
+    $_SESSION['error'] = 'Please log in first to view the scholarship board.';
+    redirect('login.php');
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -360,6 +365,7 @@ if (!function_exists('normalizeScannerNoticeCopy')) {
                         $targetApplicantType = strtolower(trim((string) ($scholarship['target_applicant_type'] ?? 'all')));
                         $targetYearLevel = strtolower(trim((string) ($scholarship['target_year_level'] ?? 'any')));
                         $requiredAdmissionStatus = strtolower(trim((string) ($scholarship['required_admission_status'] ?? 'any')));
+                        $preferredCourse = trim((string) ($scholarship['preferred_course'] ?? ''));
                         $targetStrand = trim((string) ($scholarship['target_strand'] ?? ''));
                         $academicMetricLabel = (string) ($scholarship['academic_metric_label'] ?? $userAcademicMetricLabel);
                         $academicDocumentLabel = (string) ($scholarship['academic_document_label'] ?? $userAcademicDocumentLabel);
@@ -907,10 +913,27 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                             </button>
                                         </div>
                                     </div>
+                                    <?php
+                                    $distanceDisplay = 'Set your location';
+                                    if ($userHasLocation) {
+                                        if ($distance !== null) {
+                                            $distanceDisplay = $distance < 1
+                                                ? (round($distance * 1000) . 'm away')
+                                                : (number_format($distance, 1) . 'km away');
+                                        } else {
+                                            $distanceDisplay = 'Pin unavailable';
+                                        }
+                                    }
+                                    ?>
+
                                     <div class="scholarship-topline">
                                         <span class="card-status-pill <?php echo $cardStatusClass; ?>">
                                             <i class="fas <?php echo htmlspecialchars($cardStatusIcon); ?>"></i>
                                             <?php echo $cardStatusLabel; ?>
+                                        </span>
+                                        <span class="card-status-pill distance">
+                                            <i class="fas fa-location-dot"></i>
+                                            <?php echo htmlspecialchars($distanceDisplay); ?>
                                         </span>
                                     </div>
 
@@ -968,6 +991,12 @@ $wizardApplyUrl = buildEntityUrl('applications.php', 'scholarship', (int) $schol
                                         $eligibilityFocusTags[] = [
                                             'icon' => 'fa-clipboard-check',
                                             'label' => formatAdmissionStatusLabel($requiredAdmissionStatus) . '+'
+                                        ];
+                                    }
+                                    if ($preferredCourse !== '') {
+                                        $eligibilityFocusTags[] = [
+                                            'icon' => 'fa-book-open',
+                                            'label' => 'Course: ' . $preferredCourse
                                         ];
                                     }
                                     if ($targetStrand !== '') {

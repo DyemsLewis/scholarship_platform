@@ -5217,6 +5217,17 @@
             text-transform: uppercase;
         }
 
+        .card-status-pill.distance {
+            background: #f8fbff;
+            border-color: #d7e5fb;
+            color: var(--primary);
+            text-transform: none;
+        }
+
+        .card-status-pill.distance i {
+            color: var(--primary);
+        }
+
         .scholarship-header-modern {
             display: flex;
             align-items: flex-start;

@@ -467,13 +467,13 @@ $applicantType = normalizeChoice($_POST['applicant_type'] ?? '', $allowedApplica
 $gender = normalizeChoice($_POST['gender'] ?? '', $allowedGenders);
 $school = normalizeInput($_POST['school'] ?? '');
 if ($applicantType === 'incoming_freshman') {
-    $school = null;
+    $school = '';
 }
 
 $courseInput = normalizeInput($_POST['course'] ?? '');
 $courseOther = normalizeInput($_POST['course_other'] ?? '');
 $course = strtolower($courseInput) === 'other' ? $courseOther : $courseInput;
-$targetCourse = $course;
+$targetCourse = normalizeNullable($_POST['target_course'] ?? '') ?? $course;
 
 $shsSchool = normalizeNullable($_POST['shs_school'] ?? '');
 $shsStrand = normalizeNullable($_POST['shs_strand'] ?? '');
@@ -830,7 +830,10 @@ try {
     }
 
     error_log('Registration failed: ' . $e->getMessage());
-    redirectSignupWithErrors(['Registration failed. Please try again.'], $_POST);
+    $safeMessage = $e instanceof RuntimeException
+        ? $e->getMessage()
+        : 'Registration failed. Please try again.';
+    redirectSignupWithErrors([$safeMessage], $_POST);
 }
 
 $signupUploadWarnings = [];

@@ -151,6 +151,7 @@ $scholarshipApplicationOpenDateSelect = appOptionalColumnSelect($pdo, 'sd2', 'sc
 $scholarshipTargetApplicantTypeSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_applicant_type');
 $scholarshipTargetYearLevelSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_year_level');
 $scholarshipRequiredAdmissionStatusSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'required_admission_status');
+$scholarshipPreferredCourseSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'preferred_course');
 $scholarshipTargetStrandSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_strand');
 $scholarshipTargetCitizenshipSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_citizenship');
 $scholarshipTargetIncomeBracketSelect = appOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_income_bracket');
@@ -210,6 +211,7 @@ try {
             {$scholarshipTargetApplicantTypeSelect}
             {$scholarshipTargetYearLevelSelect}
             {$scholarshipRequiredAdmissionStatusSelect}
+            {$scholarshipPreferredCourseSelect}
             {$scholarshipTargetStrandSelect}
             {$scholarshipTargetCitizenshipSelect}
             {$scholarshipTargetIncomeBracketSelect}
@@ -572,6 +574,7 @@ $scoreScholarshipContext = [
     'target_applicant_type' => (string) ($application['target_applicant_type'] ?? ''),
     'target_year_level' => (string) ($application['target_year_level'] ?? ''),
     'required_admission_status' => (string) ($application['required_admission_status'] ?? ''),
+    'preferred_course' => (string) ($application['preferred_course'] ?? ''),
     'target_strand' => (string) ($application['target_strand'] ?? ''),
     'target_citizenship' => (string) ($application['target_citizenship'] ?? ''),
     'target_income_bracket' => (string) ($application['target_income_bracket'] ?? ''),

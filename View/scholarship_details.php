@@ -190,20 +190,32 @@ $profileEvaluation = $scholarshipService->evaluateProfileRequirements($scholarsh
     'special_category' => $userSpecialCategory
 ]);
 
+$preferredCourse = trim((string) ($scholarship['preferred_course'] ?? ''));
 $audienceParts = [];
+$hasSpecificAudienceFilter = false;
 if (!empty($scholarship['target_applicant_type']) && strtolower((string) $scholarship['target_applicant_type']) !== 'all') {
     $audienceParts[] = formatApplicantTypeLabel($scholarship['target_applicant_type']);
+    $hasSpecificAudienceFilter = true;
 }
 if (!empty($scholarship['target_year_level']) && strtolower((string) $scholarship['target_year_level']) !== 'any') {
     $audienceParts[] = formatYearLevelLabel($scholarship['target_year_level']);
+    $hasSpecificAudienceFilter = true;
 }
 if (!empty($scholarship['required_admission_status']) && strtolower((string) $scholarship['required_admission_status']) !== 'any') {
     $audienceParts[] = formatAdmissionStatusLabel($scholarship['required_admission_status']) . '+';
+    $hasSpecificAudienceFilter = true;
 }
 if (!empty($scholarship['target_strand'])) {
     $audienceParts[] = strtoupper((string) $scholarship['target_strand']);
+    $hasSpecificAudienceFilter = true;
 }
-$audienceLabel = !empty($audienceParts) ? implode(' / ', $audienceParts) : 'Open to all applicants';
+if (!$hasSpecificAudienceFilter) {
+    $audienceParts[] = 'Open to all applicants';
+}
+if ($preferredCourse !== '') {
+    $audienceParts[] = 'Course: ' . $preferredCourse;
+}
+$audienceLabel = implode(' / ', $audienceParts);
 
 $requirementsCount = count($requiredDocuments);
 $verifiedCount = (int) ($documentSummary['verified'] ?? 0);

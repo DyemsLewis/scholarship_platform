@@ -202,31 +202,31 @@ if ($isProviderOrAdmin) {
                     <div class="module-card">
                         <div class="module-header">
                             <div class="module-icon">
+                                <i class="fas fa-percent"></i>
+                            </div>
+                            <h3 class="module-title">Personalized Match Guidance</h3>
+                        </div>
+                        <p>See a match percentage for each scholarship based on your profile, required documents, and applicant details, with a clear explanation of why it passed.</p>
+                    </div>
+                    
+                    <div class="module-card">
+                        <div class="module-header">
+                            <div class="module-icon">
                                 <i class="fas fa-file-image"></i>
                             </div>
-                            <h3 class="module-title">Image Processing Technology</h3>
+                            <h3 class="module-title">Scanner-Assisted Document Upload</h3>
                         </div>
-                        <p>Upload a photo of your grades and our system automatically extracts your GWA.</p>
+                        <p>Upload your Form 137/138 or TOR and let the scanner assist with grade reading, while keeping the document available for manual review when needed.</p>
                     </div>
                     
                     <div class="module-card">
                         <div class="module-header">
                             <div class="module-icon">
-                                <i class="fas fa-check-double"></i>
+                                <i class="fas fa-list-check"></i>
                             </div>
-                            <h3 class="module-title">Validation System</h3>
+                            <h3 class="module-title">Guided Application and Tracking</h3>
                         </div>
-                        <p>Automatic verification of school accreditation and grade validity.</p>
-                    </div>
-                    
-                    <div class="module-card">
-                        <div class="module-header">
-                            <div class="module-icon">
-                                <i class="fas fa-magic"></i>
-                            </div>
-                            <h3 class="module-title">Guided Application</h3>
-                        </div>
-                        <p>Step-by-step guidance through the entire application process.</p>
+                        <p>Apply through a guided flow, monitor document status, and track approval, acceptance, and assessment updates in one place.</p>
                     </div>
                 </div>
             <?php if(isset($_SESSION['user_id'])): ?>

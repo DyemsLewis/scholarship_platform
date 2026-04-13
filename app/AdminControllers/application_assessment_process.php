@@ -310,7 +310,7 @@ try {
         [
             'entity_type' => 'application',
             'entity_id' => $applicationId,
-            'link_url' => 'profile.php',
+            'link_url' => 'applications.php#applicationTracking',
         ]
     );
 

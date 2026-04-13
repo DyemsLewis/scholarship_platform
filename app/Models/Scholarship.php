@@ -84,6 +84,7 @@ class Scholarship extends Model {
             'target_applicant_type',
             'target_year_level',
             'required_admission_status',
+            'preferred_course',
             'target_strand',
             'target_citizenship',
             'target_income_bracket',

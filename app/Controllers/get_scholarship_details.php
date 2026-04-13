@@ -64,6 +64,7 @@ try {
         'target_applicant_type' => $scholarship['target_applicant_type'] ?? 'all',
         'target_year_level' => $scholarship['target_year_level'] ?? 'any',
         'required_admission_status' => $scholarship['required_admission_status'] ?? 'any',
+        'preferred_course' => $scholarship['preferred_course'] ?? '',
         'target_strand' => $scholarship['target_strand'] ?? '',
         'target_citizenship' => $scholarship['target_citizenship'] ?? 'all',
         'target_income_bracket' => $scholarship['target_income_bracket'] ?? 'any',

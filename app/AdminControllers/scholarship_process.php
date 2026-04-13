@@ -66,6 +66,7 @@ function ensureScholarshipStudentInfoColumns(PDO $pdo): void {
         'post_application_steps' => "ALTER TABLE scholarship_data ADD COLUMN post_application_steps TEXT NULL",
         'renewal_conditions' => "ALTER TABLE scholarship_data ADD COLUMN renewal_conditions TEXT NULL",
         'scholarship_restrictions' => "ALTER TABLE scholarship_data ADD COLUMN scholarship_restrictions TEXT NULL",
+        'preferred_course' => "ALTER TABLE scholarship_data ADD COLUMN preferred_course VARCHAR(150) NULL",
         'allow_if_already_accepted' => "ALTER TABLE scholarship_data ADD COLUMN allow_if_already_accepted TINYINT(1) NOT NULL DEFAULT 1",
         'assessment_schedule_at' => "ALTER TABLE scholarship_data ADD COLUMN assessment_schedule_at DATETIME NULL",
     ];
@@ -232,6 +233,7 @@ function storeScholarshipOldInput(array $input): void {
         'target_applicant_type',
         'target_year_level',
         'required_admission_status',
+        'preferred_course',
         'target_strand',
         'target_citizenship',
         'target_income_bracket',
@@ -494,6 +496,9 @@ function buildScholarshipDataPayload(PDO $pdo, array $input, ?string $image): ar
     }
     if (tableHasColumn($pdo, 'scholarship_data', 'required_admission_status')) {
         $payload['required_admission_status'] = nullableString($input['required_admission_status'] ?? '');
+    }
+    if (tableHasColumn($pdo, 'scholarship_data', 'preferred_course')) {
+        $payload['preferred_course'] = nullableString($input['preferred_course'] ?? '');
     }
     if (tableHasColumn($pdo, 'scholarship_data', 'target_strand')) {
         $payload['target_strand'] = nullableString($input['target_strand'] ?? '');
@@ -901,6 +906,21 @@ if ($action === 'approve_review' || $action === 'reject_review') {
             ]
         );
 
+        if ($action === 'approve_review') {
+            createNotificationsForUsers(
+                $pdo,
+                getNotificationRecipientIdsByRoles($pdo, ['student']),
+                'scholarship_published',
+                'New scholarship available',
+                ((string) ($scholarshipDetails['name'] ?? 'A new scholarship')) . ' is now available for application.',
+                [
+                    'entity_type' => 'scholarship',
+                    'entity_id' => $id,
+                    'link_url' => 'scholarships.php'
+                ]
+            );
+        }
+
         $_SESSION['success'] = $successMessage;
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) {
@@ -1001,6 +1021,7 @@ $targetYearLevel = normalizeChoice($_POST['target_year_level'] ?? 'any', $allowe
 $isCollegeTargetApplicantType = in_array($targetApplicantType, ['current_college', 'transferee', 'continuing_student'], true);
 $targetYearLevel = $isCollegeTargetApplicantType ? $targetYearLevel : 'any';
 $requiredAdmissionStatus = normalizeChoice($_POST['required_admission_status'] ?? 'any', $allowedAdmissionStatuses, 'any');
+$preferredCourse = trim((string) ($_POST['preferred_course'] ?? ''));
 $targetStrand = trim((string) ($_POST['target_strand'] ?? ''));
 $targetStrand = $targetApplicantType === 'incoming_freshman' ? $targetStrand : '';
 $targetCitizenship = normalizeChoice($_POST['target_citizenship'] ?? 'all', $allowedTargetCitizenships, 'all');
@@ -1125,6 +1146,9 @@ if ($targetYearLevel === null) {
 if ($requiredAdmissionStatus === null) {
     $errors[] = 'Required admission status is invalid';
 }
+if ($preferredCourse !== '' && (function_exists('mb_strlen') ? mb_strlen($preferredCourse) : strlen($preferredCourse)) > 150) {
+    $errors[] = 'Preferred course is too long';
+}
 if ($targetStrand !== '' && (function_exists('mb_strlen') ? mb_strlen($targetStrand) : strlen($targetStrand)) > 120) {
     $errors[] = 'Target SHS strand is too long';
 }
@@ -1225,6 +1249,7 @@ try {
         'target_applicant_type' => $targetApplicantType,
         'target_year_level' => $targetYearLevel,
         'required_admission_status' => $requiredAdmissionStatus,
+        'preferred_course' => $preferredCourse,
         'target_strand' => $targetStrand,
         'target_citizenship' => $targetCitizenship,
         'target_income_bracket' => $targetIncomeBracket,
@@ -1285,6 +1310,7 @@ try {
             'target_applicant_type' => $targetApplicantType,
             'target_year_level' => $targetYearLevel,
             'required_admission_status' => $requiredAdmissionStatus,
+            'preferred_course' => $preferredCourse !== '' ? $preferredCourse : null,
             'target_citizenship' => $targetCitizenship,
             'target_income_bracket' => $targetIncomeBracket,
             'target_special_category' => $targetSpecialCategory,

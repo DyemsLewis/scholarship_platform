@@ -276,7 +276,8 @@ try {
         $academicMetricLabel = getApplicantAcademicMetricLabel($applicantType);
         $academicDocumentLabel = getApplicantAcademicDocumentLabel($applicantType);
         $userCourse = (string) ($_SESSION['user_course'] ?? '');
-        $matchCourse = $userCourse !== '' ? $userCourse : (string) ($_SESSION['user_target_course'] ?? '');
+        $userTargetCourse = (string) ($_SESSION['user_target_course'] ?? '');
+        $matchCourse = trim($userTargetCourse) !== '' ? $userTargetCourse : $userCourse;
         $userLat = isset($_SESSION['user_latitude']) && $_SESSION['user_latitude'] !== '' ? (float) $_SESSION['user_latitude'] : null;
         $userLng = isset($_SESSION['user_longitude']) && $_SESSION['user_longitude'] !== '' ? (float) $_SESSION['user_longitude'] : null;
         $userProfile = [
@@ -286,7 +287,7 @@ try {
             'shs_strand' => (string) ($_SESSION['user_shs_strand'] ?? ''),
             'shs_average' => (string) ($_SESSION['user_shs_average'] ?? ''),
             'course' => $userCourse,
-            'target_course' => (string) ($_SESSION['user_target_course'] ?? ''),
+            'target_course' => $userTargetCourse,
             'school' => (string) ($_SESSION['user_school'] ?? ''),
             'target_college' => (string) ($_SESSION['user_target_college'] ?? ''),
             'enrollment_status' => (string) ($_SESSION['user_enrollment_status'] ?? ''),
@@ -358,7 +359,7 @@ try {
             [
                 'entity_type' => 'application',
                 'entity_id' => (int) $result['application_id'],
-                'link_url' => 'profile.php'
+                'link_url' => 'applications.php#applicationTracking'
             ]
         );
     } catch (Throwable $notificationError) {

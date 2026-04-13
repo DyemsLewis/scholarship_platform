@@ -28,6 +28,46 @@ function scholarshipOldSelected(array $oldInput, string $key, string $expected, 
     return $value === $expected ? 'selected' : '';
 }
 
+function scholarshipTargetCourseOptions(): array
+{
+    return [
+        '' => 'Open to any course',
+        'Bachelor of Science in Information Technology' => 'Bachelor of Science in Information Technology',
+        'Bachelor of Science in Computer Science' => 'Bachelor of Science in Computer Science',
+        'Bachelor of Science in Information Systems' => 'Bachelor of Science in Information Systems',
+        'Bachelor of Science in Accountancy' => 'Bachelor of Science in Accountancy',
+        'Bachelor of Science in Business Administration' => 'Bachelor of Science in Business Administration',
+        'Bachelor of Science in Nursing' => 'Bachelor of Science in Nursing',
+        'Bachelor of Science in Education' => 'Bachelor of Science in Education',
+        'Bachelor of Science in Engineering' => 'Bachelor of Science in Engineering',
+        'Bachelor of Arts in Communication' => 'Bachelor of Arts in Communication',
+    ];
+}
+
+function scholarshipStrandOptions(): array
+{
+    return [
+        '' => 'Open to any strand',
+        'STEM' => 'STEM',
+        'ABM' => 'ABM',
+        'HUMSS' => 'HUMSS',
+        'GAS' => 'GAS',
+        'TVL' => 'TVL',
+        'Arts and Design' => 'Arts and Design',
+        'Sports' => 'Sports',
+    ];
+}
+
+function scholarshipOptionsWithCurrentValue(array $options, string $currentValue): array
+{
+    $normalizedCurrent = trim($currentValue);
+    if ($normalizedCurrent !== '' && !array_key_exists($normalizedCurrent, $options)) {
+        $options[$normalizedCurrent] = $normalizedCurrent;
+    }
+
+    return $options;
+}
+
 function scholarshipReviewWorkflowReady(PDO $pdo): bool
 {
     static $ready = null;
@@ -65,6 +105,12 @@ if (is_array($decodedRemoteExamSites)) {
 $statusValue = scholarshipOldValue($scholarshipOld, 'status', 'active');
 $assessmentRequirementValue = scholarshipOldValue($scholarshipOld, 'assessment_requirement', 'none');
 $allowIfAlreadyAcceptedValue = scholarshipOldValue($scholarshipOld, 'allow_if_already_accepted', '1');
+$targetApplicantTypeValue = scholarshipOldValue($scholarshipOld, 'target_applicant_type', 'all');
+$preferredCourseValue = scholarshipOldValue($scholarshipOld, 'preferred_course');
+$preferredStrandValue = scholarshipOldValue($scholarshipOld, 'target_strand');
+$preferredCourseOptions = scholarshipOptionsWithCurrentValue(scholarshipTargetCourseOptions(), $preferredCourseValue);
+$preferredStrandOptions = scholarshipOptionsWithCurrentValue(scholarshipStrandOptions(), $preferredStrandValue);
+$showTargetStrandField = $targetApplicantTypeValue === 'incoming_freshman';
 $minimumDateValue = date('Y-m-d');
 $minimumDateTimeValue = date('Y-m-d\TH:i');
 $providerScope = getCurrentProviderScope($pdo);
@@ -727,7 +773,7 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
                                             </div>
                                         </div>
 
-                                        <div class="form-row-modern">
+                                        <div class="form-row-modern" id="admissionPreferredCourseRow">
                                             <div class="form-group-modern">
                                                 <label><i class="fas fa-clipboard-check"></i> Minimum Admission Status</label>
                                                 <select name="required_admission_status">
@@ -739,14 +785,31 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
                                                 </select>
                                                 <small class="helper-text">Example: choose Admitted if applicants must already have an acceptance result.</small>
                                             </div>
-                                            <div class="form-group-modern">
-                                                <label><i class="fas fa-sitemap"></i> Preferred SHS Strand</label>
-                                                <input type="text" id="targetStrandInput" name="target_strand" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'target_strand')); ?>" placeholder="Optional: STEM, ABM, HUMSS">
-                                                <small class="helper-text" id="targetStrandHelper">Leave blank if the scholarship is open to any strand.</small>
+                                            <div class="form-group-modern" id="preferredCourseGroup">
+                                                <label><i class="fas fa-book-open"></i> Preferred Course</label>
+                                                <select name="preferred_course" id="preferredCourseSelect">
+                                                    <?php foreach ($preferredCourseOptions as $optionValue => $optionLabel): ?>
+                                                        <option value="<?php echo htmlspecialchars($optionValue, ENT_QUOTES, 'UTF-8'); ?>" <?php echo scholarshipOldSelected($scholarshipOld, 'preferred_course', $optionValue); ?>>
+                                                            <?php echo htmlspecialchars($optionLabel); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <small class="helper-text" id="preferredCourseHelper">Leave this as open if the scholarship is not restricted to a specific course.</small>
                                             </div>
                                         </div>
 
-                                        <div class="form-row-modern">
+                                        <div class="form-row-modern" id="strandAcceptedRow" style="<?php echo $showTargetStrandField ? '' : 'grid-template-columns: 1fr;'; ?>">
+                                            <div class="form-group-modern" id="targetStrandGroup" style="<?php echo $showTargetStrandField ? '' : 'display: none;'; ?>">
+                                                <label><i class="fas fa-sitemap"></i> Preferred SHS Strand</label>
+                                                <select id="targetStrandInput" name="target_strand">
+                                                    <?php foreach ($preferredStrandOptions as $optionValue => $optionLabel): ?>
+                                                        <option value="<?php echo htmlspecialchars($optionValue, ENT_QUOTES, 'UTF-8'); ?>" <?php echo scholarshipOldSelected($scholarshipOld, 'target_strand', $optionValue); ?>>
+                                                            <?php echo htmlspecialchars($optionLabel); ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                                <small class="helper-text" id="targetStrandHelper">Leave blank if the scholarship is open to any strand.</small>
+                                            </div>
                                             <div class="form-group-modern">
                                                 <label><i class="fas fa-award"></i> Accepted Scholarship Rule</label>
                                                 <select name="allow_if_already_accepted" id="allowIfAcceptedSelect">
@@ -1288,16 +1351,21 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
             const applicantTypeSelect = document.getElementById('targetApplicantTypeSelect');
             const yearLevelSelect = document.getElementById('targetYearLevelSelect');
             const yearLevelHelper = document.getElementById('targetYearLevelHelper');
+            const admissionPreferredCourseRow = document.getElementById('admissionPreferredCourseRow');
+            const preferredCourseGroup = document.getElementById('preferredCourseGroup');
+            const preferredCourseSelect = document.getElementById('preferredCourseSelect');
+            const preferredCourseHelper = document.getElementById('preferredCourseHelper');
+            const strandAcceptedRow = document.getElementById('strandAcceptedRow');
+            const targetStrandGroup = document.getElementById('targetStrandGroup');
             const targetStrandInput = document.getElementById('targetStrandInput');
             const targetStrandHelper = document.getElementById('targetStrandHelper');
-            if (!applicantTypeSelect || !yearLevelSelect || !targetStrandInput) {
+            if (!applicantTypeSelect || !yearLevelSelect || !targetStrandInput || !preferredCourseSelect) {
                 return;
             }
 
             const applicantType = applicantTypeSelect.value;
             const isIncomingFreshman = applicantType === 'incoming_freshman';
             const isCollegeApplicantType = ['current_college', 'transferee', 'continuing_student'].includes(applicantType);
-
             if (!isCollegeApplicantType) {
                 yearLevelSelect.value = 'any';
             }
@@ -1311,12 +1379,24 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
                     : 'Target Year Level only applies to current college, transferee, or continuing student scholarships.';
             }
 
+            if (preferredCourseHelper) {
+                preferredCourseHelper.textContent = 'Leave this as open if the scholarship is not restricted to a specific course.';
+            }
+
             if (!isIncomingFreshman) {
                 targetStrandInput.value = '';
             }
 
             targetStrandInput.disabled = !isIncomingFreshman;
             targetStrandInput.setAttribute('aria-disabled', !isIncomingFreshman ? 'true' : 'false');
+
+            if (targetStrandGroup) {
+                targetStrandGroup.style.display = isIncomingFreshman ? '' : 'none';
+            }
+
+            if (strandAcceptedRow) {
+                strandAcceptedRow.style.gridTemplateColumns = isIncomingFreshman ? '' : '1fr';
+            }
 
             if (targetStrandHelper) {
                 targetStrandHelper.textContent = isIncomingFreshman

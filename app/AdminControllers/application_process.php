@@ -73,7 +73,7 @@ function buildApplicationDecisionEmail(string $action, array $applicationDetails
             . "\n"
             . "What to do next:\n"
             . "1. Log in to your Scholarship Finder account.\n"
-            . "2. Open your Profile and go to the Application Tracking section.\n"
+            . "2. Open the Applications page and go to the Application Tracking section.\n"
             . "3. Click Accept Scholarship on this approved application to confirm that you will take the offer.\n"
             . "4. After you accept, wait for further instructions from {$providerName}, including confirmation, orientation, interview, or release details.\n"
             . "5. Prepare your original supporting documents and a valid school or government ID in case they are requested for final validation.\n\n"
@@ -271,7 +271,7 @@ try {
                 [
                     'entity_type' => 'application',
                     'entity_id' => $applicationId,
-                    'link_url' => 'profile.php'
+                    'link_url' => 'applications.php#applicationTracking'
                 ]
             );
         } catch (Throwable $notificationError) {

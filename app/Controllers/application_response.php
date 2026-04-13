@@ -121,7 +121,7 @@ function applicationResponseHasColumn(PDO $pdo, string $tableName, string $colum
     return $cache[$key];
 }
 
-$redirectUrl = '../View/profile.php#applicationTracking';
+$redirectUrl = '../View/applications.php#applicationTracking';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     $_SESSION['error'] = 'Invalid scholarship response request.';

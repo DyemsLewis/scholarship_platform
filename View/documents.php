@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../app/Config/init.php';
+require_once __DIR__ . '/../app/Config/csrf.php';
 if (!$isLoggedIn) {
     $_SESSION['error'] = 'Please login to access document upload';
     header('Location: login.php');

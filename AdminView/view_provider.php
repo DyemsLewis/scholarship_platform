@@ -528,10 +528,6 @@ $viewProviderStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/view-provi
                                 <span>Verification File</span>
                                 <strong><?php echo htmlspecialchars($providerVerificationLabel); ?></strong>
                             </article>
-                            <article class="app-review-summary-tile">
-                                <span>Review Signals</span>
-                                <strong><?php echo htmlspecialchars($reviewStats['good'] . ' strong / ' . $reviewStats['warning'] . ' flagged'); ?></strong>
-                            </article>
                         </div>
 
                         <div class="app-review-next-step-banner is-<?php echo htmlspecialchars($providerReviewTone === 'ready' ? 'success' : 'warning'); ?>">

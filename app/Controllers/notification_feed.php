@@ -60,7 +60,11 @@ try {
             'type' => (string) ($notification['type'] ?? 'general'),
             'title' => (string) ($notification['title'] ?? 'Notification'),
             'message' => (string) ($notification['message'] ?? ''),
-            'link_url' => trim((string) ($notification['link_url'] ?? '')),
+            'link_url' => normalizeStoredNotificationLink(
+                $notification['link_url'] ?? '',
+                $_SESSION['user_role'] ?? ($_SESSION['admin_role'] ?? 'student'),
+                $notification['entity_type'] ?? ''
+            ),
             'is_read' => !empty($notification['is_read']) ? 1 : 0,
             'created_at' => (string) ($notification['created_at'] ?? ''),
             'created_at_label' => formatNotificationFeedTimestamp($notification['created_at'] ?? null),

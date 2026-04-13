@@ -1,6 +1,9 @@
 <?php
 require_once __DIR__ . '/../../app/Config/csrf.php';
-$showStudentWidgets = isset($_SESSION['user_id']) && strtolower(trim((string) ($_SESSION['user_role'] ?? ''))) === 'student';
+$currentFooterRole = function_exists('getCurrentSessionRole')
+    ? getCurrentSessionRole()
+    : strtolower(trim((string) ($_SESSION['user_role'] ?? ($_SESSION['admin_role'] ?? 'guest'))));
+$showStudentWidgets = isset($_SESSION['user_id']) && $currentFooterRole === 'student';
 $userIssueOld = ($showStudentWidgets && isset($_SESSION['user_issue_old']) && is_array($_SESSION['user_issue_old']))
     ? $_SESSION['user_issue_old']
     : [];
@@ -154,7 +157,11 @@ if ($showStudentWidgets) {
                     } elseif (str_contains($notificationType, 'submitted')) {
                         $notificationIcon = 'fa-paper-plane';
                     }
-                    $notificationLink = trim((string) ($notification['link_url'] ?? ''));
+                    $notificationLink = normalizeStoredNotificationLink(
+                        $notification['link_url'] ?? '',
+                        $userRole ?? 'student',
+                        $notification['entity_type'] ?? ''
+                    );
                     $notificationTag = $notificationLink !== '' ? 'a' : 'div';
                 ?>
                 <<?php echo $notificationTag; ?>

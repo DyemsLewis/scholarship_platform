@@ -59,6 +59,7 @@ class ScholarshipData extends Model {
             'target_applicant_type' => $data['target_applicant_type'] ?? null,
             'target_year_level' => $data['target_year_level'] ?? null,
             'required_admission_status' => $data['required_admission_status'] ?? null,
+            'preferred_course' => $data['preferred_course'] ?? null,
             'target_strand' => $data['target_strand'] ?? null
         ];
 

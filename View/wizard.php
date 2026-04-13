@@ -242,7 +242,30 @@ if (!function_exists('applicationTrackingBuildTimelineData')) {
 
         if ($studentAccepted && $assessmentEnabled) {
             $currentStageTitle = $assessmentStatusLabel !== '' ? $assessmentStatusLabel : 'Assessment required';
-            $currentStageNote = $assessmentStatusNote !== '' ? $assessmentStatusNote : 'Assessment updates will appear here after your acceptance is recorded.';
+            switch ($assessmentStatus) {
+                case 'scheduled':
+                    $currentStageNote = 'Your assessment schedule is ready. Review the details below.';
+                    break;
+                case 'ready':
+                    $currentStageNote = 'Your assessment access is ready. Review the details below.';
+                    break;
+                case 'submitted':
+                    $currentStageNote = 'Your assessment attendance or submission was recorded. Wait for the next update.';
+                    break;
+                case 'under_review':
+                    $currentStageNote = 'Your assessment result is currently under review.';
+                    break;
+                case 'passed':
+                    $currentStageNote = 'You passed the assessment. Wait for the next provider update.';
+                    break;
+                case 'failed':
+                    $currentStageNote = 'The assessment result was recorded as not passed.';
+                    break;
+                case 'not_started':
+                default:
+                    $currentStageNote = 'Assessment updates will appear here after your acceptance is recorded.';
+                    break;
+            }
         } elseif ($studentAccepted) {
             $currentStageTitle = 'Scholarship accepted';
             $currentStageNote = 'You confirmed your acceptance on ' . applicationTrackingFormatTimelineDate($studentRespondedAt, 'the latest update') . '.';
@@ -532,18 +555,30 @@ if ($isLoggedIn && $scholarship) {
         'course' => $userCourse
     ]);
 
+    $preferredCourse = trim((string) ($scholarship['preferred_course'] ?? ''));
     $audienceParts = [];
+    $hasSpecificAudienceFilter = false;
     if (!empty($scholarship['target_applicant_type']) && strtolower((string) $scholarship['target_applicant_type']) !== 'all') {
         $audienceParts[] = formatApplicantTypeLabel($scholarship['target_applicant_type']);
+        $hasSpecificAudienceFilter = true;
     }
     if (!empty($scholarship['target_year_level']) && strtolower((string) $scholarship['target_year_level']) !== 'any') {
         $audienceParts[] = formatYearLevelLabel($scholarship['target_year_level']);
+        $hasSpecificAudienceFilter = true;
     }
     if (!empty($scholarship['required_admission_status']) && strtolower((string) $scholarship['required_admission_status']) !== 'any') {
         $audienceParts[] = formatAdmissionStatusLabel($scholarship['required_admission_status']) . '+';
+        $hasSpecificAudienceFilter = true;
     }
     if (!empty($scholarship['target_strand'])) {
         $audienceParts[] = strtoupper((string) $scholarship['target_strand']);
+        $hasSpecificAudienceFilter = true;
+    }
+    if (!$hasSpecificAudienceFilter) {
+        $audienceParts[] = 'Open to all applicants';
+    }
+    if ($preferredCourse !== '') {
+        $audienceParts[] = 'Course: ' . $preferredCourse;
     }
     if (!empty($audienceParts)) {
         $audienceLabel = implode(' / ', $audienceParts);

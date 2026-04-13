@@ -257,7 +257,7 @@ class ScholarshipService {
         $targetStrand = trim((string) ($scholarship['target_strand'] ?? ''));
         if ($targetStrand !== '') {
             $status = 'pending';
-            $detail = 'Set your SHS strand';
+            $detail = 'Set your SHS strand to compare with the preferred strand';
             $normalizedTargetStrand = $this->normalizeLooseText($targetStrand);
 
             if ($profile['shs_strand'] !== '') {
@@ -273,7 +273,7 @@ class ScholarshipService {
 
             $checks[] = [
                 'key' => 'target_strand',
-                'label' => 'SHS Strand',
+                'label' => 'Preferred SHS Strand',
                 'target' => strtoupper($targetStrand),
                 'status' => $status,
                 'detail' => $detail
@@ -446,29 +446,24 @@ class ScholarshipService {
             ];
         }
 
-        $scholarshipText = $this->normalizeLooseText(trim(implode(' ', [
-            (string) ($scholarship['name'] ?? ''),
-            (string) ($scholarship['description'] ?? ''),
-            (string) ($scholarship['eligibility'] ?? ''),
-            (string) ($scholarship['provider'] ?? ''),
-            (string) ($scholarship['address'] ?? ''),
-            (string) ($scholarship['city'] ?? ''),
-            (string) ($scholarship['province'] ?? '')
-        ])));
-
         $referenceCourse = $profile['target_course'] !== '' ? $profile['target_course'] : $profile['course'];
         $status = 'pending';
         $detail = 'Set your current or target course';
+        $preferredCourse = trim((string) ($scholarship['preferred_course'] ?? ''));
         if ($referenceCourse !== '') {
             $courseMatch = $this->analyzeCourseMatch($scholarship, $referenceCourse);
+            $status = $courseMatch['status'];
+            $detail = $courseMatch['detail'];
+        } elseif ($this->scholarshipHasOpenCoursePolicy($scholarship)) {
+            $courseMatch = $this->analyzeCourseMatch($scholarship, '');
             $status = $courseMatch['status'];
             $detail = $courseMatch['detail'];
         }
 
         $checks[] = [
             'key' => 'course_pathway',
-            'label' => 'Course Pathway',
-            'target' => 'Relevant Program',
+            'label' => 'Preferred Course',
+            'target' => $preferredCourse !== '' ? $preferredCourse : 'Any course',
             'status' => $status,
             'detail' => $detail
         ];
@@ -569,7 +564,7 @@ class ScholarshipService {
         $referenceCourse = $normalizedProfile['target_course'] !== ''
             ? $normalizedProfile['target_course']
             : ($normalizedProfile['course'] ?? '');
-        if ($referenceCourse !== '') {
+        if ($referenceCourse !== '' || $this->scholarshipHasOpenCoursePolicy($scholarship)) {
             $courseMatch = $this->analyzeCourseMatch($scholarship, $referenceCourse);
             $score += (int) ($courseMatch['score'] ?? 10);
         } else {
@@ -652,59 +647,139 @@ class ScholarshipService {
     /**
      * Calculate course compatibility score
      */
-    private function analyzeCourseMatch($scholarship, $userCourse): array {
-        $text = strtolower(
-            ($scholarship['name'] ?? '') . ' ' . 
-            ($scholarship['description'] ?? '') . ' ' . 
-            ($scholarship['eligibility'] ?? '')
-        );
-        $courseLabel = trim((string) $userCourse);
-        $course = strtolower($courseLabel);
-        
-        $stemKeywords = ['stem', 'science', 'engineering', 'technology', 'computer', 'math', 'it', 'information technology', 'bsit', 'bscs'];
-        $businessKeywords = ['business', 'management', 'accountancy', 'marketing', 'finance', 'bsba', 'bsa'];
-        $artsKeywords = ['arts', 'humanities', 'communication', 'design', 'media', 'mass comm'];
-        $healthKeywords = ['nursing', 'medicine', 'health', 'pharmacy', 'medical', 'bsn', 'bsph'];
-        $architectureKeywords = ['architecture', 'archi', 'bs arch'];
-        
-        $isUserStem = $this->textContainsAny($course, $stemKeywords);
-        $isUserBusiness = $this->textContainsAny($course, $businessKeywords);
-        $isUserArts = $this->textContainsAny($course, $artsKeywords);
-        $isUserHealth = $this->textContainsAny($course, $healthKeywords);
-        $isUserArchitecture = $this->textContainsAny($course, $architectureKeywords);
-        
-        $isScholarshipStem = $this->textContainsAny($text, $stemKeywords);
-        $isScholarshipBusiness = $this->textContainsAny($text, $businessKeywords);
-        $isScholarshipArts = $this->textContainsAny($text, $artsKeywords);
-        $isScholarshipHealth = $this->textContainsAny($text, $healthKeywords);
-        $isScholarshipArchitecture = $this->textContainsAny($text, $architectureKeywords);
-
-        $courseReference = $courseLabel !== '' ? $courseLabel : 'the recorded course';
-        
-        if (($isUserStem && $isScholarshipStem) || 
-            ($isUserBusiness && $isScholarshipBusiness) || 
-            ($isUserArts && $isScholarshipArts) || 
-            ($isUserHealth && $isScholarshipHealth) ||
-            ($isUserArchitecture && $isScholarshipArchitecture)) {
-            return [
-                'score' => 30,
-                'status' => 'met',
-                'detail' => 'Passed course check because ' . $courseReference . ' matches the scholarship focus area.'
-            ];
+    private function normalizeCourseText(string $value): string
+    {
+        $normalized = strtolower(trim($value));
+        if ($normalized === '') {
+            return '';
         }
 
-        if (strpos($text, 'all courses') !== false || strpos($text, 'any course') !== false || strpos($text, 'open to all') !== false) {
+        $expanded = ' ' . $normalized . ' ';
+        $replacements = [
+            '/\bbsit\b/' => ' information technology ',
+            '/\bbsit program\b/' => ' information technology ',
+            '/\bbscs\b/' => ' computer science ',
+            '/\bbsis\b/' => ' information systems ',
+            '/\bbsn\b/' => ' nursing ',
+            '/\bbsa\b/' => ' accountancy ',
+            '/\bbsba\b/' => ' business administration ',
+            '/\bbse\b/' => ' education ',
+            '/\bbsce\b/' => ' civil engineering ',
+            '/\bbsee\b/' => ' electrical engineering ',
+            '/\bbsme\b/' => ' mechanical engineering ',
+            '/\bbs arch\b/' => ' architecture ',
+            '/\bbsarch\b/' => ' architecture ',
+            '/\bbsae\b/' => ' aeronautical engineering ',
+        ];
+
+        foreach ($replacements as $pattern => $replacement) {
+            $expanded = preg_replace($pattern, $replacement, $expanded) ?? $expanded;
+        }
+
+        return $this->normalizeLooseText(trim($expanded));
+    }
+
+    private function extractCourseTokens(string $value): array
+    {
+        $normalized = $this->normalizeCourseText($value);
+        if ($normalized === '') {
+            return [];
+        }
+
+        $tokens = preg_split('/\s+/', $normalized) ?: [];
+        $stopWords = [
+            'bachelor',
+            'science',
+            'arts',
+            'in',
+            'of',
+            'and',
+            'the',
+            'program',
+            'course',
+            'major',
+            'majoring',
+            'studies'
+        ];
+
+        $tokens = array_values(array_filter($tokens, function ($token) use ($stopWords) {
+            return $token !== '' && !in_array($token, $stopWords, true);
+        }));
+
+        return array_values(array_unique($tokens));
+    }
+
+    private function coursePreferenceMatches(string $userCourse, string $preferredCourse): bool
+    {
+        $normalizedUser = $this->normalizeCourseText($userCourse);
+        $normalizedPreferred = $this->normalizeCourseText($preferredCourse);
+
+        if ($normalizedUser === '' || $normalizedPreferred === '') {
+            return false;
+        }
+
+        if (
+            $normalizedUser === $normalizedPreferred
+            || str_contains($normalizedUser, $normalizedPreferred)
+            || str_contains($normalizedPreferred, $normalizedUser)
+        ) {
+            return true;
+        }
+
+        $userTokens = $this->extractCourseTokens($normalizedUser);
+        $preferredTokens = $this->extractCourseTokens($normalizedPreferred);
+        if (empty($userTokens) || empty($preferredTokens)) {
+            return false;
+        }
+
+        $sharedTokens = array_intersect($userTokens, $preferredTokens);
+        if (empty($sharedTokens)) {
+            return false;
+        }
+
+        $requiredMatches = min(count($preferredTokens), 2);
+        return count($sharedTokens) >= $requiredMatches;
+    }
+
+    private function scholarshipHasOpenCoursePolicy($scholarship): bool
+    {
+        $preferredCourse = trim((string) ($scholarship['preferred_course'] ?? ''));
+        if ($preferredCourse === '') {
+            return true;
+        }
+
+        $normalizedPreferredCourse = $this->normalizeCourseText($preferredCourse);
+        return str_contains($normalizedPreferredCourse, 'all courses')
+            || str_contains($normalizedPreferredCourse, 'any course')
+            || str_contains($normalizedPreferredCourse, 'all programs')
+            || str_contains($normalizedPreferredCourse, 'any program');
+    }
+
+    private function analyzeCourseMatch($scholarship, $userCourse): array {
+        $courseLabel = trim((string) $userCourse);
+        $preferredCourse = trim((string) ($scholarship['preferred_course'] ?? ''));
+        $courseReference = $courseLabel !== '' ? $courseLabel : 'the recorded course';
+
+        if ($this->scholarshipHasOpenCoursePolicy($scholarship)) {
             return [
                 'score' => 25,
                 'status' => 'met',
-                'detail' => 'Passed course check because this scholarship is open to all courses.'
+                'detail' => 'Passed course check because this scholarship does not require a specific preferred course.'
+            ];
+        }
+
+        if ($this->coursePreferenceMatches($courseReference, $preferredCourse)) {
+            return [
+                'score' => 30,
+                'status' => 'met',
+                'detail' => 'Passed course check because ' . $courseReference . ' matches the preferred course: ' . $preferredCourse . '.'
             ];
         }
 
         return [
             'score' => 10,
             'status' => 'warn',
-            'detail' => 'Course check is weaker because the scholarship details do not clearly list ' . $courseReference . ' as a priority course.'
+            'detail' => 'Course check is weaker because this scholarship prefers ' . $preferredCourse . ', while the recorded course is ' . $courseReference . '.'
         ];
     }
 
@@ -849,12 +924,12 @@ if (!function_exists('scholarshipMatchGuideReasonFromCheck')) {
 
             case 'target_strand':
                 if ($status === 'met') {
-                    return scholarshipMatchGuideSentence('Passed SHS strand because the recorded profile matches ' . $target);
+                    return scholarshipMatchGuideSentence('Passed preferred SHS strand because the recorded profile matches ' . $target);
                 }
                 if ($status === 'failed') {
-                    return scholarshipMatchGuideSentence('SHS strand does not pass because this scholarship requires ' . $target);
+                    return scholarshipMatchGuideSentence('Preferred SHS strand does not pass because this scholarship requires ' . $target);
                 }
-                return 'SHS strand is still missing, so this scholarship check is not confirmed yet.';
+                return 'SHS strand is still missing, so the preferred SHS strand check is not confirmed yet.';
 
             case 'target_citizenship':
                 if ($status === 'met') {

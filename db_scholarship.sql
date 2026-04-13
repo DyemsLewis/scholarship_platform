@@ -228,6 +228,7 @@ CREATE TABLE `scholarship_data` (
   `target_applicant_type` varchar(50) NOT NULL DEFAULT 'all',
   `target_year_level` varchar(40) NOT NULL DEFAULT 'any',
   `required_admission_status` varchar(40) NOT NULL DEFAULT 'any',
+  `preferred_course` varchar(150) DEFAULT NULL,
   `target_strand` varchar(80) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -235,13 +236,13 @@ CREATE TABLE `scholarship_data` (
 -- Dumping data for table `scholarship_data`
 --
 
-INSERT INTO `scholarship_data` (`id`, `scholarship_id`, `image`, `provider`, `benefits`, `address`, `city`, `province`, `deadline`, `assessment_requirement`, `assessment_link`, `assessment_details`, `created_at`, `updated_at`, `target_applicant_type`, `target_year_level`, `required_admission_status`, `target_strand`) VALUES
-(9, 2, '69ba7a895018b_1773828745.png', 'Department of Science and Technology', 'Tuition + Allowance + Book Allowance + Monthly Stipend', 'DOST-SEI Office, Bicutan, Taguig', 'Taguig City', 'Metro Manila', '2026-04-30', 'none', NULL, NULL, '2026-01-27 16:00:00', '2026-03-18 10:12:25', 'all', 'any', 'any', NULL),
-(10, 3, NULL, 'Local Government Unit', 'Partial Tuition Coverage', 'Local Government Unit, Main Office', 'Manila', 'Metro Manila', '2026-05-15', 'none', NULL, NULL, '2026-01-27 16:00:00', '2026-01-29 08:58:14', 'all', 'any', 'any', NULL),
-(11, 4, '69ba79cc5f173_1773828556.png', 'SM Foundation', 'Tuition + Allowance + Book Allowance', 'SM Head Office, Mall of Asia Complex', 'Pasay City', 'Metro Manila', '2026-06-30', 'none', NULL, NULL, '2026-01-29 08:58:14', '2026-03-18 10:09:16', 'all', 'any', 'any', NULL),
-(12, 5, '69ba7a70a196e_1773828720.png', 'Ayala Foundation', 'Full Scholarship + Internship Opportunity', 'Ayala Avenue, Makati', 'Makati City', 'Metro Manila', '2026-07-15', 'none', NULL, NULL, '2026-01-29 08:58:14', '2026-03-18 10:12:00', 'all', 'any', 'any', NULL),
-(13, 6, '69ba7a7b08623_1773828731.png', 'University of the Philippines', 'Tuition Discount + Stipend', 'UP Diliman Campus', 'Quezon City', 'Metro Manila', '2026-08-31', 'none', NULL, NULL, '2026-01-29 08:58:14', '2026-03-18 10:12:11', 'all', 'any', 'any', NULL),
-(16, 7, '69ba76584f604_1773827672.jpg', 'Commission on Higher Education', 'Full Tuition + Monthly Stipend + Book Allowance', 'Samar Street', 'Taguig', 'Metro Manila', '2027-01-12', 'remote_examination', NULL, NULL, '2026-03-18 09:56:40', '2026-03-30 00:54:37', 'all', 'any', 'any', NULL);
+INSERT INTO `scholarship_data` (`id`, `scholarship_id`, `image`, `provider`, `benefits`, `address`, `city`, `province`, `deadline`, `assessment_requirement`, `assessment_link`, `assessment_details`, `created_at`, `updated_at`, `target_applicant_type`, `target_year_level`, `required_admission_status`, `preferred_course`, `target_strand`) VALUES
+(9, 2, '69ba7a895018b_1773828745.png', 'Department of Science and Technology', 'Tuition + Allowance + Book Allowance + Monthly Stipend', 'DOST-SEI Office, Bicutan, Taguig', 'Taguig City', 'Metro Manila', '2026-04-30', 'none', NULL, NULL, '2026-01-27 16:00:00', '2026-03-18 10:12:25', 'all', 'any', 'any', NULL, NULL),
+(10, 3, NULL, 'Local Government Unit', 'Partial Tuition Coverage', 'Local Government Unit, Main Office', 'Manila', 'Metro Manila', '2026-05-15', 'none', NULL, NULL, '2026-01-27 16:00:00', '2026-01-29 08:58:14', 'all', 'any', 'any', NULL, NULL),
+(11, 4, '69ba79cc5f173_1773828556.png', 'SM Foundation', 'Tuition + Allowance + Book Allowance', 'SM Head Office, Mall of Asia Complex', 'Pasay City', 'Metro Manila', '2026-06-30', 'none', NULL, NULL, '2026-01-29 08:58:14', '2026-03-18 10:09:16', 'all', 'any', 'any', NULL, NULL),
+(12, 5, '69ba7a70a196e_1773828720.png', 'Ayala Foundation', 'Full Scholarship + Internship Opportunity', 'Ayala Avenue, Makati', 'Makati City', 'Metro Manila', '2026-07-15', 'none', NULL, NULL, '2026-01-29 08:58:14', '2026-03-18 10:12:00', 'all', 'any', 'any', NULL, NULL),
+(13, 6, '69ba7a7b08623_1773828731.png', 'University of the Philippines', 'Tuition Discount + Stipend', 'UP Diliman Campus', 'Quezon City', 'Metro Manila', '2026-08-31', 'none', NULL, NULL, '2026-01-29 08:58:14', '2026-03-18 10:12:11', 'all', 'any', 'any', NULL, NULL),
+(16, 7, '69ba76584f604_1773827672.jpg', 'Commission on Higher Education', 'Full Tuition + Monthly Stipend + Book Allowance', 'Samar Street', 'Taguig', 'Metro Manila', '2027-01-12', 'remote_examination', NULL, NULL, '2026-03-18 09:56:40', '2026-03-30 00:54:37', 'all', 'any', 'any', NULL, NULL);
 
 -- --------------------------------------------------------
 

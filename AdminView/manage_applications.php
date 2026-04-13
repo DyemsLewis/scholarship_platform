@@ -99,6 +99,7 @@ function queueBuildMatchGuidePayload(array $application, ScholarshipService $sch
         'target_applicant_type' => (string) ($application['target_applicant_type'] ?? ''),
         'target_year_level' => (string) ($application['target_year_level'] ?? ''),
         'required_admission_status' => (string) ($application['required_admission_status'] ?? ''),
+        'preferred_course' => (string) ($application['preferred_course'] ?? ''),
         'target_strand' => (string) ($application['target_strand'] ?? ''),
         'target_citizenship' => (string) ($application['target_citizenship'] ?? ''),
         'target_income_bracket' => (string) ($application['target_income_bracket'] ?? ''),
@@ -442,6 +443,7 @@ $scholarshipApplicationOpenDateSelect = queueOptionalColumnSelect($pdo, 'sd2', '
 $scholarshipTargetApplicantTypeSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_applicant_type');
 $scholarshipTargetYearLevelSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_year_level');
 $scholarshipRequiredAdmissionStatusSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'required_admission_status');
+$scholarshipPreferredCourseSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'preferred_course');
 $scholarshipTargetStrandSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_strand');
 $scholarshipTargetCitizenshipSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_citizenship');
 $scholarshipTargetIncomeBracketSelect = queueOptionalColumnSelect($pdo, 'sd2', 'scholarship_data', 'target_income_bracket');
@@ -516,6 +518,7 @@ try {
             {$scholarshipTargetApplicantTypeSelect}
             {$scholarshipTargetYearLevelSelect}
             {$scholarshipRequiredAdmissionStatusSelect}
+            {$scholarshipPreferredCourseSelect}
             {$scholarshipTargetStrandSelect}
             {$scholarshipTargetCitizenshipSelect}
             {$scholarshipTargetIncomeBracketSelect}

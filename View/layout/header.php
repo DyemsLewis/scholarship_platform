@@ -127,8 +127,8 @@ if ($isLoggedIn && ($userRole ?? 'guest') === 'student') {
 
                 <div class="nav-links">
                     <a href="index.php" <?php echo getCurrentPage() == 'index.php' ? 'class="active"' : ''; ?>>Home</a>
-                    <a href="scholarships.php" <?php echo in_array(getCurrentPage(), ['scholarships.php', 'results.php', 'scholarship_details.php', 'scholarship_requirements.php']) ? 'class="active"' : ''; ?>>Scholarships</a>
                     <?php if ($isLoggedIn): ?>
+                    <a href="scholarships.php" <?php echo in_array(getCurrentPage(), ['scholarships.php', 'results.php', 'scholarship_details.php', 'scholarship_requirements.php']) ? 'class="active"' : ''; ?>>Scholarships</a>
                     <a href="profile.php" <?php echo getCurrentPage() === 'profile.php' ? 'class="active"' : ''; ?>>Profile</a>
                     <a href="upload.php" <?php echo getCurrentPage() == 'upload.php' ? 'class="active"' : ''; ?>>Upload</a>
                     <a href="documents.php" class="<?php echo isActivePage('documents.php') ? 'active' : ''; ?>">Documents</a>

@@ -32,6 +32,10 @@ class StudentData {
         return $trimmed === '' ? null : $trimmed;
     }
 
+    private function normalizeRequiredString($value): string {
+        return trim((string) $value);
+    }
+
     private function buildPayload(array $data, array $existing = []): array {
         $payload = [];
 
@@ -46,16 +50,16 @@ class StudentData {
         };
 
         $columnMap = [
-            'firstname' => fn() => $this->normalizeString($resolve('firstname', '')),
-            'lastname' => fn() => $this->normalizeString($resolve('lastname', '')),
-            'middleinitial' => fn() => $this->normalizeString($resolve('middleinitial', '')),
+            'firstname' => fn() => $this->normalizeRequiredString($resolve('firstname', '')),
+            'lastname' => fn() => $this->normalizeRequiredString($resolve('lastname', '')),
+            'middleinitial' => fn() => $this->normalizeRequiredString($resolve('middleinitial', '')),
             'suffix' => fn() => $this->normalizeString($resolve('suffix', null)),
             'age' => fn() => (int) ($resolve('age', 0) ?? 0),
             'birthdate' => fn() => $this->normalizeString($resolve('birthdate', null)),
             'gender' => fn() => $this->normalizeString($resolve('gender', null)),
             'applicant_type' => fn() => $this->normalizeString($resolve('applicant_type', null)),
-            'course' => fn() => $this->normalizeString($resolve('course', '')),
-            'school' => fn() => $this->normalizeString($resolve('school', '')),
+            'course' => fn() => $this->normalizeRequiredString($resolve('course', '')),
+            'school' => fn() => $this->normalizeRequiredString($resolve('school', '')),
             'shs_school' => fn() => $this->normalizeString($resolve('shs_school', null)),
             'shs_strand' => fn() => $this->normalizeString($resolve('shs_strand', null)),
             'shs_graduation_year' => fn() => $this->normalizeString($resolve('shs_graduation_year', null)),

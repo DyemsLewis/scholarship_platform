@@ -104,6 +104,79 @@ if (!function_exists('normalizeAppUrl')) {
     }
 }
 
+if (!function_exists('normalizeStoredNotificationLink')) {
+    function normalizeStoredNotificationLink(?string $path, ?string $role = null, ?string $entityType = null): string
+    {
+        $value = trim((string) ($path ?? ''));
+        $normalizedEntityType = strtolower(trim((string) ($entityType ?? '')));
+        $normalizedRole = strtolower(trim((string) ($role ?? ($_SESSION['user_role'] ?? $_SESSION['admin_role'] ?? 'student'))));
+
+        if ($normalizedRole === 'student' && $normalizedEntityType === 'application') {
+            $legacyValue = str_replace('\\', '/', $value);
+            $legacyPathOnly = $legacyValue;
+            $legacyFragment = '';
+            $legacyQuery = '';
+
+            $fragmentPosition = strpos($legacyPathOnly, '#');
+            if ($fragmentPosition !== false) {
+                $legacyFragment = substr($legacyPathOnly, $fragmentPosition);
+                $legacyPathOnly = substr($legacyPathOnly, 0, $fragmentPosition);
+            }
+
+            $queryPosition = strpos($legacyPathOnly, '?');
+            if ($queryPosition !== false) {
+                $legacyQuery = substr($legacyPathOnly, $queryPosition);
+                $legacyPathOnly = substr($legacyPathOnly, 0, $queryPosition);
+            }
+
+            $trimmedLegacyPath = ltrim($legacyPathOnly, './');
+            if ($trimmedLegacyPath === '' || $trimmedLegacyPath === 'profile.php' || $trimmedLegacyPath === 'applications.php') {
+                return normalizeAppUrl('View/applications.php' . $legacyQuery . '#applicationTracking');
+            }
+        }
+
+        if ($value === '') {
+            return '';
+        }
+
+        $value = str_replace('\\', '/', $value);
+
+        if (preg_match('~^(?:https?:)?//~i', $value)) {
+            return $value;
+        }
+
+        if (str_starts_with($value, '/')) {
+            return preg_replace('#/+#', '/', $value);
+        }
+
+        $query = '';
+        $fragment = '';
+        $pathOnly = $value;
+
+        $fragmentPosition = strpos($pathOnly, '#');
+        if ($fragmentPosition !== false) {
+            $fragment = substr($pathOnly, $fragmentPosition);
+            $pathOnly = substr($pathOnly, 0, $fragmentPosition);
+        }
+
+        $queryPosition = strpos($pathOnly, '?');
+        if ($queryPosition !== false) {
+            $query = substr($pathOnly, $queryPosition);
+            $pathOnly = substr($pathOnly, 0, $queryPosition);
+        }
+
+        $defaultSection = in_array($normalizedRole, ['provider', 'admin', 'super_admin'], true)
+            ? 'AdminView/'
+            : 'View/';
+
+        if ($pathOnly !== '' && !str_contains($pathOnly, '/') && !str_starts_with($pathOnly, '.')) {
+            $value = $defaultSection . ltrim($pathOnly, '/') . $query . $fragment;
+        }
+
+        return normalizeAppUrl($value);
+    }
+}
+
 if (!function_exists('assetUrl')) {
     function assetUrl(string $projectRelativePath, bool $versioned = true): string {
         $normalized = ltrim(str_replace('\\', '/', $projectRelativePath), '/');
