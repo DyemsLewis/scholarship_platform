@@ -473,34 +473,6 @@ class ScholarshipService {
             'detail' => $detail
         ];
 
-        $referenceSchool = $profile['target_college'] !== '' ? $profile['target_college'] : $profile['school'];
-        $status = 'pending';
-        $detail = 'Set your school or target college';
-        if ($referenceSchool !== '') {
-            $normalizedSchool = $this->normalizeLooseText($referenceSchool);
-            if (strlen($normalizedSchool) >= 4 && $scholarshipText !== '' && str_contains($scholarshipText, $normalizedSchool)) {
-                $status = 'met';
-                $detail = 'Passed school/location check because the scholarship details mention ' . $referenceSchool . '.';
-            } elseif ($profile['city'] !== '' && $scholarshipText !== '' && str_contains($scholarshipText, $profile['city'])) {
-                $status = 'met';
-                $detail = 'Passed school/location check because the scholarship is listed in ' . ucwords($profile['city']) . '.';
-            } elseif ($profile['province'] !== '' && $scholarshipText !== '' && str_contains($scholarshipText, $profile['province'])) {
-                $status = 'warn';
-                $detail = 'School/location check is only partial because the scholarship is listed in ' . ucwords($profile['province']) . '.';
-            } else {
-                $status = 'warn';
-                $detail = 'School/location check is weaker because the scholarship details do not mention the recorded school or location.';
-            }
-        }
-
-        $checks[] = [
-            'key' => 'school_context',
-            'label' => 'School Context',
-            'target' => 'Campus/Location Fit',
-            'status' => $status,
-            'detail' => $detail
-        ];
-
         foreach ($checks as $check) {
             if ($check['status'] === 'met') {
                 $met++;

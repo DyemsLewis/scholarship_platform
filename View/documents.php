@@ -178,7 +178,7 @@ $completion = $totalTypes > 0 ? round(($totalUploaded / $totalTypes) * 100) : 0;
             <div id="documentsGrid" class="documents-grid" data-pagination="cards" data-page-size="6" data-item-selector=".doc-card" data-pagination-label="documents">
                 <?php foreach ($documentTypes as $type): 
                     $docType = $type['code'];
-                    $docName = $type['name'];
+                    $docName = $docType === 'form_138' ? 'Form 137/138' : $type['name'];
                     $docIcon = $type['icon'] ?? 'file-lines';
                     $docDescription = $type['description'] ?? '';
                     $uploadedDoc = isset($userDocuments[$docType]) ? $userDocuments[$docType] : null;
@@ -194,12 +194,11 @@ $completion = $totalTypes > 0 ? round(($totalUploaded / $totalTypes) * 100) : 0;
                     if ($rejectionReason === '' && $status === 'rejected' && $uploadedDoc) {
                         $rejectionReason = stripReviewerDocumentNote($uploadedDoc['admin_notes'] ?? null);
                     }
-                    $searchBlob = strtolower(trim(implode(' ', array_filter([
+                    $searchIndex = strtolower(trim(implode(' ', array_filter([
                         $docName,
                         $docType,
                         $docDescription,
-                        $uploadedDoc['file_name'] ?? '',
-                        $status
+                        $uploadedDoc['file_name'] ?? ''
                     ]))));
                 ?>
                 <div
@@ -210,7 +209,7 @@ $completion = $totalTypes > 0 ? round(($totalUploaded / $totalTypes) * 100) : 0;
                     data-document-description="<?php echo htmlspecialchars(strtolower($docDescription)); ?>"
                     data-document-status="<?php echo htmlspecialchars(strtolower($status)); ?>"
                     data-document-file="<?php echo htmlspecialchars(strtolower((string) ($uploadedDoc['file_name'] ?? ''))); ?>"
-                    data-document-keywords="<?php echo htmlspecialchars($searchBlob); ?>"
+                    data-document-search-index="<?php echo htmlspecialchars($searchIndex); ?>"
                 >
                     <div class="doc-card-header">
                         <div class="doc-info">

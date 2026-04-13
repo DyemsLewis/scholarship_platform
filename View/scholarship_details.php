@@ -565,6 +565,14 @@ if ($assessmentRequirement === 'online_exam') {
 $assessmentNotesLabel = trim((string) ($scholarship['assessment_details'] ?? '')) !== ''
     ? 'Provider notes available'
     : 'No extra provider notes';
+$sharedAssessmentScheduleDisplay = 'Schedule to be announced';
+if (!empty($scholarship['assessment_schedule_at'])) {
+    try {
+        $sharedAssessmentScheduleDisplay = (new DateTime((string) $scholarship['assessment_schedule_at']))->format('M d, Y g:i A');
+    } catch (Throwable $e) {
+        $sharedAssessmentScheduleDisplay = 'Schedule to be announced';
+    }
+}
 
 $pushReason = static function (array &$reasons, string $reason, int $limit = 4): void {
     $normalized = trim(preg_replace('/\s+/', ' ', $reason) ?? $reason);
@@ -761,6 +769,14 @@ $applicationGuideItems = [
         'detail' => $postApplicationStepsText,
     ],
 ];
+
+if ($hasAssessment) {
+    $applicationGuideItems[] = [
+        'label' => 'Shared assessment schedule',
+        'value' => $sharedAssessmentScheduleDisplay,
+        'detail' => 'If a schedule is already set, accepted applicants will see the same exam timing in application tracking.',
+    ];
+}
 
 if ($requirementsCount > 0) {
     $uploadedRequirementCount = $requirementsCount - $missingCount;

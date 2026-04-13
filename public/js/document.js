@@ -82,6 +82,9 @@ class DocumentManager {
 
         if (this.elements.documentSearch) {
             this.elements.documentSearch.addEventListener('input', () => this.applyDocumentFilters());
+            this.elements.documentSearch.addEventListener('search', () => this.applyDocumentFilters());
+            this.elements.documentSearch.addEventListener('change', () => this.applyDocumentFilters());
+            this.elements.documentSearch.addEventListener('keyup', () => this.applyDocumentFilters());
         }
 
         if (this.elements.documentStatusFilter) {
@@ -275,6 +278,7 @@ class DocumentManager {
     normalizeFilterText(value) {
         return String(value || '')
             .toLowerCase()
+            .replace(/[^a-z0-9]+/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
     }
@@ -285,17 +289,14 @@ class DocumentManager {
     }
 
     getDocumentSearchHaystack(card) {
-        const datasetText = [
+        const datasetText = card.dataset.documentSearchIndex || [
             card.dataset.documentName || '',
             card.dataset.documentType || '',
             card.dataset.documentDescription || '',
-            card.dataset.documentFile || '',
-            card.dataset.documentStatus || '',
-            card.dataset.documentKeywords || ''
+            card.dataset.documentFile || ''
         ].join(' ');
 
-        const contentText = card.textContent || '';
-        return this.normalizeFilterText(`${datasetText} ${contentText}`);
+        return this.normalizeFilterText(datasetText);
     }
 
     matchesDocumentSearch(card, searchValue) {
@@ -379,7 +380,7 @@ class DocumentManager {
             'id': ['Valid government-issued ID', 'ID must not be expired', 'Photo and details must be clear', 'Both sides if applicable'],
             'birth_certificate': ['PSA or NSO issued birth certificate', 'Document must be complete and clear', 'No alterations or damage', 'Late registered? Include additional docs'],
             'grades': ['Official transcript or grade slip', 'Must show all subjects and grades', 'School seal and signature visible', 'Recent grades (last semester)'],
-            'form_138': ['Official senior high school report card', 'Student name and school year must be visible', 'Grades must be readable on every page', 'Upload the clearest copy available'],
+            'form_138': ['Official senior high school report card (Form 137/138)', 'Student name and school year must be visible', 'Grades must be readable on every page', 'Upload the clearest copy available'],
             'good_moral': ['Issued by school guidance office', 'Must include date of issue', 'Valid for current school year', 'School seal and signature'],
             'enrollment': ['Official enrollment certificate', 'Current school year', 'School seal and registrar signature', 'Complete student details'],
             'income_tax': ['Latest ITR from BIR', 'Must show parent/guardian name', 'Complete with tax details', 'Official BIR stamp'],

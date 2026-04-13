@@ -16,8 +16,14 @@ class Application extends Model {
 
     private function hasColumn(string $columnName): bool
     {
-        if (isset(self::$columnCache[$columnName])) {
-            return self::$columnCache[$columnName];
+        return $this->hasTableColumn($this->table, $columnName);
+    }
+
+    private function hasTableColumn(string $tableName, string $columnName): bool
+    {
+        $cacheKey = $tableName . '.' . $columnName;
+        if (isset(self::$columnCache[$cacheKey])) {
+            return self::$columnCache[$cacheKey];
         }
 
         try {
@@ -29,16 +35,16 @@ class Application extends Model {
                   AND COLUMN_NAME = :column_name
             ");
             $stmt->execute([
-                ':table_name' => $this->table,
+                ':table_name' => $tableName,
                 ':column_name' => $columnName,
             ]);
-            self::$columnCache[$columnName] = ((int) $stmt->fetchColumn()) > 0;
+            self::$columnCache[$cacheKey] = ((int) $stmt->fetchColumn()) > 0;
         } catch (Throwable $e) {
-            error_log('Application hasColumn error: ' . $e->getMessage());
-            self::$columnCache[$columnName] = false;
+            error_log('Application hasTableColumn error: ' . $e->getMessage());
+            self::$columnCache[$cacheKey] = false;
         }
 
-        return self::$columnCache[$columnName];
+        return self::$columnCache[$cacheKey];
     }
 
     private function hasTable(string $tableName): bool
@@ -83,7 +89,7 @@ class Application extends Model {
 
             try {
                 $this->pdo->exec($sql);
-                self::$columnCache[$columnName] = true;
+                self::$columnCache[$this->table . '.' . $columnName] = true;
             } catch (Throwable $e) {
                 error_log('Application ensureAssessmentColumns error (' . $columnName . '): ' . $e->getMessage());
             }
@@ -166,6 +172,10 @@ class Application extends Model {
             'sd.assessment_link',
             'sd.assessment_details'
         ];
+
+        $selectParts[] = $this->hasTableColumn('scholarship_data', 'assessment_schedule_at')
+            ? 'sd.assessment_schedule_at AS shared_assessment_schedule_at'
+            : 'NULL AS shared_assessment_schedule_at';
 
         $selectParts[] = $this->hasColumn('updated_at')
             ? 'a.updated_at'

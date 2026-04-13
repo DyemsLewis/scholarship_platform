@@ -513,7 +513,7 @@ $location_name = normalizeNullable($_POST['location_name'] ?? '');
 
 $errors = [];
 $torUpload = validateOptionalSignupUpload('signup_tor_file', 'TOR / grade report', $errors);
-$form138Upload = validateOptionalSignupUpload('signup_form138_file', 'Form 138', $errors);
+    $form138Upload = validateOptionalSignupUpload('signup_form138_file', 'Form 137/138', $errors);
 $citizenshipProofUpload = validateOptionalSignupUpload('signup_citizenship_file', 'Citizenship / residency proof', $errors);
 $incomeProofUpload = validateOptionalSignupUpload('signup_income_file', 'Household income proof', $errors);
 $specialCategoryProofUpload = validateOptionalSignupUpload('signup_special_category_file', 'Special category proof', $errors);
@@ -836,7 +836,7 @@ try {
 $signupUploadWarnings = [];
 
 ensureSignupDocumentType($pdo, 'grades', 'Transcript of Records', 'Official transcript of records or grade slip.');
-ensureSignupDocumentType($pdo, 'form_138', 'Form 138', 'Senior high school report card / Form 138.');
+    ensureSignupDocumentType($pdo, 'form_138', 'Form 137/138', 'Senior high school report card / Form 137 or 138.');
 ensureSignupDocumentType($pdo, 'citizenship_proof', 'Citizenship / Residency Proof', 'Birth certificate, passport, or residency document supporting citizenship or residency details.');
 ensureSignupDocumentType($pdo, 'income_proof', 'Household Income Proof', 'Income certificate, certificate of indigency, payslip, ITR, or similar household income supporting document.');
 ensureSignupDocumentType($pdo, 'special_category_proof', 'Special Category Proof', 'Supporting document for PWD, solo parent, IP, 4Ps, OFW, orphan, or other scholarship category claims.');
@@ -894,12 +894,12 @@ if (!empty($torUpload) || !empty($form138Upload) || !empty($citizenshipProofUplo
             'form_138',
             $form138Upload,
             'form138',
-            'Form 138',
-            'Senior high school report card / Form 138 uploaded during signup.'
+            'Form 137/138',
+            'Senior high school report card / Form 137 or 138 uploaded during signup.'
         );
 
         if (!($form138SaveResult['success'] ?? false)) {
-            $signupUploadWarnings[] = (string) ($form138SaveResult['message'] ?? 'Form 138 could not be saved right now.');
+                    $signupUploadWarnings[] = (string) ($form138SaveResult['message'] ?? 'Form 137/138 could not be saved right now.');
         } elseif (!empty($form138SaveResult['absolute_path'])) {
             try {
                 $ocrService = new OcrService();
@@ -923,19 +923,19 @@ if (!empty($torUpload) || !empty($form138Upload) || !empty($citizenshipProofUplo
                         if ($rawAcademicValue >= 60) {
                             $signupUploadWarnings[] = 'Detected SHS average: ' . number_format($rawAcademicValue, 2) . ' (normalized to ' . number_format($finalGwa, 2) . ' for scholarship eligibility).';
                         } else {
-                            $signupUploadWarnings[] = 'Detected academic score from Form 138: ' . number_format($finalGwa, 2) . '.';
+                            $signupUploadWarnings[] = 'Detected academic score from Form 137/138: ' . number_format($finalGwa, 2) . '.';
                         }
                     } else {
-                        $signupUploadWarnings[] = 'The uploaded Form 138 was scanned, but the detected academic score could not be saved yet.';
+                        $signupUploadWarnings[] = 'The uploaded Form 137/138 was scanned, but the detected academic score could not be saved yet.';
                     }
                 } elseif ($ocrResult['success'] ?? false) {
-                    $signupUploadWarnings[] = 'No academic score was detected from the uploaded Form 138. You can upload a clearer copy later.';
+                    $signupUploadWarnings[] = 'No academic score was detected from the uploaded Form 137/138. You can upload a clearer copy later.';
                 } else {
-                    $signupUploadWarnings[] = 'Scanner could not be completed for the uploaded Form 138 right now.';
+                    $signupUploadWarnings[] = 'Scanner could not be completed for the uploaded Form 137/138 right now.';
                 }
             } catch (Throwable $e) {
                 error_log('Signup Form 138 scan failed: ' . $e->getMessage());
-                $signupUploadWarnings[] = 'Scanner could not be completed for the uploaded Form 138 right now.';
+                $signupUploadWarnings[] = 'Scanner could not be completed for the uploaded Form 137/138 right now.';
             }
         }
     }

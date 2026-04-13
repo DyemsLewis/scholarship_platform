@@ -75,6 +75,7 @@ class Scholarship extends Model {
             'application_process_label',
             'assessment_requirement',
             'assessment_link',
+            'assessment_schedule_at',
             'assessment_details',
             'post_application_steps',
             'renewal_conditions',

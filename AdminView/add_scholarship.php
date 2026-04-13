@@ -65,6 +65,8 @@ if (is_array($decodedRemoteExamSites)) {
 $statusValue = scholarshipOldValue($scholarshipOld, 'status', 'active');
 $assessmentRequirementValue = scholarshipOldValue($scholarshipOld, 'assessment_requirement', 'none');
 $allowIfAlreadyAcceptedValue = scholarshipOldValue($scholarshipOld, 'allow_if_already_accepted', '1');
+$minimumDateValue = date('Y-m-d');
+$minimumDateTimeValue = date('Y-m-d\TH:i');
 $providerScope = getCurrentProviderScope($pdo);
 $isProviderScopedUser = !empty($providerScope['is_provider']);
 $currentProviderOrganization = $providerScope['organization_name'] ?? '';
@@ -670,14 +672,14 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
                                       </div>
                                       <div class="form-group-modern">
                                           <label><i class="fas fa-calendar-alt"></i> Application Deadline *</label>
-                                        <input type="date" name="deadline" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'deadline')); ?>" min="<?php echo htmlspecialchars(date('Y-m-d')); ?>" required>
+                                        <input type="date" name="deadline" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'deadline')); ?>" min="<?php echo htmlspecialchars($minimumDateValue); ?>" required>
                                     </div>
                                 </div>
 
                                 <div class="form-row-modern">
                                     <div class="form-group-modern">
                                         <label><i class="fas fa-door-open"></i> Application Opening Date</label>
-                                        <input type="date" name="application_open_date" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'application_open_date')); ?>">
+                                        <input type="date" name="application_open_date" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'application_open_date')); ?>" min="<?php echo htmlspecialchars($minimumDateValue); ?>">
                                         <small class="helper-text">Optional: use this if applications only start on a specific date.</small>
                                     </div>
                                     <div class="form-group-modern">
@@ -828,8 +830,14 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
                                     </div>
                                 </div>
                                 <div class="form-group-modern">
-                                    <label><i class="fas fa-note-sticky"></i> Assessment Details</label>
-                                    <textarea name="assessment_details" rows="3" placeholder="Instructions, schedule, or evaluation notes"><?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'assessment_details')); ?></textarea>
+                                    <label><i class="fas fa-calendar-check"></i> Shared Assessment Schedule</label>
+                                    <input type="datetime-local" name="assessment_schedule_at" value="<?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'assessment_schedule_at')); ?>" min="<?php echo htmlspecialchars($minimumDateTimeValue); ?>">
+                                    <small class="helper-text">This shared schedule appears for all accepted applicants, so staff do not need to schedule each student one by one.</small>
+                                </div>
+                                <div class="form-group-modern">
+                                    <label><i class="fas fa-note-sticky"></i> Shared Assessment Notes</label>
+                                    <textarea name="assessment_details" rows="3" placeholder="Instructions or reminders that should appear for all accepted applicants"><?php echo htmlspecialchars(scholarshipOldValue($scholarshipOld, 'assessment_details')); ?></textarea>
+                                    <small class="helper-text">Use this for shared instructions, reminders, or exam guidance shown in student tracking.</small>
                                 </div>
 
                                 <div class="form-card-modern" style="margin-top: 24px; border: 1px solid var(--gray-200);">
@@ -1343,8 +1351,20 @@ if ($isProviderScopedUser && $scholarshipReviewWorkflowReady) {
                     useMainPinBtn.addEventListener('click', () => {
                         const mainLat = document.getElementById('latitudeInput')?.value || '';
                         const mainLng = document.getElementById('longitudeInput')?.value || '';
+                        const mainAddress = document.getElementById('addressInput')?.value || '';
+                        const mainCity = document.getElementById('cityInput')?.value || '';
+                        const mainProvince = document.getElementById('provinceInput')?.value || '';
                         row.querySelector('[data-field="latitude"]').value = mainLat;
                         row.querySelector('[data-field="longitude"]').value = mainLng;
+                        if (mainAddress.trim() !== '') {
+                            row.querySelector('[data-field="address"]').value = mainAddress.trim();
+                        }
+                        if (mainCity.trim() !== '') {
+                            row.querySelector('[data-field="city"]').value = mainCity.trim();
+                        }
+                        if (mainProvince.trim() !== '') {
+                            row.querySelector('[data-field="province"]').value = mainProvince.trim();
+                        }
                         syncRemoteExamSites();
                     });
                 }

@@ -35,6 +35,35 @@ function applicationAssessmentTableExists(PDO $pdo, string $tableName): bool
     return $cache[$tableName];
 }
 
+function applicationAssessmentTableHasColumn(PDO $pdo, string $tableName, string $columnName): bool
+{
+    static $cache = [];
+    $cacheKey = $tableName . '.' . $columnName;
+    if (array_key_exists($cacheKey, $cache)) {
+        return $cache[$cacheKey];
+    }
+
+    try {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*)
+            FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = :table_name
+              AND COLUMN_NAME = :column_name
+        ");
+        $stmt->execute([
+            ':table_name' => $tableName,
+            ':column_name' => $columnName,
+        ]);
+        $cache[$cacheKey] = ((int) $stmt->fetchColumn()) > 0;
+    } catch (Throwable $e) {
+        error_log('application_assessment_process tableHasColumn error: ' . $e->getMessage());
+        $cache[$cacheKey] = false;
+    }
+
+    return $cache[$cacheKey];
+}
+
 function normalizeAssessmentStatusLabel(string $status): string
 {
     $map = [
@@ -99,6 +128,9 @@ if (!providerCanAccessApplication($pdo, $applicationId)) {
 
 $applicationModel = new Application($pdo);
 $applicationModel->ensureAssessmentColumns();
+$sharedAssessmentScheduleSelect = applicationAssessmentTableHasColumn($pdo, 'scholarship_data', 'assessment_schedule_at')
+    ? 'sd2.assessment_schedule_at AS shared_assessment_schedule_at,'
+    : 'NULL AS shared_assessment_schedule_at,';
 
 try {
     $stmt = $pdo->prepare("
@@ -120,6 +152,7 @@ try {
             sd2.provider AS provider_name,
             sd2.assessment_requirement,
             sd2.assessment_link,
+            {$sharedAssessmentScheduleSelect}
             sd2.assessment_details
         FROM applications a
         JOIN scholarships s ON s.id = a.scholarship_id
@@ -230,6 +263,8 @@ if ($assessmentRequirement === 'remote_examination') {
 $effectiveLink = $assessmentLinkOverride !== ''
     ? $assessmentLinkOverride
     : trim((string) ($application['assessment_link'] ?? ''));
+$effectiveScheduleAt = $assessmentScheduleAt ?? (!empty($application['shared_assessment_schedule_at']) ? (string) $application['shared_assessment_schedule_at'] : null);
+$effectiveNotes = $assessmentNotes !== '' ? $assessmentNotes : trim((string) ($application['assessment_details'] ?? ''));
 
 $payload = [
     'assessment_status' => $assessmentStatus,
@@ -250,8 +285,8 @@ try {
         'Your ' . strtolower($assessmentTypeLabel) . ' for ' . $scholarshipName . ' is now marked as ' . strtolower($statusLabel) . '.',
     ];
 
-    if ($assessmentScheduleAt !== null) {
-        $messageParts[] = 'Schedule: ' . (new DateTime($assessmentScheduleAt))->format('M d, Y g:i A') . '.';
+    if ($effectiveScheduleAt !== null) {
+        $messageParts[] = 'Schedule: ' . (new DateTime($effectiveScheduleAt))->format('M d, Y g:i A') . '.';
     }
 
     if ($selectedSiteLabel !== '') {
@@ -262,8 +297,8 @@ try {
         $messageParts[] = 'Open your application tracking to access the exam link.';
     }
 
-    if ($assessmentNotes !== '') {
-        $messageParts[] = 'Latest note: ' . $assessmentNotes;
+    if ($effectiveNotes !== '') {
+        $messageParts[] = 'Latest note: ' . $effectiveNotes;
     }
 
     createNotificationsForUsers(
@@ -295,7 +330,7 @@ try {
                 'application_id' => $applicationId,
                 'assessment_requirement' => $assessmentRequirement,
                 'assessment_status' => $assessmentStatus,
-                'assessment_schedule_at' => $assessmentScheduleAt,
+                'assessment_schedule_at' => $effectiveScheduleAt,
                 'assessment_site_id' => $assessmentSiteId,
                 'assessment_link_override' => $assessmentLinkOverride !== '' ? $assessmentLinkOverride : null,
             ],

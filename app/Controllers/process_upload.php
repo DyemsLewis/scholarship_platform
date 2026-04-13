@@ -147,7 +147,7 @@ function resolveAcademicDocumentType(PDO $pdo, ?string $applicantType): ?string
             return $preferredCode;
         }
 
-        return ensureDocumentTypeExists($pdo, 'form_138', 'Form 138', 'Senior high school report card / Form 138');
+        return ensureDocumentTypeExists($pdo, 'form_138', 'Form 137/138', 'Senior high school report card / Form 137 or 138');
     }
 
     if (empty($types)) {
@@ -169,12 +169,12 @@ function resolveAcademicDocumentType(PDO $pdo, ?string $applicantType): ?string
 
 function getAcademicDocumentLabel(string $documentType): string
 {
-    return strtolower(trim($documentType)) === 'form_138' ? 'Form 138' : 'academic record';
+    return strtolower(trim($documentType)) === 'form_138' ? 'Form 137/138' : 'academic record';
 }
 
 function getAcademicEntityName(string $documentType): string
 {
-    return strtolower(trim($documentType)) === 'form_138' ? 'Form 138' : 'Grades / Academic Record';
+    return strtolower(trim($documentType)) === 'form_138' ? 'Form 137/138' : 'Grades / Academic Record';
 }
 
 function resolveStudentApplicantType(PDO $pdo, int $userId): string

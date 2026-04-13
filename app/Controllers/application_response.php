@@ -154,6 +154,13 @@ if (!$csrfValidation['valid']) {
     exit();
 }
 
+$acceptTermsConfirmation = trim((string) ($_POST['accept_terms_confirmation'] ?? '0'));
+if ($acceptTermsConfirmation !== '1') {
+    $_SESSION['error'] = 'Please review and agree to the scholarship acceptance terms before confirming your scholarship.';
+    header('Location: ' . normalizeAppUrl($redirectUrl));
+    exit();
+}
+
 $hasStudentResponseStatus = applicationResponseHasColumn($pdo, 'applications', 'student_response_status');
 $hasStudentRespondedAt = applicationResponseHasColumn($pdo, 'applications', 'student_responded_at');
 

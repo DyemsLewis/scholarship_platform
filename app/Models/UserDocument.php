@@ -16,7 +16,7 @@ class UserDocument extends Model {
             ['code' => 'id', 'name' => 'Valid ID', 'description' => 'Government-issued ID (passport, driver\'s license, school ID)', 'icon' => 'id-card'],
             ['code' => 'birth_certificate', 'name' => 'Birth Certificate', 'description' => 'PSA or NSO issued birth certificate', 'icon' => 'baby'],
             ['code' => 'grades', 'name' => 'Transcript of Records', 'description' => 'Official transcript or grade slip', 'icon' => 'scroll'],
-            ['code' => 'form_138', 'name' => 'Form 138', 'description' => 'Senior high school report card / Form 138', 'icon' => 'file-lines'],
+            ['code' => 'form_138', 'name' => 'Form 137/138', 'description' => 'Senior high school report card / Form 137 or 138', 'icon' => 'file-lines'],
             ['code' => 'good_moral', 'name' => 'Good Moral Character', 'description' => 'Certificate from school guidance office', 'icon' => 'hand-holding-heart'],
             ['code' => 'enrollment', 'name' => 'Proof of Enrollment', 'description' => 'Certificate of enrollment or registration form', 'icon' => 'user-graduate'],
             ['code' => 'income_tax', 'name' => 'Income Tax Return', 'description' => 'ITR of parents or guardian (if applicable)', 'icon' => 'file-invoice'],

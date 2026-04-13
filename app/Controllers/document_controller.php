@@ -189,7 +189,7 @@ class DocumentController {
             'id' => 'Valid ID',
             'birth_certificate' => 'Birth Certificate',
             'grades' => 'Transcript of Records',
-            'form_138' => 'Form 138',
+            'form_138' => 'Form 137/138',
             'good_moral' => 'Good Moral Character',
             'enrollment' => 'Proof of Enrollment',
             'income_tax' => 'Income Tax Return',

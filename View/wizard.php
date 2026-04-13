@@ -125,10 +125,17 @@ if (!function_exists('applicationTrackingBuildTimelineData')) {
         }
 
         $assessmentNotes = trim((string) ($application['assessment_notes'] ?? ''));
+        if ($assessmentNotes === '') {
+            $assessmentNotes = trim((string) ($application['assessment_details'] ?? ''));
+        }
         $assessmentScheduleValue = !empty($application['assessment_schedule_at'])
             ? (string) $application['assessment_schedule_at']
-            : '';
+            : (!empty($application['shared_assessment_schedule_at'])
+                ? (string) $application['shared_assessment_schedule_at']
+                : '');
         $assessmentScheduleLabel = applicationTrackingFormatTimelineDate($assessmentScheduleValue, 'Not scheduled yet');
+        $assessmentScheduleTimestamp = $assessmentScheduleValue !== '' ? strtotime($assessmentScheduleValue) : false;
+        $assessmentAccessWindowOpen = $assessmentScheduleTimestamp !== false && time() >= $assessmentScheduleTimestamp;
 
         $assessmentSiteParts = array_filter([
             trim((string) ($application['assessment_site_name'] ?? '')),
@@ -149,7 +156,7 @@ if (!function_exists('applicationTrackingBuildTimelineData')) {
                     'id' => (int) ($application['scholarship_id'] ?? 0),
                 ]);
                 $assessmentActionLabel = 'View Exam Sites';
-            } elseif ($assessmentLink !== '') {
+            } elseif ($assessmentLink !== '' && $assessmentAccessWindowOpen) {
                 $assessmentActionUrl = $assessmentLink;
                 $assessmentActionLabel = 'Open Exam Portal';
                 $assessmentActionExternal = true;
@@ -216,6 +223,15 @@ if (!function_exists('applicationTrackingBuildTimelineData')) {
                         $assessmentStepState = 'current';
                         $assessmentStepIcon = 'fa-file-signature';
                         break;
+                }
+
+                if ($assessmentRequirement !== 'remote_examination' && $assessmentLink !== '' && !$assessmentAccessWindowOpen) {
+                    $accessNote = $assessmentScheduleValue !== ''
+                        ? ('The exam link will be available on ' . $assessmentScheduleLabel . '.')
+                        : 'The exam link will appear once the schedule is set.';
+                    $assessmentStatusNote = trim($assessmentStatusNote) !== ''
+                        ? ($assessmentStatusNote . ' ' . $accessNote)
+                        : $accessNote;
                 }
 
                 if ($assessmentNotes !== '') {
@@ -328,12 +344,6 @@ if (!function_exists('applicationTrackingBuildTimelineData')) {
                     ? 'complete'
                     : ($applicationStatus === 'approved' ? 'current' : 'upcoming'),
                 'icon' => 'fa-handshake',
-            ];
-            $timelineSteps[] = [
-                'label' => $assessmentTypeLabel,
-                'detail' => $assessmentStatusNote !== '' ? $assessmentStatusNote : 'Assessment updates will appear here after your confirmation.',
-                'state' => $studentAccepted ? $assessmentStepState : 'upcoming',
-                'icon' => $assessmentStepIcon,
             ];
         } else {
             $timelineSteps[] = [
@@ -493,6 +503,9 @@ if ($isLoggedIn && $scholarshipId > 0) {
         $assessmentLinkSelect = tableHasColumn($pdo, 'scholarship_data', 'assessment_link')
             ? 'sd.assessment_link'
             : 'NULL AS assessment_link';
+        $assessmentScheduleSelect = tableHasColumn($pdo, 'scholarship_data', 'assessment_schedule_at')
+            ? 'sd.assessment_schedule_at'
+            : 'NULL AS assessment_schedule_at';
         $assessmentDetailsSelect = tableHasColumn($pdo, 'scholarship_data', 'assessment_details')
             ? 'sd.assessment_details'
             : 'NULL AS assessment_details';
@@ -500,7 +513,7 @@ if ($isLoggedIn && $scholarshipId > 0) {
             ? 'sd.allow_if_already_accepted'
             : '1 AS allow_if_already_accepted';
 
-        $stmt = $pdo->prepare("\n            SELECT\n                s.*,\n                sd.image AS scholarship_image,\n                sd.provider,\n                sd.benefits,\n                sd.address,\n                sd.city,\n                sd.province,\n                {$applicationOpenDateSelect},\n                sd.deadline,\n                {$applicationProcessLabelSelect},\n                {$assessmentRequirementSelect},\n                {$assessmentLinkSelect},\n                {$assessmentDetailsSelect},\n                {$postApplicationStepsSelect},\n                {$renewalConditionsSelect},\n                {$scholarshipRestrictionsSelect},\n                {$allowIfAlreadyAcceptedSelect}\n            FROM scholarships s\n            LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id\n            WHERE s.id = ? AND s.status = 'active'\n            LIMIT 1\n        ");
+        $stmt = $pdo->prepare("\n            SELECT\n                s.*,\n                sd.image AS scholarship_image,\n                sd.provider,\n                sd.benefits,\n                sd.address,\n                sd.city,\n                sd.province,\n                {$applicationOpenDateSelect},\n                sd.deadline,\n                {$applicationProcessLabelSelect},\n                {$assessmentRequirementSelect},\n                {$assessmentLinkSelect},\n                {$assessmentScheduleSelect},\n                {$assessmentDetailsSelect},\n                {$postApplicationStepsSelect},\n                {$renewalConditionsSelect},\n                {$scholarshipRestrictionsSelect},\n                {$allowIfAlreadyAcceptedSelect}\n            FROM scholarships s\n            LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id\n            WHERE s.id = ? AND s.status = 'active'\n            LIMIT 1\n        ");
         $stmt->execute([$scholarshipId]);
         $scholarship = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
     } catch (Throwable $e) {
@@ -696,6 +709,14 @@ if ($assessmentType === 'online_exam') {
     $assessmentLabel = 'Online Assessment';
 } elseif ($assessmentType === 'evaluation') {
     $assessmentLabel = 'Online Evaluation';
+}
+$assessmentScheduleDisplay = 'Schedule to be announced';
+if (!empty($scholarship['assessment_schedule_at'])) {
+    try {
+        $assessmentScheduleDisplay = (new DateTime((string) $scholarship['assessment_schedule_at']))->format('M d, Y g:i A');
+    } catch (Throwable $e) {
+        $assessmentScheduleDisplay = 'Schedule to be announced';
+    }
 }
 
 $applicationProcessLabel = trim((string) ($scholarship['application_process_label'] ?? ''));
@@ -1466,15 +1487,16 @@ if ($wizardProfileInitials === '') {
                                             <strong class="wizard-submit-value"><?php echo htmlspecialchars($assessmentDetails); ?></strong>
                                         </div>
                                     <?php endif; ?>
+                                    <?php if ($assessmentLabel !== 'None'): ?>
+                                        <div>
+                                            <span class="wizard-submit-label">Assessment schedule</span>
+                                            <strong class="wizard-submit-value"><?php echo htmlspecialchars($assessmentScheduleDisplay); ?></strong>
+                                        </div>
+                                    <?php endif; ?>
                                     <?php if ($assessmentType === 'remote_examination' && !empty($remoteExamLocations)): ?>
                                         <div>
                                             <span class="wizard-submit-label">Exam sites</span>
                                             <strong class="wizard-submit-value"><a href="<?php echo htmlspecialchars($remoteExamMapUrl); ?>" class="wizard-inline-action">View all sites on map</a></strong>
-                                        </div>
-                                    <?php elseif (!empty($scholarship['assessment_link'])): ?>
-                                        <div>
-                                            <span class="wizard-submit-label">Assessment link</span>
-                                            <strong class="wizard-submit-value"><a href="<?php echo htmlspecialchars((string) $scholarship['assessment_link']); ?>" class="wizard-inline-action" target="_blank" rel="noopener noreferrer">Open assessment page</a></strong>
                                         </div>
                                     <?php endif; ?>
                                 </div>
@@ -1561,6 +1583,147 @@ function showWizardPrivacy() {
     }
 }
 
+function escapeWizardModalHtml(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function buildScholarshipAcceptanceTermsHtml(scholarshipName) {
+    const safeScholarshipName = escapeWizardModalHtml(scholarshipName || 'this scholarship');
+
+    return `
+        <div class="policy-modal policy-modal--terms">
+            <div class="policy-modal-hero">
+                <div class="policy-modal-icon">
+                    <i class="fas fa-file-signature"></i>
+                </div>
+                <div class="policy-modal-hero-copy">
+                    <span class="policy-modal-eyebrow">Scholarship Acceptance Terms</span>
+                    <h3>Review before accepting ${safeScholarshipName}</h3>
+                    <p>Your confirmation will be saved in the system and shared with the scholarship team so they can continue with the next step of your award process.</p>
+                </div>
+            </div>
+            <div class="policy-modal-grid">
+                <article class="policy-modal-section">
+                    <div class="policy-modal-section-number">1</div>
+                    <div class="policy-modal-section-copy">
+                        <h4>Acceptance will be recorded</h4>
+                        <p>Choosing to continue confirms that you are accepting this scholarship offer in Scholarship Finder.</p>
+                    </div>
+                </article>
+                <article class="policy-modal-section">
+                    <div class="policy-modal-section-number">2</div>
+                    <div class="policy-modal-section-copy">
+                        <h4>Watch for next-step instructions</h4>
+                        <p>After acceptance, keep checking Application Tracking and your email for updates, schedules, or follow-up instructions.</p>
+                    </div>
+                </article>
+                <article class="policy-modal-section">
+                    <div class="policy-modal-section-number">3</div>
+                    <div class="policy-modal-section-copy">
+                        <h4>Keep your records accurate</h4>
+                        <p>Your contact details, profile information, and submitted documents should stay accurate and available for any additional review.</p>
+                    </div>
+                </article>
+                <article class="policy-modal-section">
+                    <div class="policy-modal-section-number">4</div>
+                    <div class="policy-modal-section-copy">
+                        <h4>Provider conditions may still apply</h4>
+                        <p>If the scholarship includes an online exam, remote examination, or another follow-up step, you are expected to follow the schedule and instructions provided.</p>
+                    </div>
+                </article>
+            </div>
+            <div class="policy-modal-acceptance-box">
+                <label class="policy-modal-checkbox" for="acceptScholarshipTermsCheck">
+                    <input type="checkbox" id="acceptScholarshipTermsCheck">
+                    <div class="policy-modal-checkbox-copy">
+                        <strong>I have read and agree to the scholarship acceptance terms for ${safeScholarshipName}.</strong>
+                        <span>I understand that my acceptance will be recorded and the scholarship team may send follow-up instructions after this step.</span>
+                    </div>
+                </label>
+                <p class="policy-modal-acceptance-note">Continue only if you are ready to follow the scholarship's next-step requirements and any review instructions tied to this award.</p>
+            </div>
+        </div>
+    `;
+}
+
+async function openScholarshipAcceptanceTerms(form) {
+    const scholarshipName = form.dataset.scholarshipName || 'this scholarship';
+    const confirmationInput = form.querySelector('.application-response-terms-input');
+
+    if (!window.Swal || typeof window.Swal.fire !== 'function') {
+        const accepted = window.confirm(
+            `By accepting ${scholarshipName}, you confirm that you agree to the scholarship acceptance terms and will follow the next-step instructions shown in Scholarship Finder.`
+        );
+
+        if (confirmationInput) {
+            confirmationInput.value = accepted ? '1' : '0';
+        }
+
+        return accepted;
+    }
+
+    const result = await window.Swal.fire({
+        html: buildScholarshipAcceptanceTermsHtml(scholarshipName),
+        width: 760,
+        padding: '0',
+        showCancelButton: true,
+        showCloseButton: false,
+        confirmButtonText: 'Agree and Accept Scholarship',
+        cancelButtonText: 'Cancel',
+        buttonsStyling: false,
+        focusConfirm: false,
+        customClass: {
+            popup: 'policy-modal-popup',
+            htmlContainer: 'policy-modal-html',
+            confirmButton: 'policy-modal-confirm',
+            cancelButton: 'policy-modal-secondary'
+        },
+        didOpen: () => {
+            const popup = window.Swal.getPopup();
+            const checkbox = popup ? popup.querySelector('#acceptScholarshipTermsCheck') : null;
+            const confirmButton = window.Swal.getConfirmButton();
+
+            if (confirmButton) {
+                confirmButton.disabled = true;
+                confirmButton.classList.add('is-disabled');
+            }
+
+            if (!checkbox || !confirmButton) {
+                return;
+            }
+
+            checkbox.addEventListener('change', () => {
+                const isChecked = checkbox.checked;
+                confirmButton.disabled = !isChecked;
+                confirmButton.classList.toggle('is-disabled', !isChecked);
+            });
+        },
+        preConfirm: () => {
+            const popup = window.Swal.getPopup();
+            const checkbox = popup ? popup.querySelector('#acceptScholarshipTermsCheck') : null;
+
+            if (!checkbox || !checkbox.checked) {
+                window.Swal.showValidationMessage('Please agree to the scholarship acceptance terms before continuing.');
+                return false;
+            }
+
+            return true;
+        }
+    });
+
+    const confirmed = !!result.isConfirmed;
+    if (confirmationInput) {
+        confirmationInput.value = confirmed ? '1' : '0';
+    }
+
+    return confirmed;
+}
+
 document.querySelectorAll('.application-response-form').forEach((form) => {
     form.addEventListener('submit', async (event) => {
         if (form.dataset.confirmed === '1') {
@@ -1569,27 +1732,13 @@ document.querySelectorAll('.application-response-form').forEach((form) => {
 
         event.preventDefault();
 
-        const scholarshipName = form.dataset.scholarshipName || 'this scholarship';
-        if (!window.Swal || typeof window.Swal.fire !== 'function') {
-            form.dataset.confirmed = '1';
-            form.submit();
+        const accepted = await openScholarshipAcceptanceTerms(form);
+        if (!accepted) {
             return;
         }
 
-        const result = await window.Swal.fire({
-            title: 'Accept scholarship?',
-            text: `You are about to confirm your acceptance for ${scholarshipName}.`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Accept Scholarship',
-            confirmButtonColor: '#2c5aa0',
-            cancelButtonColor: '#64748b'
-        });
-
-        if (result.isConfirmed) {
-            form.dataset.confirmed = '1';
-            form.submit();
-        }
+        form.dataset.confirmed = '1';
+        form.submit();
     });
 });
 </script>

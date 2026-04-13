@@ -40,7 +40,7 @@ $guestPagesCssVersion = @filemtime(__DIR__ . '/../public/css/guest-pages.css') ?
                 <article class="guest-info-card">
                     <div class="guest-icon"><i class="fas fa-graduation-cap"></i></div>
                     <h3>Academic Record</h3>
-                    <p>Keep your latest grades, report card, TOR, or Form 138 ready because many scholarships depend on academic standing.</p>
+                    <p>Keep your latest grades, report card, TOR, or Form 137/138 ready because many scholarships depend on academic standing.</p>
                 </article>
 
                 <article class="guest-info-card">

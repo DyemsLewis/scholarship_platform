@@ -181,8 +181,9 @@
                     <input type="hidden" name="action" value="accept">
                     <?php echo csrfInputField('application_accept'); ?>
                     <input type="hidden" name="id" value="<?php echo (int) ($applicationItem['id'] ?? 0); ?>">
+                    <input type="hidden" name="accept_terms_confirmation" value="0" class="application-response-terms-input">
                     <button type="submit" class="btn btn-primary application-response-btn">
-                        <i class="fas fa-circle-check"></i> Accept Scholarship
+                        <i class="fas fa-circle-check"></i> Review Terms & Accept
                     </button>
                 </form>
             </div>

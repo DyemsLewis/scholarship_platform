@@ -272,7 +272,7 @@ if (!function_exists('getApplicantAcademicRequirementLabel')) {
 if (!function_exists('getApplicantAcademicDocumentLabel')) {
     function getApplicantAcademicDocumentLabel($applicantType): string
     {
-        return isIncomingFreshmanApplicantType($applicantType) ? 'Form 138' : 'TOR/grades';
+        return isIncomingFreshmanApplicantType($applicantType) ? 'Form 137/138' : 'TOR/grades';
     }
 }
 

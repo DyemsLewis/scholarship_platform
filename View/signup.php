@@ -614,7 +614,7 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
                             <div class="academic-path-note compact-doc-note">
                                 <i class="fas fa-circle-info"></i>
                                 <div id="signupSupportingDocsNoteText">
-                                    These uploads are optional during signup. TOR is helpful for current college students, Form 138 is helpful for incoming freshmen, and the support files below can back up citizenship, income, or scholarship-category details. You can still upload clearer copies later in Documents.
+                                    These uploads are optional during signup. TOR is helpful for current college students, Form 137/138 is helpful for incoming freshmen, and the support files below can back up citizenship, income, or scholarship-category details. You can still upload clearer copies later in Documents.
                                 </div>
                             </div>
 
@@ -641,12 +641,12 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
                                 <div class="compact-upload-card" id="signupForm138UploadCard">
                                     <div class="compact-upload-header">
                                         <div>
-                                            <h4>Form 138</h4>
+                                            <h4>Form 137/138</h4>
                                             <p>Senior high school report card in PDF, JPG, or PNG up to 5MB.</p>
                                         </div>
                                         <span class="compact-upload-badge">Optional</span>
                                     </div>
-                                    <label for="signupForm138File" class="compact-upload-label">Upload Form 138</label>
+                                    <label for="signupForm138File" class="compact-upload-label">Upload Form 137/138</label>
                                     <input
                                         type="file"
                                         id="signupForm138File"
@@ -1086,7 +1086,7 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
     const optionalUploadAllowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
     const compactUploadFields = [
         { input: torFileInput, status: torFileStatus, label: 'TOR / grade report' },
-        { input: form138FileInput, status: form138FileStatus, label: 'Form 138' },
+        { input: form138FileInput, status: form138FileStatus, label: 'Form 137/138' },
         { input: citizenshipFileInput, status: citizenshipFileStatus, label: 'Citizenship / residency proof' },
         { input: incomeFileInput, status: incomeFileStatus, label: 'Household income proof' },
         { input: specialCategoryFileInput, status: specialCategoryFileStatus, label: 'Special category proof' }
@@ -1342,7 +1342,7 @@ $verifiedEmailStateValue = ($signupEmailValue !== '' && isSignupEmailVerified($p
 
         if (supportingDocsNoteText) {
             if (isIncoming) {
-                supportingDocsNoteText.textContent = 'Form 138 is shown for incoming freshmen. You can also attach support files for citizenship, income, or scholarship-category details during signup.';
+                supportingDocsNoteText.textContent = 'Form 137/138 is shown for incoming freshmen. You can also attach support files for citizenship, income, or scholarship-category details during signup.';
             } else if (isCurrentStudent) {
                 supportingDocsNoteText.textContent = 'TOR / Grade Report is shown for current college applicants. You can also attach support files for citizenship, income, or scholarship-category details during signup.';
             } else {

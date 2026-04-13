@@ -67,6 +67,7 @@ function ensureScholarshipStudentInfoColumns(PDO $pdo): void {
         'renewal_conditions' => "ALTER TABLE scholarship_data ADD COLUMN renewal_conditions TEXT NULL",
         'scholarship_restrictions' => "ALTER TABLE scholarship_data ADD COLUMN scholarship_restrictions TEXT NULL",
         'allow_if_already_accepted' => "ALTER TABLE scholarship_data ADD COLUMN allow_if_already_accepted TINYINT(1) NOT NULL DEFAULT 1",
+        'assessment_schedule_at' => "ALTER TABLE scholarship_data ADD COLUMN assessment_schedule_at DATETIME NULL",
     ];
 
     foreach ($columnDefinitions as $columnName => $sql) {
@@ -93,7 +94,7 @@ function normalizeChoice($value, array $allowedValues, ?string $default = null):
     return in_array($normalized, $allowedValues, true) ? $normalized : null;
 }
 
-function validateScholarshipDeadline(string $deadline, array &$errors): ?string {
+function validateScholarshipDeadline(string $deadline, array &$errors, ?string $allowExistingValue = null): ?string {
     $normalized = trim($deadline);
     if ($normalized === '') {
         return null;
@@ -110,7 +111,7 @@ function validateScholarshipDeadline(string $deadline, array &$errors): ?string 
     }
 
     $today = new DateTime('today');
-    if ($date < $today) {
+    if ($date < $today && $normalized !== trim((string) $allowExistingValue)) {
         $errors[] = 'Deadline cannot be set to a past date.';
         return null;
     }
@@ -118,7 +119,7 @@ function validateScholarshipDeadline(string $deadline, array &$errors): ?string 
     return $normalized;
 }
 
-function validateScholarshipCalendarDate(string $dateValue, string $label, array &$errors): ?string {
+function validateScholarshipCalendarDate(string $dateValue, string $label, array &$errors, bool $disallowPast = false, ?string $allowExistingValue = null): ?string {
     $normalized = trim($dateValue);
     if ($normalized === '') {
         return null;
@@ -134,7 +135,80 @@ function validateScholarshipCalendarDate(string $dateValue, string $label, array
         return null;
     }
 
+    if ($disallowPast) {
+        $today = new DateTime('today');
+        if ($date < $today && $normalized !== trim((string) $allowExistingValue)) {
+            $errors[] = $label . ' cannot be set to a past date.';
+            return null;
+        }
+    }
+
     return $normalized;
+}
+
+function validateScholarshipScheduleDateTime(string $dateTimeValue, array &$errors, ?string $allowExistingValue = null): ?string
+{
+    $normalized = trim($dateTimeValue);
+    if ($normalized === '') {
+        return '';
+    }
+
+    try {
+        $dateTime = new DateTime($normalized);
+    } catch (Throwable $e) {
+        $errors[] = 'Assessment schedule must be a valid date and time.';
+        return '';
+    }
+
+    $formatted = $dateTime->format('Y-m-d H:i:s');
+    $currentMoment = new DateTime();
+    if ($dateTime < $currentMoment && $formatted !== trim((string) $allowExistingValue)) {
+        $errors[] = 'Assessment schedule cannot be set to a past date and time.';
+        return '';
+    }
+
+    return $formatted;
+}
+
+function getScholarshipExistingCalendarValues(PDO $pdo, int $scholarshipId): array
+{
+    $default = [
+        'deadline' => '',
+        'application_open_date' => '',
+        'assessment_schedule_at' => '',
+    ];
+
+    if ($scholarshipId <= 0) {
+        return $default;
+    }
+
+    $selectParts = [
+        tableHasColumn($pdo, 'scholarship_data', 'deadline')
+            ? 'sd.deadline'
+            : 'NULL AS deadline',
+        tableHasColumn($pdo, 'scholarship_data', 'application_open_date')
+            ? 'sd.application_open_date'
+            : 'NULL AS application_open_date',
+        tableHasColumn($pdo, 'scholarship_data', 'assessment_schedule_at')
+            ? 'sd.assessment_schedule_at'
+            : 'NULL AS assessment_schedule_at',
+    ];
+
+    $stmt = $pdo->prepare("
+        SELECT " . implode(', ', $selectParts) . "
+        FROM scholarships s
+        LEFT JOIN scholarship_data sd ON s.id = sd.scholarship_id
+        WHERE s.id = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$scholarshipId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+    return [
+        'deadline' => trim((string) ($row['deadline'] ?? '')),
+        'application_open_date' => trim((string) ($row['application_open_date'] ?? '')),
+        'assessment_schedule_at' => trim((string) ($row['assessment_schedule_at'] ?? '')),
+    ];
 }
 
 function storeScholarshipOldInput(array $input): void {
@@ -167,6 +241,7 @@ function storeScholarshipOldInput(array $input): void {
         'province',
         'assessment_requirement',
         'assessment_link',
+        'assessment_schedule_at',
         'assessment_details',
         'remote_exam_sites',
         'requirements',
@@ -404,6 +479,9 @@ function buildScholarshipDataPayload(PDO $pdo, array $input, ?string $image): ar
     }
     if (tableHasColumn($pdo, 'scholarship_data', 'assessment_link')) {
         $payload['assessment_link'] = nullableString($input['assessment_link'] ?? '');
+    }
+    if (tableHasColumn($pdo, 'scholarship_data', 'assessment_schedule_at')) {
+        $payload['assessment_schedule_at'] = nullableString($input['assessment_schedule_at'] ?? '');
     }
     if (tableHasColumn($pdo, 'scholarship_data', 'assessment_details')) {
         $payload['assessment_details'] = nullableString($input['assessment_details'] ?? '');
@@ -935,6 +1013,8 @@ $city = trim((string) ($_POST['city'] ?? ''));
 $province = trim((string) ($_POST['province'] ?? ''));
 $assessmentRequirement = trim((string) ($_POST['assessment_requirement'] ?? 'none'));
 $assessmentLink = trim((string) ($_POST['assessment_link'] ?? ''));
+$assessmentScheduleInput = trim((string) ($_POST['assessment_schedule_at'] ?? ''));
+$assessmentScheduleAt = '';
 $assessmentDetails = trim((string) ($_POST['assessment_details'] ?? ''));
 $remoteExamSitesJson = (string) ($_POST['remote_exam_sites'] ?? '[]');
 
@@ -964,6 +1044,11 @@ $existingReviewState = $isUpdate && $reviewWorkflowReady ? getScholarshipReviewS
     'reviewed_at' => null
 ];
 $existingReviewStatus = strtolower(trim((string) ($existingReviewState['review_status'] ?? '')));
+$existingCalendarValues = $isUpdate ? getScholarshipExistingCalendarValues($pdo, $scholarshipId) : [
+    'deadline' => '',
+    'application_open_date' => '',
+    'assessment_schedule_at' => '',
+];
 $reviewStatusForSave = null;
 $reviewNotesForSave = null;
 $reviewedByUserIdForSave = null;
@@ -982,12 +1067,18 @@ if ($name === '') {
 if ($deadline === '') {
     $errors[] = 'Deadline is required';
 } else {
-    $validatedDeadline = validateScholarshipDeadline($deadline, $errors);
+    $validatedDeadline = validateScholarshipDeadline($deadline, $errors, $existingCalendarValues['deadline'] ?? '');
     if ($validatedDeadline !== null) {
         $deadline = $validatedDeadline;
     }
 }
-$validatedOpenDate = validateScholarshipCalendarDate($applicationOpenDate, 'Application opening date', $errors);
+$validatedOpenDate = validateScholarshipCalendarDate(
+    $applicationOpenDate,
+    'Application opening date',
+    $errors,
+    true,
+    $existingCalendarValues['application_open_date'] ?? ''
+);
 if ($validatedOpenDate !== null) {
     $applicationOpenDate = $validatedOpenDate;
 }
@@ -1048,6 +1139,14 @@ if ($targetSpecialCategory === null) {
 }
 if ($applicationProcessLabel !== '' && (function_exists('mb_strlen') ? mb_strlen($applicationProcessLabel) : strlen($applicationProcessLabel)) > 150) {
     $errors[] = 'Application process label is too long.';
+}
+
+if ($assessmentScheduleInput !== '') {
+    $assessmentScheduleAt = validateScholarshipScheduleDateTime(
+        $assessmentScheduleInput,
+        $errors,
+        $existingCalendarValues['assessment_schedule_at'] ?? ''
+    );
 }
 
 [$latitude, $longitude] = parseCoordinates($latitudeRaw, $longitudeRaw, $errors);
@@ -1136,6 +1235,7 @@ try {
         'province' => $province,
         'assessment_requirement' => $assessmentRequirement,
         'assessment_link' => $assessmentLink,
+        'assessment_schedule_at' => $assessmentScheduleAt,
         'assessment_details' => $assessmentDetails
     ];
 
@@ -1190,6 +1290,7 @@ try {
             'target_special_category' => $targetSpecialCategory,
             'allow_if_already_accepted' => (int) $allowIfAlreadyAccepted,
             'assessment_requirement' => $assessmentRequirement,
+            'assessment_schedule_at' => $assessmentScheduleAt !== '' ? $assessmentScheduleAt : null,
             'required_documents' => $requirementsCount,
             'remote_exam_sites' => $remoteExamCount,
             'review_status' => $reviewStatusForSave ?? ($existingReviewStatus !== '' ? $existingReviewStatus : null)

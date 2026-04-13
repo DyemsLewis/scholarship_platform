@@ -2619,9 +2619,85 @@ body.report-issue-open {
     transition: background-color 0.2s ease, transform 0.2s ease;
 }
 
+.policy-modal-confirm:disabled,
+.policy-modal-confirm.is-disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    opacity: 0.75;
+    transform: none;
+}
+
 .policy-modal-confirm:hover {
     background: #244a86;
     transform: translateY(-1px);
+}
+
+.policy-modal-secondary {
+    border: 1px solid #cbd5e1;
+    border-radius: 999px;
+    padding: 12px 22px;
+    min-height: 52px;
+    min-width: 120px;
+    background: #ffffff;
+    color: #1e3a8a;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.policy-modal-secondary:hover {
+    border-color: #2c5aa0;
+    color: #15396b;
+    transform: translateY(-1px);
+}
+
+.policy-modal-acceptance-box {
+    margin-top: 16px;
+    padding: 18px;
+    border-radius: 22px;
+    border: 1px solid #dbe4ee;
+    background: rgba(255, 255, 255, 0.96);
+}
+
+.policy-modal-checkbox {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    cursor: pointer;
+}
+
+.policy-modal-checkbox input {
+    width: 18px;
+    height: 18px;
+    margin-top: 3px;
+    flex-shrink: 0;
+    accent-color: #2c5aa0;
+}
+
+.policy-modal-checkbox-copy {
+    min-width: 0;
+}
+
+.policy-modal-checkbox-copy strong {
+    display: block;
+    color: #0f172a;
+    font-size: 0.98rem;
+    line-height: 1.55;
+}
+
+.policy-modal-checkbox-copy span {
+    display: block;
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 0.88rem;
+    line-height: 1.6;
+}
+
+.policy-modal-acceptance-note {
+    margin: 14px 0 0;
+    color: #475569;
+    font-size: 0.9rem;
+    line-height: 1.65;
 }
 
 @media (max-width: 768px) {

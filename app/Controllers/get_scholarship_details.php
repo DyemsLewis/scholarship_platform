@@ -56,6 +56,7 @@ try {
         'min_gwa' => $scholarship['min_gwa'] ?? null,
         'assessment_requirement' => $scholarship['assessment_requirement'] ?? 'none',
         'assessment_link' => $scholarship['assessment_link'] ?? '',
+        'assessment_schedule_at' => $scholarship['assessment_schedule_at'] ?? '',
         'assessment_details' => $scholarship['assessment_details'] ?? '',
         'allow_if_already_accepted' => isset($scholarship['allow_if_already_accepted'])
             ? (int) $scholarship['allow_if_already_accepted']
