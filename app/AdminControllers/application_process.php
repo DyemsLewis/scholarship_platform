@@ -68,14 +68,13 @@ function buildApplicationDecisionEmail(string $action, array $applicationDetails
         $subject = 'Scholarship Finder Application Approved - Acceptance Required';
         $body = "Hello {$studentName},\n\n"
             . "Good news. Your application for {$scholarshipName} under {$providerName} has been approved by the scholarship review team.\n\n"
-            . "Current status: Approved - awaiting your confirmation\n"
-            . ($referenceLine !== '' ? $referenceLine : '')
-            . "\n"
-            . "What to do next:\n"
-            . "1. Log in to your Scholarship Finder account.\n"
-            . "2. Open the Applications page and go to the Application Tracking section.\n"
-            . "3. Click Accept Scholarship on this approved application to confirm that you will take the offer.\n"
-            . "4. After you accept, wait for further instructions from {$providerName}, including confirmation, orientation, interview, or release details.\n"
+            . "Current status: Approved - awaiting your confirmation\n\n"
+            . ($referenceLine !== '' ? $referenceLine . "\n" : '')
+            . "What to do next:\n\n"
+            . "1. Log in to your Scholarship Finder account.\n\n"
+            . "2. Open the Applications page and go to the Application Tracking section.\n\n"
+            . "3. Click Accept Scholarship on this approved application to confirm that you will take the offer.\n\n"
+            . "4. After you accept, wait for further instructions from {$providerName}, including confirmation, orientation, interview, or release details.\n\n"
             . "5. Prepare your original supporting documents and a valid school or government ID in case they are requested for final validation.\n\n"
             . "If you have questions, please contact the scholarship provider through the contact details listed in the scholarship posting.\n\n"
             . "Thank you,\nScholarship Finder";
@@ -88,11 +87,11 @@ function buildApplicationDecisionEmail(string $action, array $applicationDetails
         . "Your application for {$scholarshipName} was not approved at this time.\n\n"
         . ($referenceLine !== '' ? $referenceLine . "\n" : '')
         . ($rejectionReason !== ''
-            ? "Reason provided by the reviewer:\n{$rejectionReason}\n\n"
+            ? "Reason provided by the reviewer:\n\n{$rejectionReason}\n\n"
             : '')
-        . "What to do next:\n"
-        . "1. Log in to your Scholarship Finder account and review your current application records.\n"
-        . "2. Check whether your profile details and uploaded documents need improvement for future submissions.\n"
+        . "What to do next:\n\n"
+        . "1. Log in to your Scholarship Finder account and review your current application records.\n\n"
+        . "2. Check whether your profile details and uploaded documents need improvement for future submissions.\n\n"
         . "3. Continue exploring other scholarship opportunities that match your academic profile and requirements.\n\n"
         . "If the provider shares additional guidance, please follow the instructions in your account or email.\n\n"
         . "Thank you,\nScholarship Finder";

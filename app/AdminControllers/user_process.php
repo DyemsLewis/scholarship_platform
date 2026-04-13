@@ -275,9 +275,10 @@ function buildProviderActivationEmail(array $providerDetails): array {
         . "Your provider account has been approved and activated in Scholarship Finder.\n\n"
         . "You can now sign in and access provider features, including scholarship posting, application review, and provider account management.\n\n"
         . "What you can do next:\n"
-        . "1. Log in to your provider account.\n"
-        . "2. Review your organization profile and contact details.\n"
-        . "3. Post or manage scholarship programs.\n"
+        . "\n"
+        . "1. Log in to your provider account.\n\n"
+        . "2. Review your organization profile and contact details.\n\n"
+        . "3. Post or manage scholarship programs.\n\n"
         . "4. Start reviewing applications submitted to your scholarships.\n\n"
         . "If you were not expecting this account activation, please contact the Scholarship Finder administrator immediately.\n\n"
         . "Thank you,\nScholarship Finder";
@@ -304,6 +305,70 @@ function sendProviderActivationEmail(array $mailConfig, array $providerDetails):
     }
 
     [$subject, $body] = buildProviderActivationEmail($providerDetails);
+    $mailer = new SmtpMailer($mailConfig);
+    $sendResult = $mailer->send($recipientEmail, $subject, wordwrap($body, 70));
+
+    return [
+        'success' => !empty($sendResult['success']),
+        'skipped' => false,
+        'error' => $sendResult['error'] ?? null
+    ];
+}
+
+function buildProviderReviewRequestEmail(array $providerDetails, string $requestNote = '', bool $requestVerificationFile = false): array {
+    $providerName = trim((string) ($providerDetails['display_name'] ?? ''));
+    if ($providerName === '') {
+        $providerName = trim((string) ($providerDetails['username'] ?? ''));
+    }
+    if ($providerName === '') {
+        $providerName = 'Provider';
+    }
+
+    $subject = 'Scholarship Finder Provider Review Update Needed';
+    $body = "Hello {$providerName},\n\n"
+        . "Your provider account needs additional information before the review can continue.\n\n"
+        . "What we need from you:\n\n";
+
+    if ($requestVerificationFile) {
+        $body .= "- Please send a clearer or updated verification file using your registered provider email.\n\n";
+    }
+
+    if ($requestNote !== '') {
+        $body .= "Review note:\n"
+            . $requestNote . "\n\n";
+    }
+
+    if (!$requestVerificationFile && $requestNote === '') {
+        $body .= "- Please review your submitted provider details and send the missing information requested by the review team.\n\n";
+    }
+
+    $body .= "How to respond:\n\n"
+        . "Reply to this email or coordinate with the review team using your registered provider contact details so the requested information can be checked.\n\n"
+        . "If you were not expecting this message, please contact the Scholarship Finder support team.\n\n"
+        . "Thank you,\nScholarship Finder";
+
+    return [$subject, $body];
+}
+
+function sendProviderReviewRequestEmail(array $mailConfig, array $providerDetails, string $requestNote = '', bool $requestVerificationFile = false): array {
+    $recipientEmail = trim((string) ($providerDetails['email'] ?? ''));
+    if ($recipientEmail === '' || !filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+        return [
+            'success' => false,
+            'skipped' => true,
+            'error' => 'The provider does not have a valid email address on file.'
+        ];
+    }
+
+    if (empty($mailConfig['configured'])) {
+        return [
+            'success' => false,
+            'skipped' => true,
+            'error' => 'Email notifications are not configured on this server.'
+        ];
+    }
+
+    [$subject, $body] = buildProviderReviewRequestEmail($providerDetails, $requestNote, $requestVerificationFile);
     $mailer = new SmtpMailer($mailConfig);
     $sendResult = $mailer->send($recipientEmail, $subject, wordwrap($body, 70));
 
@@ -478,6 +543,75 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $_SESSION['error'] = 'Failed to update user status';
             }
         }
+        header('Location: ' . normalizeAppUrl($redirectAfterAction));
+        exit();
+    }
+
+    elseif ($action == 'request_provider_update') {
+        $id = (int) ($_POST['user_id'] ?? 0);
+        $requestNote = trim((string) ($_POST['request_note'] ?? ''));
+        $requestVerificationFile = !empty($_POST['request_verification_file']);
+
+        if ($id <= 0) {
+            denyUserManagementAction('Invalid provider selected.');
+        }
+        requireUserActionToken($id, 'request_update');
+
+        $targetRole = getTargetUserRole($pdo, $id);
+        if ($targetRole !== 'provider') {
+            denyUserManagementAction('Only provider accounts can receive this request.');
+        }
+
+        $redirectAfterAction = resolveUserManagementRedirect($id, $targetRole);
+        if (!canActorReviewProviderAccount($actorRole, $targetRole)) {
+            denyUserManagementAction('Only authorized administrators can review provider accounts.');
+        }
+
+        if ($requestNote === '' && !$requestVerificationFile) {
+            $_SESSION['error'] = 'Add a note or request a new verification file before sending the provider update notice.';
+            header('Location: ' . normalizeAppUrl($redirectAfterAction));
+            exit();
+        }
+
+        $targetUser = getTargetUserSnapshot($pdo, $id);
+        if (!$targetUser) {
+            denyUserManagementAction('Target provider not found.');
+        }
+
+        $currentStatus = strtolower(trim((string) ($targetUser['status'] ?? 'pending')));
+        if (in_array('pending', getSupportedUserStatuses($pdo), true) && $currentStatus !== 'active') {
+            $stmt = $pdo->prepare("UPDATE users SET status = 'pending' WHERE id = ?");
+            $stmt->execute([$id]);
+            $currentStatus = 'pending';
+        }
+        syncProviderVerificationStatus($pdo, $id, $currentStatus === 'active' ? 'active' : 'pending');
+
+        $emailNotice = sendProviderReviewRequestEmail($mailConfig, $targetUser, $requestNote, $requestVerificationFile);
+        if (empty($emailNotice['success'])) {
+            error_log('Failed to send provider review request email for user #' . $id . ': ' . ($emailNotice['error'] ?? 'Unknown error'));
+        }
+
+        $activityLog = new ActivityLog($pdo);
+        $activityLog->log('request_update', 'provider_review', 'Requested additional provider review information.', [
+            'entity_id' => $id,
+            'entity_name' => (string) ($targetUser['display_name'] ?? $targetUser['username'] ?? 'Provider'),
+            'target_user_id' => $id,
+            'target_name' => (string) ($targetUser['display_name'] ?? $targetUser['username'] ?? 'Provider'),
+            'details' => [
+                'email' => (string) ($targetUser['email'] ?? ''),
+                'request_verification_file' => $requestVerificationFile ? 1 : 0,
+                'request_note' => $requestNote
+            ]
+        ]);
+
+        if (!empty($emailNotice['success'])) {
+            $_SESSION['success'] = 'Provider update request sent successfully. The provider received an email notice.';
+        } elseif (!empty($emailNotice['error'])) {
+            $_SESSION['success'] = 'Provider update request was saved, but the email notice could not be sent: ' . $emailNotice['error'];
+        } else {
+            $_SESSION['success'] = 'Provider update request sent successfully.';
+        }
+
         header('Location: ' . normalizeAppUrl($redirectAfterAction));
         exit();
     }

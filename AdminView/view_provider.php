@@ -319,6 +319,7 @@ $isVerified = (int) ($providerProfile['is_verified'] ?? 0) === 1;
 $profileSource = (string) ($providerProfile['profile_source'] ?? '');
 $currentStatus = strtolower((string) ($providerUser['status'] ?? 'inactive'));
 $providerStatusToken = buildEntityUrlToken('user', $providerId, 'update_status');
+$providerRequestUpdateToken = buildEntityUrlToken('user', $providerId, 'request_update');
 $providerStatusActionUrl = '../app/AdminControllers/user_process.php';
 $reviewsCurrentView = 'providers';
 $canManageAccounts = canAccessStaffAccounts();
@@ -547,6 +548,19 @@ $viewProviderStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/view-provi
                                 <button type="submit" class="btn btn-primary provider-activate-button">
                                     <i class="fas fa-circle-check"></i>
                                     Activate Provider
+                                </button>
+                            </form>
+                            <form method="POST" action="<?php echo htmlspecialchars($providerStatusActionUrl); ?>" class="provider-request-update-form" data-provider-request-form="true">
+                                <input type="hidden" name="action" value="request_provider_update">
+                                <?php echo csrfInputField('admin_account_management'); ?>
+                                <input type="hidden" name="user_id" value="<?php echo $providerId; ?>">
+                                <input type="hidden" name="entity_token" value="<?php echo htmlspecialchars($providerRequestUpdateToken); ?>">
+                                <input type="hidden" name="redirect_target" value="provider_review">
+                                <input type="hidden" name="request_note" value="">
+                                <input type="hidden" name="request_verification_file" value="0">
+                                <button type="button" class="btn btn-outline provider-action-button" data-provider-request-trigger="true">
+                                    <i class="fas fa-envelope-open-text"></i>
+                                    Request Update
                                 </button>
                             </form>
                             <?php else: ?>
@@ -937,6 +951,81 @@ $viewProviderStyleVersion = @filemtime(__DIR__ . '/../AdminPublic/css/view-provi
                 if (window.confirm('Activate this provider account?')) {
                     providerActivateForm.submit();
                 }
+            });
+        }
+
+        const providerRequestForm = document.querySelector('[data-provider-request-form="true"]');
+        const providerRequestTrigger = document.querySelector('[data-provider-request-trigger="true"]');
+        if (providerRequestForm && providerRequestTrigger) {
+            providerRequestTrigger.addEventListener('click', async () => {
+                const noteInput = providerRequestForm.querySelector('input[name="request_note"]');
+                const fileInput = providerRequestForm.querySelector('input[name="request_verification_file"]');
+
+                if (window.Swal && typeof window.Swal.fire === 'function') {
+                    const result = await window.Swal.fire({
+                        title: 'Request Provider Update',
+                        html: `
+                            <div style="text-align:left;">
+                                <p style="margin:0 0 12px; color:#475569;">Send an email note so the provider knows what must be submitted before activation.</p>
+                                <textarea id="providerRequestNote" class="swal2-textarea" placeholder="Example: Please reply with your official organization website and a clearer business permit." style="display:block; width:100%; min-height:140px; margin:0; box-sizing:border-box;"></textarea>
+                                <label style="display:flex; align-items:flex-start; gap:10px; margin-top:12px; font-size:0.95rem; color:#334155;">
+                                    <input type="checkbox" id="providerRequestFile" style="margin-top:3px;">
+                                    <span>Ask the provider to send another verification file by email.</span>
+                                </label>
+                            </div>
+                        `,
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonColor: '#1d4ed8',
+                        cancelButtonColor: '#64748b',
+                        confirmButtonText: 'Send Request',
+                        focusConfirm: false,
+                        preConfirm: () => {
+                            const noteValue = (document.getElementById('providerRequestNote')?.value || '').trim();
+                            const requestFileValue = !!document.getElementById('providerRequestFile')?.checked;
+                            if (noteValue === '' && !requestFileValue) {
+                                window.Swal.showValidationMessage('Add a note or ask for a replacement verification file.');
+                                return false;
+                            }
+                            return {
+                                note: noteValue,
+                                requestFile: requestFileValue
+                            };
+                        }
+                    });
+
+                    if (!result.isConfirmed || !result.value) {
+                        return;
+                    }
+
+                    if (noteInput) {
+                        noteInput.value = result.value.note || '';
+                    }
+                    if (fileInput) {
+                        fileInput.value = result.value.requestFile ? '1' : '0';
+                    }
+                    providerRequestForm.submit();
+                    return;
+                }
+
+                const fallbackNote = window.prompt('Enter the update note for this provider:', '');
+                if (fallbackNote === null) {
+                    return;
+                }
+                const trimmedNote = fallbackNote.trim();
+                const requestFile = window.confirm('Should the provider send a replacement verification file by email?');
+                if (trimmedNote === '' && !requestFile) {
+                    window.alert('Add a note or request a replacement verification file before sending the update notice.');
+                    return;
+                }
+
+                if (noteInput) {
+                    noteInput.value = trimmedNote;
+                }
+                if (fileInput) {
+                    fileInput.value = requestFile ? '1' : '0';
+                }
+                providerRequestForm.submit();
             });
         }
 

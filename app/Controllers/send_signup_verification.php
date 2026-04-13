@@ -114,7 +114,8 @@ $message = "Hello,\n\n"
     . "Use this verification code to complete your Scholarship Finder signup:\n\n"
     . $verificationCode . "\n\n"
     . "This code will expire in 10 minutes.\n\n"
-    . "If you did not request this signup, you can ignore this email.";
+    . "If you did not request this signup, you can ignore this email.\n\n"
+    . "Thank you,\nScholarship Finder";
 
 $mailer = new SmtpMailer($mailConfig);
 $mailResult = $mailer->send($email, $subject, wordwrap($message, 70));

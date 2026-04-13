@@ -56,11 +56,11 @@ function buildApplicationAcceptanceEmail(array $applicationDetails): array
     $body = "Hello {$studentName},\n\n"
         . "Your application for {$scholarshipName} has been approved, and your acceptance has been recorded successfully.\n\n"
         . $referenceLine
-        . "What happens next:\n"
-        . "1. Wait for further instructions from {$providerName}.\n"
-        . "2. Keep your supporting documents ready in case additional confirmation is requested.\n"
-        . "3. Check your Scholarship Finder account and email regularly for follow-up updates.\n"
-        . $assessmentLine . "\n"
+        . "What happens next:\n\n"
+        . "1. Wait for further instructions from {$providerName}.\n\n"
+        . "2. Keep your supporting documents ready in case additional confirmation is requested.\n\n"
+        . "3. Check your Scholarship Finder account and email regularly for follow-up updates.\n\n"
+        . ($assessmentLine !== '' ? $assessmentLine . "\n" : '')
         . "Thank you,\nScholarship Finder";
 
     return [$subject, $body];
